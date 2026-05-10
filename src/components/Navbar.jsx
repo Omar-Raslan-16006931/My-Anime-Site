@@ -1,8 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
 export default function Navbar({ user, profile, onAuthClick, currentPage, setCurrentPage }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -11,21 +18,34 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
 
   return (
     <nav style={{
-      position: 'sticky', top: 0, zIndex: 100,
-      background: 'rgba(10,10,15,0.85)', backdropFilter: 'blur(12px)',
+      position: 'sticky',
+      top: 0,
+      zIndex: 100,
+      background: 'rgba(10,10,15,0.85)',
+      backdropFilter: 'blur(12px)',
       borderBottom: '1px solid var(--border)',
-      padding: '0 24px', height: 64,
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+      padding: isMobile ? '0 12px' : '0 24px',
+      height: isMobile ? 56 : 64,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between'
     }}>
-      <div onClick={() => setCurrentPage('home')} style={{
-        fontWeight: 800, fontSize: 22, cursor: 'pointer',
-        background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
-        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
-      }}>
+      <div
+        onClick={() => setCurrentPage('home')}
+        style={{
+          fontWeight: 800,
+          fontSize: isMobile ? 18 : 22,
+          cursor: 'pointer',
+          background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          whiteSpace: 'nowrap'
+        }}
+      >
         Gojo3mk
       </div>
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: isMobile ? 4 : 8, alignItems: 'center' }}>
         {['home', 'watchlist'].map(page => (
           <button
             key={page}
@@ -33,15 +53,15 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
             style={{
               background: currentPage === page ? 'var(--bg3)' : 'transparent',
               color: currentPage === page ? 'var(--text)' : 'var(--text2)',
-              padding: '8px 16px',
+              padding: isMobile ? '6px 10px' : '8px 16px',
               borderRadius: 8,
               fontWeight: currentPage === page ? 600 : 400,
-              fontSize: 14,
+              fontSize: isMobile ? 12 : 14,
               transition: 'all 0.2s',
               textTransform: 'capitalize'
             }}
           >
-            {page}
+            {isMobile ? page.slice(0, 1) : page}
           </button>
         ))}
 
@@ -50,8 +70,8 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
             <div
               onClick={() => setMenuOpen(!menuOpen)}
               style={{
-                width: 38,
-                height: 38,
+                width: isMobile ? 32 : 38,
+                height: isMobile ? 32 : 38,
                 borderRadius: '50%',
                 cursor: 'pointer',
                 background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
@@ -59,7 +79,7 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: 700,
-                fontSize: 16,
+                fontSize: isMobile ? 13 : 16,
                 color: '#fff',
                 userSelect: 'none'
               }}
@@ -71,20 +91,23 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
               <div style={{
                 position: 'absolute',
                 right: 0,
-                top: 48,
+                top: isMobile ? 40 : 48,
                 background: 'var(--bg2)',
                 border: '1px solid var(--border)',
                 borderRadius: 'var(--radius)',
-                padding: 8,
-                minWidth: 180,
+                padding: 6,
+                minWidth: isMobile ? 160 : 180,
                 boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
               }}>
                 <div style={{
-                  padding: '8px 12px',
+                  padding: '8px 10px',
                   color: 'var(--text2)',
-                  fontSize: 13,
+                  fontSize: 12,
                   borderBottom: '1px solid var(--border)',
-                  marginBottom: 4
+                  marginBottom: 4,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
                 }}>
                   @{profile?.username || user.email}
                 </div>
@@ -94,11 +117,11 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
                   style={{
                     width: '100%',
                     textAlign: 'left',
-                    padding: '8px 12px',
+                    padding: '8px 10px',
                     borderRadius: 6,
                     background: 'transparent',
                     color: 'var(--text)',
-                    fontSize: 14,
+                    fontSize: 13,
                     transition: 'background 0.2s'
                   }}
                   onMouseEnter={e => e.target.style.background = 'var(--bg3)'}
@@ -112,11 +135,11 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
                   style={{
                     width: '100%',
                     textAlign: 'left',
-                    padding: '8px 12px',
+                    padding: '8px 10px',
                     borderRadius: 6,
                     background: 'transparent',
                     color: 'var(--text)',
-                    fontSize: 14,
+                    fontSize: 13,
                     transition: 'background 0.2s'
                   }}
                   onMouseEnter={e => e.target.style.background = 'var(--bg3)'}
@@ -130,11 +153,11 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
                   style={{
                     width: '100%',
                     textAlign: 'left',
-                    padding: '8px 12px',
+                    padding: '8px 10px',
                     borderRadius: 6,
                     background: 'transparent',
                     color: 'var(--accent)',
-                    fontSize: 14,
+                    fontSize: 13,
                     transition: 'background 0.2s'
                   }}
                   onMouseEnter={e => e.target.style.background = 'var(--bg3)'}
@@ -151,11 +174,12 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
             style={{
               background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
               color: '#fff',
-              padding: '8px 20px',
+              padding: isMobile ? '7px 12px' : '8px 20px',
               borderRadius: 8,
               fontWeight: 600,
-              fontSize: 14,
-              transition: 'opacity 0.2s'
+              fontSize: isMobile ? 12 : 14,
+              transition: 'opacity 0.2s',
+              whiteSpace: 'nowrap'
             }}
             onMouseEnter={e => e.target.style.opacity = 0.85}
             onMouseLeave={e => e.target.style.opacity = 1}
