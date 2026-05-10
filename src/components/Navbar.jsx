@@ -22,7 +22,7 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
         background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
         WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
       }}>
-        AniTrack
+        Gojo3mk
       </div>
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
