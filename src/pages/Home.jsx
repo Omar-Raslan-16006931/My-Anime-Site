@@ -65,32 +65,32 @@ export default function Home({ user, onAuthRequired, onSelect }) {
       borderRadius: isMobile ? 14 : 18,
       overflow: 'hidden',
       position: 'relative',
-      minHeight: isMobile ? 120 : 180,
+      minHeight: isMobile ? 140 : 260,
       background: 'linear-gradient(135deg, rgba(225,29,72,0.15), rgba(168,85,247,0.18))',
       border: '1px solid var(--border)'
     }}>
       <img
-        src="/FuckCrunchyroll.png"
+        src="/LuffyCrunchyroll.png"
         alt="Banner"
         style={{
           position: 'absolute',
           inset: 0,
           width: '100%',
           height: '100%',
-          objectFit: 'cover',
-          opacity: 0.52
+          objectFit: 'fill',
+          opacity: 0.72
         }}
       />
       <div style={{
         position: 'relative',
         zIndex: 1,
         padding: isMobile ? '14px 12px' : '28px 24px',
-        minHeight: isMobile ? 120 : 180,
+        minHeight: isMobile ? 140 : 210,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         textAlign: 'center',
-        backdropFilter: 'blur(1px)'
+        backdropFilter: 'blur(0px)'
       }}>
         <p style={{
           fontSize: isMobile ? 11 : 13,
@@ -98,26 +98,29 @@ export default function Home({ user, onAuthRequired, onSelect }) {
           textTransform: 'uppercase',
           color: 'var(--text2)',
           marginBottom: 8,
-          fontWeight: 700
+          fontWeight: 700,
+          textShadow: '0 4px 4px rgba(0,0,0,0.4)'
         }}>
-          Gojo3mk
+         
         </p>
         <h2 style={{
           fontSize: isMobile ? 18 : 'clamp(21px, 4vw, 41px)',
           lineHeight: 1.05,
           fontWeight: 900,
-          color: '#fff',
-          marginBottom: 8
+          color: '#f2a049',
+          marginBottom: 8,
+          textShadow: '0 4px 4px rgba(0,0,0,0.4)'
         }}>
-          Fuck Crunchyroll & Netflix, Watch Anime Your Way
+          Fuck Crunchyroll And The Jews
         </h2>
         <p style={{
           maxWidth: 700,
           margin: '0 auto',
           color: 'rgba(255,255,255,0.78)',
-          fontSize: isMobile ? 12 : 15
+          fontSize: isMobile ? 12 : 15,
+          textShadow: '0 4px 8px rgba(0,0,0,0.4)'
         }}>
-          Discover new series, track episodes, and keep your watchlist in one place.
+          
         </p>
       </div>
     </section>
