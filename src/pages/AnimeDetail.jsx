@@ -45,6 +45,13 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
   const [activeTab, setActiveTab] = useState('overview')
   const [playingEp, setPlayingEp] = useState(null)
   const [epPage, setEpPage] = useState(1)
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   useEffect(() => {
     setLoading(true)
@@ -124,7 +131,6 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
   }
 
   const trailer = details?.trailer?.embed_url
-  const youtubeId = details?.trailer?.youtube_id
   const totalEps = epCount || details?.episodes || '?'
   const EP_GROUP = 100
   const totalEpsNumber = typeof totalEps === 'number' ? totalEps : null
@@ -150,7 +156,7 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
       .map(ep => ({ num: ep.episode ?? ep.mal_id, ep }))
 
   const renderThumb = (epNum, ep) => {
-    const yt = youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : null
+    const yt = details?.trailer?.youtube_id ? `https://img.youtube.com/vi/${details.trailer.youtube_id}/hqdefault.jpg` : null
     const poster = details?.images?.jpg?.large_image_url || details?.images?.jpg?.image_url || null
     const epThumb = ep?.images?.jpg?.image_url || null
     const src = yt || poster || epThumb
@@ -159,7 +165,7 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
       <img
         src={src}
         alt={`EP ${epNum}`}
-        style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'auto' }}
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         onError={e => {
           e.currentTarget.style.display = 'none'
           const badge = e.currentTarget.parentElement.querySelector('.thumb-fallback')
@@ -174,8 +180,9 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
       onClick={() => handlePlay(epNum)}
       style={{
         display: 'flex',
-        alignItems: 'center',
-        gap: 16,
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: isMobile ? 8 : 16,
         background: 'var(--card)',
         border: '1px solid var(--border)',
         borderRadius: 10,
@@ -183,16 +190,15 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
         cursor: 'pointer',
         transition: 'border-color 0.2s, transform 0.15s'
       }}
-      onMouseEnter={e => {
-        e.currentTarget.style.borderColor = 'var(--accent)'
-        e.currentTarget.style.transform = 'translateX(4px)'
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.borderColor = 'var(--border)'
-        e.currentTarget.style.transform = 'translateX(0)'
-      }}
     >
-      <div style={{ width: 160, height: 90, flexShrink: 0, background: 'var(--bg3)', position: 'relative', overflow: 'hidden' }}>
+      <div style={{
+        width: isMobile ? '100%' : 160,
+        height: isMobile ? 120 : 90,
+        flexShrink: 0,
+        background: 'var(--bg3)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
         {renderThumb(epNum, epObj)}
         <div
           className="thumb-fallback"
@@ -222,65 +228,97 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
         }}>EP {epNum}</div>
       </div>
 
-      <div style={{ flex: 1, padding: '8px 0' }}>
-        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 3 }}>
+      <div style={{ flex: 1, padding: isMobile ? '0 10px 10px' : '8px 0' }}>
+        <div style={{ fontWeight: 600, fontSize: isMobile ? 13 : 14, marginBottom: 3 }}>
           {title || `Episode ${epNum}`}
         </div>
         {romanji && romanji !== title && (
-          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 3 }}>{romanji}</div>
+          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 3 }}>
+            {romanji}
+          </div>
         )}
         {aired && <div style={{ fontSize: 11, color: 'var(--text2)' }}>{aired.split('T')[0]}</div>}
       </div>
 
-      <div style={{ paddingRight: 16 }}>
-        <span style={{
-          background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
-          color: '#fff',
-          padding: '7px 16px',
-          borderRadius: 6,
-          fontSize: 13,
-          fontWeight: 600,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6
-        }}>▶ Play</span>
-      </div>
+      {!isMobile && (
+        <div style={{ paddingRight: 16 }}>
+          <span style={{
+            background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
+            color: '#fff',
+            padding: '7px 16px',
+            borderRadius: 6,
+            fontSize: 13,
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6
+          }}>▶ Play</span>
+        </div>
+      )}
     </div>
   )
 
+  const contentPadding = isMobile ? '12px' : '24px 24px'
+
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 24px' }}>
+    <div style={{
+      maxWidth: 1100,
+      margin: '0 auto',
+      padding: contentPadding
+    }}>
       <button onClick={onBack} style={{
         background: 'var(--bg3)',
         color: 'var(--text2)',
-        padding: '8px 16px',
+        padding: isMobile ? '6px 12px' : '8px 16px',
         borderRadius: 8,
         fontSize: 14,
-        marginBottom: 24,
+        marginBottom: isMobile ? 14 : 24,
         display: 'flex',
         alignItems: 'center',
         gap: 6
       }}>← Back</button>
 
-      <div style={{ display: 'flex', gap: 32, marginBottom: 32, flexWrap: 'wrap' }}>
+      <div style={{
+        display: 'flex',
+        gap: isMobile ? 16 : 32,
+        marginBottom: isMobile ? 18 : 32,
+        flexWrap: 'wrap',
+        flexDirection: isMobile ? 'column' : 'row'
+      }}>
         <img
           src={details?.images?.jpg?.large_image_url || details?.images?.jpg?.image_url}
           alt={details?.title_english || details?.title}
-          style={{ width: 200, borderRadius: 'var(--radius)', flexShrink: 0, objectFit: 'cover' }}
+          style={{
+            width: isMobile ? '100%' : 200,
+            maxWidth: isMobile ? '100%' : 200,
+            borderRadius: 'var(--radius)',
+            flexShrink: 0,
+            objectFit: 'cover'
+          }}
         />
 
-        <div style={{ flex: 1, minWidth: 280 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>
+        <div style={{ flex: 1, minWidth: isMobile ? 0 : 280 }}>
+          <h1 style={{
+            fontSize: isMobile ? 20 : 28,
+            fontWeight: 800,
+            marginBottom: 8,
+            lineHeight: 1.15
+          }}>
             {details?.title_english || details?.title}
           </h1>
 
           {details?.title && details?.title_english && details.title_english !== details.title && (
-            <p style={{ color: 'var(--text2)', marginBottom: 12 }}>
+            <p style={{ color: 'var(--text2)', marginBottom: 12, fontSize: isMobile ? 12 : 14 }}>
               {details.title}
             </p>
           )}
 
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
+          <div style={{
+            display: 'flex',
+            gap: 10,
+            flexWrap: 'wrap',
+            marginBottom: 14
+          }}>
             {[
               { label: '⭐ Score', value: details?.score || 'N/A' },
               { label: '📺 Episodes', value: `${totalEps}${isAiring ? ' aired' : ''}` },
@@ -291,11 +329,11 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
                 background: 'var(--bg3)',
                 border: '1px solid var(--border)',
                 borderRadius: 8,
-                padding: '8px 14px',
+                padding: isMobile ? '6px 10px' : '8px 14px',
                 textAlign: 'center'
               }}>
-                <div style={{ fontSize: 12, color: 'var(--text2)' }}>{s.label}</div>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: 'var(--text2)' }}>{s.label}</div>
+                <div style={{ fontWeight: 700, fontSize: isMobile ? 13 : 15 }}>{s.value}</div>
               </div>
             ))}
           </div>
@@ -319,11 +357,11 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
             {details?.genres?.map(g => (
               <span key={g.mal_id} style={{
-                fontSize: 12,
-                padding: '4px 12px',
+                fontSize: 11,
+                padding: '4px 10px',
                 borderRadius: 20,
                 background: 'rgba(225,29,72,0.15)',
                 color: 'var(--accent)',
@@ -339,10 +377,11 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
               background: inWatchlist ? 'rgba(225,29,72,0.15)' : 'linear-gradient(135deg, var(--accent), var(--accent2))',
               color: inWatchlist ? 'var(--accent)' : '#fff',
               border: inWatchlist ? '1px solid var(--accent)' : 'none',
-              padding: '10px 24px',
+              padding: isMobile ? '9px 16px' : '10px 24px',
               borderRadius: 8,
               fontWeight: 600,
-              fontSize: 14
+              fontSize: 14,
+              width: isMobile ? '100%' : 'auto'
             }}>
               {inWatchlist ? '★ In Watchlist' : '☆ Add to Watchlist'}
             </button>
@@ -350,13 +389,19 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid var(--border)' }}>
+      <div style={{
+        display: 'flex',
+        gap: 4,
+        marginBottom: 20,
+        borderBottom: '1px solid var(--border)',
+        overflowX: isMobile ? 'auto' : 'visible'
+      }}>
         {['overview', 'episodes', 'trailer'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             style={{
-              padding: '10px 20px',
+              padding: isMobile ? '8px 14px' : '10px 20px',
               borderRadius: '8px 8px 0 0',
               background: activeTab === tab ? 'var(--bg3)' : 'transparent',
               color: activeTab === tab ? 'var(--text)' : 'var(--text2)',
@@ -364,7 +409,8 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
               fontSize: 14,
               borderBottom: activeTab === tab ? '2px solid var(--accent)' : '2px solid transparent',
               textTransform: 'capitalize',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap'
             }}
           >
             {tab === 'episodes' ? `Episodes${totalEps !== '?' ? ` (${totalEps})` : ''}` : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -373,7 +419,12 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
       </div>
 
       {activeTab === 'overview' && (
-        <p style={{ color: 'var(--text2)', lineHeight: 1.8, fontSize: 15, maxWidth: 800 }}>
+        <p style={{
+          color: 'var(--text2)',
+          lineHeight: 1.8,
+          fontSize: isMobile ? 14 : 15,
+          maxWidth: 800
+        }}>
           {details?.synopsis || 'No synopsis available.'}
         </p>
       )}
@@ -428,11 +479,16 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
       {activeTab === 'trailer' && (
         <div>
           {trailer ? (
-            <div style={{ borderRadius: 'var(--radius)', overflow: 'hidden', maxWidth: 800 }}>
+            <div style={{
+              borderRadius: 'var(--radius)',
+              overflow: 'hidden',
+              maxWidth: 800,
+              aspectRatio: isMobile ? '16 / 9' : 'auto'
+            }}>
               <iframe
                 src={trailer}
                 width="100%"
-                height="450"
+                height={isMobile ? '220' : '450'}
                 frameBorder="0"
                 allowFullScreen
                 style={{ display: 'block', borderRadius: 'var(--radius)' }}
