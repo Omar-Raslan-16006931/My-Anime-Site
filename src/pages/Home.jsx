@@ -78,7 +78,7 @@ export default function Home({ user, onAuthRequired, onSelect }) {
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          opacity: 0.22
+          opacity: 0.52
         }}
       />
       <div style={{
@@ -90,7 +90,7 @@ export default function Home({ user, onAuthRequired, onSelect }) {
         flexDirection: 'column',
         justifyContent: 'center',
         textAlign: 'center',
-        backdropFilter: 'blur(2px)'
+        backdropFilter: 'blur(1px)'
       }}>
         <p style={{
           fontSize: isMobile ? 11 : 13,
