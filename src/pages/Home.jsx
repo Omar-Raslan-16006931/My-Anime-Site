@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
 import AnimeCard from '../components/AnimeCard'
+import { supabase } from '../supabase'
 
 export default function Home({ user, onAuthRequired, onSelect }) {
   const [anime, setAnime] = useState([])
+  const [watching, setWatching] = useState([])
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [watchingLoading, setWatchingLoading] = useState(true)
 
   useEffect(() => {
     setLoading(true)
@@ -22,12 +25,32 @@ export default function Home({ user, onAuthRequired, onSelect }) {
       .catch(() => setLoading(false))
   }, [query])
 
+  useEffect(() => {
+    const loadWatching = async () => {
+      if (!user) {
+        setWatching([])
+        setWatchingLoading(false)
+        return
+      }
+
+      setWatchingLoading(true)
+      const { data } = await supabase
+        .from('currently_watching')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+
+      setWatching(data || [])
+      setWatchingLoading(false)
+    }
+
+    loadWatching()
+  }, [user])
+
   const handleSearch = (e) => {
     e.preventDefault()
     setQuery(search.trim())
   }
-
-  const keepWatching = anime.slice(0, 4)
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
@@ -71,7 +94,7 @@ export default function Home({ user, onAuthRequired, onSelect }) {
             marginBottom: 10,
             fontWeight: 700
           }}>
-            AniTrack
+            Gojo3mk
           </p>
           <h2 style={{
             fontSize: 'clamp(21px, 4vw, 41px)',
@@ -152,7 +175,6 @@ export default function Home({ user, onAuthRequired, onSelect }) {
       </form>
 
       <div style={{ display: 'flex', gap: 24, minHeight: 400 }}>
-        {/* Main content */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <h2 style={{
             fontSize: 20,
@@ -184,40 +206,57 @@ export default function Home({ user, onAuthRequired, onSelect }) {
           )}
         </div>
 
-        {/* Keep Watching sidebar */}
-        {keepWatching.length > 0 && (
-          <div style={{
-            width: 240,
-            flexShrink: 0,
-            background: 'var(--bg3)',
-            borderRadius: 16,
-            padding: 20,
-            border: '1px solid var(--border)'
+        <div style={{
+          width: 240,
+          flexShrink: 0,
+          background: 'var(--bg3)',
+          borderRadius: 16,
+          padding: 20,
+          border: '1px solid var(--border)'
+        }}>
+          <h3 style={{
+            fontSize: 16,
+            fontWeight: 700,
+            marginBottom: 16,
+            color: 'var(--text2)'
           }}>
-            <h3 style={{
-              fontSize: 16,
-              fontWeight: 700,
-              marginBottom: 16,
-              color: 'var(--text2)'
-            }}>
-              Keep Watching
-            </h3>
+            Currently Watching
+          </h3>
+
+          {!user ? (
+            <div style={{ color: 'var(--text2)', fontSize: 13 }}>
+              Sign in to see your active shows.
+            </div>
+          ) : watchingLoading ? (
+            <div style={{ color: 'var(--text2)', fontSize: 13 }}>Loading...</div>
+          ) : watching.length === 0 ? (
+            <div style={{ color: 'var(--text2)', fontSize: 13 }}>
+              No currently watching shows yet.
+            </div>
+          ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {keepWatching.map(a => (
-                <div key={a.mal_id} style={{
-                  display: 'flex',
-                  gap: 8,
-                  padding: 8,
-                  borderRadius: 12,
-                  background: 'var(--bg2)',
-                  cursor: 'pointer',
-                  transition: 'background 0.2s'
-                }}
-                  onClick={() => onSelect(a)}
+              {watching.map(item => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    padding: 8,
+                    borderRadius: 12,
+                    background: 'var(--bg2)',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s'
+                  }}
+                  onClick={() => onSelect({
+                    mal_id: item.mal_id,
+                    title: item.title,
+                    title_english: item.title,
+                    images: { jpg: { large_image_url: item.poster, image_url: item.poster } }
+                  })}
                 >
                   <img
-                    src={a.images?.jpg?.image_url || '/placeholder.jpg'}
-                    alt={a.title}
+                    src={item.poster || '/placeholder.jpg'}
+                    alt={item.title}
                     style={{
                       width: 48,
                       height: 72,
@@ -234,21 +273,22 @@ export default function Home({ user, onAuthRequired, onSelect }) {
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap'
                     }}>
-                      {a.title}
+                      {item.title}
                     </div>
                     <div style={{
                       fontSize: 11,
                       color: 'var(--text2)',
                       marginTop: 2
                     }}>
-                      Ep. 1 • {a.score || 'N/A'}
+                      Ep. {item.last_episode}
+                      {item.total_episodes ? ` / ${item.total_episodes}` : ''}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
