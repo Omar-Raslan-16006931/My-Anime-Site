@@ -42,7 +42,7 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
           whiteSpace: 'nowrap'
         }}
       >
-        FuckCrunchyroll
+        Gojo3mk
       </div>
 
       <div style={{ display: 'flex', gap: isMobile ? 4 : 8, alignItems: 'center' }}>
