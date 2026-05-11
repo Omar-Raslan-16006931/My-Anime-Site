@@ -16,24 +16,50 @@ export default function AnimeCard({ anime, user, onAuthRequired, onSelect, compa
 
   const toggleWatchlist = async (e) => {
     e.stopPropagation()
-    if (!user) return onAuthRequired()
+    console.log('Toggle watchlist clicked. User:', user, 'Current state:', inWatchlist)
+    if (!user) {
+      console.log('No user, calling auth required')
+      return onAuthRequired()
+    }
 
-    if (inWatchlist) {
-      await supabase.from('watchlist')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('mal_id', anime.mal_id)
-      setInWatchlist(false)
-    } else {
-      await supabase.from('watchlist').insert({
-        user_id: user.id,
-        mal_id: anime.mal_id,
-        title: anime.title_english || anime.title,
-        japanese_title: anime.title,
-        poster: anime.images?.jpg?.large_image_url,
-        score: anime.score
-      })
-      setInWatchlist(true)
+    try {
+      if (inWatchlist) {
+        console.log('Removing from watchlist...')
+        const { data, error } = await supabase.from('watchlist')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('mal_id', anime.mal_id)
+        console.log('Delete response:', { data, error })
+        if (error) {
+          console.error('Delete error:', error)
+          return
+        }
+        setInWatchlist(false)
+      } else {
+        console.log('Adding to watchlist with data:', {
+          user_id: user.id,
+          mal_id: anime.mal_id,
+          title: anime.title_english || anime.title,
+          japanese_title: anime.title,
+          poster: anime.images?.jpg?.large_image_url,
+          score: anime.score
+        })
+        const { data, error } = await supabase.from('watchlist').insert({
+          user_id: user.id,
+          mal_id: anime.mal_id,
+          title: anime.title_english || anime.title,
+          poster: anime.images?.jpg?.large_image_url,
+          score: anime.score
+        })
+        console.log('Insert response:', { data, error })
+        if (error) {
+          console.error('Insert error:', error)
+          return
+        }
+        setInWatchlist(true)
+      }
+    } catch (err) {
+      console.error('Watchlist toggle error:', err)
     }
   }
 
