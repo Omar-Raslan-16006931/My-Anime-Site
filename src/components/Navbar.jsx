@@ -42,7 +42,7 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
           whiteSpace: 'nowrap'
         }}
       >
-        Gojo3mk
+        banner
       </div>
 
       <div style={{ display: 'flex', gap: isMobile ? 4 : 8, alignItems: 'center' }}>
