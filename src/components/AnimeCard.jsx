@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 
-export default function AnimeCard({ anime, user, onAuthRequired, onSelect, compact = false }) {
+export default function AnimeCard({ anime, user, onAuthRequired, compact = false }) {
   const [inWatchlist, setInWatchlist] = useState(false)
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (!user) return
-    supabase.from('watchlist')
+
+    supabase
+      .from('watchlist')
       .select('mal_id')
       .eq('user_id', user.id)
       .eq('mal_id', anime.mal_id)
@@ -16,46 +20,39 @@ export default function AnimeCard({ anime, user, onAuthRequired, onSelect, compa
 
   const toggleWatchlist = async (e) => {
     e.stopPropagation()
-    console.log('Toggle watchlist clicked. User:', user, 'Current state:', inWatchlist)
+
     if (!user) {
-      console.log('No user, calling auth required')
       return onAuthRequired()
     }
 
     try {
       if (inWatchlist) {
-        console.log('Removing from watchlist...')
-        const { data, error } = await supabase.from('watchlist')
+        const { error } = await supabase
+          .from('watchlist')
           .delete()
           .eq('user_id', user.id)
           .eq('mal_id', anime.mal_id)
-        console.log('Delete response:', { data, error })
+
         if (error) {
           console.error('Delete error:', error)
           return
         }
+
         setInWatchlist(false)
       } else {
-        console.log('Adding to watchlist with data:', {
-          user_id: user.id,
-          mal_id: anime.mal_id,
-          title: anime.title_english || anime.title,
-          japanese_title: anime.title,
-          poster: anime.images?.jpg?.large_image_url,
-          score: anime.score
-        })
-        const { data, error } = await supabase.from('watchlist').insert({
+        const { error } = await supabase.from('watchlist').insert({
           user_id: user.id,
           mal_id: anime.mal_id,
           title: anime.title_english || anime.title,
           poster: anime.images?.jpg?.large_image_url,
           score: anime.score
         })
-        console.log('Insert response:', { data, error })
+
         if (error) {
           console.error('Insert error:', error)
           return
         }
+
         setInWatchlist(true)
       }
     } catch (err) {
@@ -65,7 +62,7 @@ export default function AnimeCard({ anime, user, onAuthRequired, onSelect, compa
 
   return (
     <div
-      onClick={() => onSelect(anime)}
+      onClick={() => navigate(`/anime/${anime.mal_id}`)}
       style={{
         background: 'var(--card)',
         borderRadius: compact ? 12 : 'var(--radius)',
@@ -88,7 +85,13 @@ export default function AnimeCard({ anime, user, onAuthRequired, onSelect, compa
         }
       }}
     >
-      <div style={{ position: 'relative', aspectRatio: compact ? '3/4' : '2/3', overflow: 'hidden' }}>
+      <div
+        style={{
+          position: 'relative',
+          aspectRatio: compact ? '3/4' : '2/3',
+          overflow: 'hidden'
+        }}
+      >
         <img
           src={anime.images?.jpg?.large_image_url}
           alt={anime.title_english || anime.title}
@@ -96,18 +99,20 @@ export default function AnimeCard({ anime, user, onAuthRequired, onSelect, compa
         />
 
         {anime.score && (
-          <div style={{
-            position: 'absolute',
-            top: compact ? 6 : 8,
-            left: compact ? 6 : 8,
-            background: 'rgba(0,0,0,0.8)',
-            backdropFilter: 'blur(4px)',
-            color: '#fbbf24',
-            fontWeight: 700,
-            fontSize: compact ? 11 : 13,
-            padding: compact ? '2px 6px' : '3px 8px',
-            borderRadius: 6
-          }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: compact ? 6 : 8,
+              left: compact ? 6 : 8,
+              background: 'rgba(0,0,0,0.8)',
+              backdropFilter: 'blur(4px)',
+              color: '#fbbf24',
+              fontWeight: 700,
+              fontSize: compact ? 11 : 13,
+              padding: compact ? '2px 6px' : '3px 8px',
+              borderRadius: 6
+            }}
+          >
             ⭐ {anime.score}
           </div>
         )}
@@ -137,29 +142,33 @@ export default function AnimeCard({ anime, user, onAuthRequired, onSelect, compa
       </div>
 
       <div style={{ padding: compact ? 8 : 12 }}>
-        <h3 style={{
-          fontSize: compact ? 12 : 14,
-          fontWeight: 600,
-          marginBottom: compact ? 3 : 4,
-          overflow: 'hidden',
-          display: '-webkit-box',
-          WebkitLineClamp: compact ? 1 : 2,
-          WebkitBoxOrient: 'vertical',
-          lineHeight: 1.25
-        }}>
+        <h3
+          style={{
+            fontSize: compact ? 12 : 14,
+            fontWeight: 600,
+            marginBottom: compact ? 3 : 4,
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitLineClamp: compact ? 1 : 2,
+            WebkitBoxOrient: 'vertical',
+            lineHeight: 1.25
+          }}
+        >
           {anime.title_english || anime.title}
         </h3>
 
         {!compact && anime.title_english && anime.title_english !== anime.title && (
-          <div style={{
-            fontSize: 11,
-            color: 'var(--text2)',
-            marginBottom: 6,
-            overflow: 'hidden',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical'
-          }}>
+          <div
+            style={{
+              fontSize: 11,
+              color: 'var(--text2)',
+              marginBottom: 6,
+              overflow: 'hidden',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical'
+            }}
+          >
             {anime.title}
           </div>
         )}
