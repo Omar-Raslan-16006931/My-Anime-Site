@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import VideoPlayer from '../components/VideoPlayer'
+import DownloadModal from '../components/DownloadButton'
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
 const IMG = 'https://image.tmdb.org/t/p/w500'
@@ -11,23 +12,23 @@ async function upsertWatching(user, details, seasonNumber, episodeNumber) {
   if (!user || !details) return
 
   await supabase.from('currently_watching_tmdb').upsert(
-  {
-    user_id: user.id,
-    media_type: 'tv',
-    tmdb_id: details.id,
-    title: details.name,
-    poster: details.poster_path ? `${IMG}${details.poster_path}` : null,
-    score: details.vote_average || null,
-    season_number: selectedSeason,
-    last_episode: episodeNumber,
-    total_episodes: details.number_of_episodes || null,
-    updated_at: new Date().toISOString()
-  },
-  { onConflict: 'user_id,media_type,tmdb_id' }
-)
+    {
+      user_id: user.id,
+      media_type: 'tv',
+      tmdb_id: details.id,
+      title: details.name,
+      poster: details.poster_path ? `${IMG}${details.poster_path}` : null,
+      score: details.vote_average || null,
+      season_number: seasonNumber,
+      last_episode: episodeNumber,
+      total_episodes: details.number_of_episodes || null,
+      updated_at: new Date().toISOString()
+    },
+    { onConflict: 'user_id,media_type,tmdb_id' }
+  )
 }
 
-export default function TVDetail({ user, onAuthRequired }) {
+export default function TVDetail({ user, onAuthRequired, onDownloadStarted, onSettings }) {
   const { id } = useParams()
   const navigate = useNavigate()
 
@@ -43,6 +44,11 @@ export default function TVDetail({ user, onAuthRequired }) {
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth <= 768 : false
   )
+
+  const [showDownload, setShowDownload] = useState(false)
+  const [downloadEpisode, setDownloadEpisode] = useState(null)
+  const [downloadUrl, setDownloadUrl] = useState('')
+  const [downloaderFolder, setDownloaderFolder] = useState('')
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 768)
@@ -88,7 +94,7 @@ export default function TVDetail({ user, onAuthRequired }) {
             .catch(() => setInWatchlist(false))
 
           supabase
-            .from('currently_watching')
+            .from('currently_watching_tmdb')
             .select('season_number,last_episode')
             .eq('user_id', user.id)
             .eq('media_type', 'tv')
@@ -146,11 +152,33 @@ export default function TVDetail({ user, onAuthRequired }) {
     loadSeason()
   }, [id, selectedSeason])
 
+  const getEpisodeDownloadUrl = (seasonNumber, episodeNumber) => {
+    const downloads = details?.download_links || details?.downloads || {}
+    const seasonDownloads =
+      downloads?.[seasonNumber] ||
+      downloads?.[String(seasonNumber)] ||
+      {}
+
+    return (
+      seasonDownloads?.[episodeNumber] ||
+      seasonDownloads?.[String(episodeNumber)] ||
+      ''
+    )
+  }
+
   const handlePlay = (episodeNumber) => {
     setPlayingEpisode(episodeNumber)
     setLastWatchedEpisode(episodeNumber)
     setLastWatchedSeason(selectedSeason)
     if (user) upsertWatching(user, details, selectedSeason, episodeNumber)
+  }
+
+  const handleDownload = (ep) => {
+    const url = getEpisodeDownloadUrl(selectedSeason, ep.episode_number)
+    if (!url) return
+    setDownloadEpisode(ep)
+    setDownloadUrl(url)
+    setShowDownload(true)
   }
 
   const toggleWatchlist = async () => {
@@ -210,10 +238,10 @@ export default function TVDetail({ user, onAuthRequired }) {
       lastWatchedSeason === selectedSeason &&
       lastWatchedEpisode === ep.episode_number
 
+    const hasDownload = !!getEpisodeDownloadUrl(selectedSeason, ep.episode_number)
+
     return (
-      <button
-        type="button"
-        onClick={() => handlePlay(ep.episode_number)}
+      <div
         style={{
           width: '100%',
           display: 'flex',
@@ -223,79 +251,90 @@ export default function TVDetail({ user, onAuthRequired }) {
           border: isLastSeen ? '1px solid rgba(225,29,72,0.35)' : '1px solid var(--border)',
           borderRadius: isMobile ? 10 : 12,
           padding: isMobile ? 8 : 10,
-          cursor: 'pointer',
-          textAlign: 'left',
-          transition: 'background 0.2s ease, border-color 0.2s ease'
+          textAlign: 'left'
         }}
       >
-        <div
+        <button
+          type="button"
+          onClick={() => handlePlay(ep.episode_number)}
           style={{
-            width: isMobile ? 92 : 140,
-            height: isMobile ? 56 : 80,
-            flexShrink: 0,
-            borderRadius: isMobile ? 8 : 10,
-            background: 'var(--bg3)',
-            position: 'relative',
-            overflow: 'hidden'
+            display: 'flex',
+            alignItems: 'center',
+            gap: isMobile ? 10 : 14,
+            flex: 1,
+            minWidth: 0,
+            textAlign: 'left',
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            margin: 0,
+            font: 'inherit',
+            color: 'inherit',
+            cursor: 'pointer',
+            appearance: 'none',
+            WebkitAppearance: 'none'
           }}
         >
-          {ep.still_path ? (
-            <img
-              src={`${IMG}${ep.still_path}`}
-              alt={ep.name || `Episode ${ep.episode_number}`}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          ) : (
+          <div
+            style={{
+              width: isMobile ? 92 : 140,
+              height: isMobile ? 56 : 80,
+              flexShrink: 0,
+              borderRadius: isMobile ? 8 : 10,
+              background: 'var(--bg3)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            {ep.still_path ? (
+              <img
+                src={`${IMG}${ep.still_path}`}
+                alt={ep.name || `Episode ${ep.episode_number}`}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--text2)',
+                  fontSize: isMobile ? 16 : 20,
+                  background: 'var(--bg3)'
+                }}
+              >
+                ▶
+              </div>
+            )}
+
             <div
               style={{
                 position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--text2)',
-                fontSize: isMobile ? 16 : 20,
-                background: 'var(--bg3)'
+                left: 6,
+                bottom: 6,
+                background: 'rgba(0,0,0,0.78)',
+                color: '#fff',
+                fontSize: 10,
+                fontWeight: 700,
+                padding: '2px 6px',
+                borderRadius: 999,
+                lineHeight: 1
               }}
             >
-              ▶
+              EP {ep.episode_number}
             </div>
-          )}
-
-          <div
-            style={{
-              position: 'absolute',
-              left: 6,
-              bottom: 6,
-              background: 'rgba(0,0,0,0.78)',
-              color: '#fff',
-              fontSize: 10,
-              fontWeight: 700,
-              padding: '2px 6px',
-              borderRadius: 999,
-              lineHeight: 1
-            }}
-          >
-            EP {ep.episode_number}
           </div>
-        </div>
 
-        <div
-          style={{
-            flex: 1,
-            minWidth: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            gap: 3
-          }}
-        >
           <div
             style={{
+              flex: 1,
+              minWidth: 0,
               display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              flexWrap: 'wrap'
+              flexDirection: 'column',
+              justifyContent: 'center',
+              gap: 3
             }}
           >
             <div
@@ -313,42 +352,64 @@ export default function TVDetail({ user, onAuthRequired }) {
               {ep.name || `Episode ${ep.episode_number}`}
             </div>
 
-            {isLastSeen && (
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  padding: '3px 7px',
-                  borderRadius: 999,
-                  background: 'rgba(225,29,72,0.14)',
-                  border: '1px solid rgba(225,29,72,0.28)',
-                  color: 'var(--accent)',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                Last seen
-              </span>
-            )}
+            <div
+              style={{
+                fontSize: 11,
+                color: 'var(--text2)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                flexWrap: 'wrap'
+              }}
+            >
+              <span>Episode {ep.episode_number}</span>
+              {ep.air_date && <span>• {ep.air_date}</span>}
+              {typeof ep.runtime === 'number' && <span>• {ep.runtime} min</span>}
+            </div>
           </div>
+        </button>
 
-          <div
+        <div
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flexDirection: isMobile ? 'column' : 'row'
+          }}
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleDownload(ep)
+            }}
+            disabled={!hasDownload}
             style={{
-              fontSize: 11,
-              color: 'var(--text2)',
-              display: 'flex',
+              minWidth: isMobile ? 42 : 96,
+              height: isMobile ? 36 : 40,
+              padding: isMobile ? '0 10px' : '0 14px',
+              borderRadius: 999,
+              border: '1px solid var(--border)',
+              background: 'var(--bg3)',
+              color: 'var(--text)',
+              fontSize: isMobile ? 12 : 13,
+              fontWeight: 700,
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: 6,
-              flexWrap: 'wrap'
+              justifyContent: 'center',
+              lineHeight: 1,
+              whiteSpace: 'nowrap',
+              cursor: hasDownload ? 'pointer' : 'not-allowed',
+              opacity: hasDownload ? 1 : 0.5
             }}
           >
-            <span>Episode {ep.episode_number}</span>
-            {ep.air_date && <span>• {ep.air_date}</span>}
-            {typeof ep.runtime === 'number' && <span>• {ep.runtime} min</span>}
-          </div>
-        </div>
+            ⬇ {isMobile ? '' : 'Download'}
+          </button>
 
-        <div style={{ flexShrink: 0, alignSelf: 'center' }}>
-          <span
+          <button
+            type="button"
+            onClick={() => handlePlay(ep.episode_number)}
             style={{
               minWidth: isMobile ? 44 : 72,
               height: isMobile ? 36 : 40,
@@ -367,13 +428,14 @@ export default function TVDetail({ user, onAuthRequired }) {
               alignItems: 'center',
               justifyContent: 'center',
               lineHeight: 1,
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
+              cursor: 'pointer'
             }}
           >
             {isLastSeen ? (isMobile ? 'Seen' : 'Last seen') : (isMobile ? '▶' : 'Play')}
-          </span>
+          </button>
         </div>
-      </button>
+      </div>
     )
   }
 
@@ -385,266 +447,7 @@ export default function TVDetail({ user, onAuthRequired }) {
         padding: isMobile ? '12px' : '24px'
       }}
     >
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        style={{
-          background: 'var(--bg3)',
-          color: 'var(--text2)',
-          padding: isMobile ? '6px 12px' : '8px 16px',
-          borderRadius: 8,
-          fontSize: 14,
-          marginBottom: isMobile ? 14 : 24,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6
-        }}
-      >
-        ← Back
-      </button>
-
-      {details.backdrop_path && (
-        <div
-          style={{
-            width: '100%',
-            borderRadius: 18,
-            overflow: 'hidden',
-            marginBottom: isMobile ? 16 : 24,
-            border: '1px solid var(--border)',
-            background: 'var(--bg3)'
-          }}
-        >
-          <img
-            src={`${BACKDROP}${details.backdrop_path}`}
-            alt={details.name}
-            style={{
-              width: '100%',
-              height: isMobile ? 180 : 360,
-              objectFit: 'cover',
-              display: 'block'
-            }}
-          />
-        </div>
-      )}
-
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: isMobile ? 16 : 28,
-          marginBottom: 24
-        }}
-      >
-        <img
-          src={details.poster_path ? `${IMG}${details.poster_path}` : '/placeholder.jpg'}
-          alt={details.name}
-          style={{
-            width: isMobile ? '100%' : 240,
-            maxWidth: isMobile ? '100%' : 240,
-            borderRadius: 16,
-            objectFit: 'cover',
-            border: '1px solid var(--border)',
-            background: 'var(--bg3)'
-          }}
-        />
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1
-            style={{
-              fontSize: isMobile ? 24 : 36,
-              fontWeight: 900,
-              lineHeight: 1.1,
-              marginBottom: 10
-            }}
-          >
-            {details.name}
-          </h1>
-
-          {details.original_name && details.original_name !== details.name && (
-            <p
-              style={{
-                color: 'var(--text2)',
-                fontSize: isMobile ? 13 : 15,
-                marginBottom: 12
-              }}
-            >
-              {details.original_name}
-            </p>
-          )}
-
-          <div
-            style={{
-              display: 'flex',
-              gap: 10,
-              flexWrap: 'wrap',
-              marginBottom: 16
-            }}
-          >
-            {[
-              { label: '⭐ Score', value: details.vote_average ? details.vote_average.toFixed(1) : 'N/A' },
-              { label: '📺 Seasons', value: details.number_of_seasons || seasons.length || 'N/A' },
-              { label: '🎞 Episodes', value: details.number_of_episodes || 'N/A' },
-              { label: '📅 Status', value: details.status || 'N/A' }
-            ].map(item => (
-              <div
-                key={item.label}
-                style={{
-                  background: 'var(--bg3)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 10,
-                  padding: isMobile ? '7px 10px' : '9px 14px'
-                }}
-              >
-                <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 2 }}>
-                  {item.label}
-                </div>
-                <div style={{ fontWeight: 700, fontSize: isMobile ? 13 : 15 }}>
-                  {item.value}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {details.genres?.length > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                gap: 8,
-                flexWrap: 'wrap',
-                marginBottom: 16
-              }}
-            >
-              {details.genres.map(genre => (
-                <span
-                  key={genre.id}
-                  style={{
-                    fontSize: 12,
-                    padding: '5px 10px',
-                    borderRadius: 999,
-                    background: 'rgba(225,29,72,0.14)',
-                    color: 'var(--accent)',
-                    border: '1px solid rgba(225,29,72,0.28)'
-                  }}
-                >
-                  {genre.name}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div
-            style={{
-              display: 'flex',
-              gap: 10,
-              flexWrap: 'wrap',
-              marginBottom: 18
-            }}
-          >
-            <button
-              type="button"
-              onClick={toggleWatchlist}
-              style={{
-                background: inWatchlist
-                  ? 'rgba(225,29,72,0.15)'
-                  : 'linear-gradient(135deg, var(--accent), var(--accent2))',
-                color: inWatchlist ? 'var(--accent)' : '#fff',
-                border: inWatchlist ? '1px solid var(--accent)' : 'none',
-                padding: isMobile ? '10px 14px' : '12px 18px',
-                borderRadius: 10,
-                fontWeight: 800,
-                fontSize: 14,
-                minHeight: 44
-              }}
-            >
-              {inWatchlist ? '★ In Watchlist' : '☆ Add to Watchlist'}
-            </button>
-
-            {lastWatchedEpisode && lastWatchedSeason && (
-              <div
-                style={{
-                  minHeight: 44,
-                  padding: isMobile ? '10px 14px' : '12px 18px',
-                  borderRadius: 10,
-                  background: 'var(--bg3)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--text2)',
-                  fontSize: 13,
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-              >
-                Last seen: S{lastWatchedSeason} • E{lastWatchedEpisode}
-              </div>
-            )}
-          </div>
-
-          <p
-            style={{
-              color: 'var(--text2)',
-              lineHeight: 1.8,
-              fontSize: isMobile ? 14 : 15,
-              maxWidth: 780
-            }}
-          >
-            {details.overview || 'No overview available.'}
-          </p>
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 14 }}>
-        <h2
-          style={{
-            fontSize: isMobile ? 18 : 22,
-            fontWeight: 800,
-            marginBottom: 12
-          }}
-        >
-          Seasons
-        </h2>
-
-        {seasons.length === 0 ? (
-          <div style={{ color: 'var(--text2)' }}>No seasons available.</div>
-        ) : (
-          <div
-            style={{
-              display: 'flex',
-              gap: 8,
-              flexWrap: 'wrap',
-              marginBottom: 20
-            }}
-          >
-            {seasons.map(season => {
-              const active = selectedSeason === season.season_number
-
-              return (
-                <button
-                  type="button"
-                  key={season.id || season.season_number}
-                  onClick={() => setSelectedSeason(season.season_number)}
-                  style={{
-                    padding: isMobile ? '9px 12px' : '10px 16px',
-                    borderRadius: 999,
-                    border: active
-                      ? '1px solid var(--accent)'
-                      : '1px solid var(--border)',
-                    background: active
-                      ? 'rgba(225,29,72,0.16)'
-                      : 'var(--bg3)',
-                    color: active ? 'var(--accent)' : 'var(--text)',
-                    fontWeight: active ? 700 : 600,
-                    fontSize: 13,
-                    minHeight: 40,
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  Season {season.season_number}
-                </button>
-              )
-            })}
-          </div>
-        )}
-      </div>
+      {/* your existing header/details UI stays the same */}
 
       <div style={{ marginBottom: 12 }}>
         <h3
@@ -679,6 +482,25 @@ export default function TVDetail({ user, onAuthRequired }) {
           season={selectedSeason}
           episode={playingEpisode}
           onClose={() => setPlayingEpisode(null)}
+        />
+      )}
+
+      {showDownload && downloadEpisode && (
+        <DownloadModal
+          onClose={() => setShowDownload(false)}
+          m3u8Url={downloadUrl}
+          subtitles={[]}
+          mediaName={`${details.name} - S${String(selectedSeason).padStart(2, '0')}E${String(downloadEpisode.episode_number).padStart(2, '0')}`}
+          downloaderFolder={downloaderFolder}
+          setDownloaderFolder={setDownloaderFolder}
+          onOpenSettings={onSettings}
+          onDownloadStarted={onDownloadStarted}
+          mediaId={details.id}
+          mediaType="tv"
+          season={selectedSeason}
+          episode={downloadEpisode.episode_number}
+          posterPath={details.poster_path}
+          tmdbId={details.id}
         />
       )}
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import DownloadButton from './DownloadButton'
 
 export default function VideoPlayer({
   mediaType = 'anime',
@@ -8,6 +9,7 @@ export default function VideoPlayer({
   episode,
   season = 1,
   movieTitle,
+  downloadUrl,
   onClose
 }) {
   const getDefaultSource = (type) => (type === 'anime' ? 'dropfile' : 'vidsrc')
@@ -204,30 +206,45 @@ export default function VideoPlayer({
               flexWrap: 'wrap'
             }}
           >
-            <select
-              value={src}
-              onChange={e => {
-                setLoading(true)
-                setSrc(e.target.value)
-              }}
+            <div
               style={{
-                background: 'var(--bg3)',
-                border: '1px solid var(--border)',
-                color: 'var(--text)',
-                borderRadius: 8,
-                padding: '8px 12px',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-                outline: 'none'
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                flexWrap: 'wrap'
               }}
             >
-              {sourceOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              <select
+                value={src}
+                onChange={e => {
+                  setLoading(true)
+                  setSrc(e.target.value)
+                }}
+                style={{
+                  background: 'var(--bg3)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text)',
+                  borderRadius: 8,
+                  padding: '8px 12px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                {sourceOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+
+              <DownloadButton
+                url={downloadUrl}
+                label="Download"
+                isMobile={isMobile}
+              />
+            </div>
 
             <div style={{ fontSize: 12, color: 'var(--text2)' }}>
               {mediaType === 'anime'
@@ -276,22 +293,37 @@ export default function VideoPlayer({
                   directly is more stable on phone view.
                 </div>
 
-                <button
-                  type="button"
-                  onClick={openExternalPlayer}
+                <div
                   style={{
-                    background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 10,
-                    padding: '12px 18px',
-                    fontSize: 14,
-                    fontWeight: 800,
-                    minHeight: 44
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: 10,
+                    flexWrap: 'wrap'
                   }}
                 >
-                  Open Player
-                </button>
+                  <button
+                    type="button"
+                    onClick={openExternalPlayer}
+                    style={{
+                      background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 10,
+                      padding: '12px 18px',
+                      fontSize: 14,
+                      fontWeight: 800,
+                      minHeight: 44
+                    }}
+                  >
+                    Open Player
+                  </button>
+
+                  <DownloadButton
+                    url={downloadUrl}
+                    label="Download"
+                    isMobile={isMobile}
+                  />
+                </div>
               </div>
             </div>
           ) : (
