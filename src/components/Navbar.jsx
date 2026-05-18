@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 
-export default function Navbar({ user, profile, onAuthClick, currentPage, setCurrentPage }) {
+export default function Navbar({ user, profile, onAuthClick }) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth <= 768 : false
+  )
+
+  const navigate = useNavigate()
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 768)
@@ -14,24 +19,39 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setMenuOpen(false)
+    navigate('/')
   }
 
+  const navBtnStyle = ({ isActive }) => ({
+    background: isActive ? 'var(--bg3)' : 'transparent',
+    color: isActive ? 'var(--text)' : 'var(--text2)',
+    padding: isMobile ? '6px 10px' : '8px 16px',
+    borderRadius: 8,
+    fontWeight: isActive ? 600 : 400,
+    fontSize: isMobile ? 12 : 14,
+    transition: 'all 0.2s',
+    textTransform: 'capitalize',
+    border: 'none'
+  })
+
   return (
-    <nav style={{
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      background: 'rgba(10,10,15,0.85)',
-      backdropFilter: 'blur(12px)',
-      borderBottom: '1px solid var(--border)',
-      padding: isMobile ? '0 12px' : '0 24px',
-      height: isMobile ? 56 : 64,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between'
-    }}>
-      <div
-        onClick={() => setCurrentPage('home')}
+    <nav
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        background: 'rgba(10,10,15,0.85)',
+        backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid var(--border)',
+        padding: isMobile ? '0 12px' : '0 24px',
+        height: isMobile ? 56 : 64,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}
+    >
+      <Link
+        to="/"
         style={{
           fontWeight: 800,
           fontSize: isMobile ? 18 : 22,
@@ -43,27 +63,24 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
         }}
       >
         Gojo3mk
-      </div>
+      </Link>
 
       <div style={{ display: 'flex', gap: isMobile ? 4 : 8, alignItems: 'center' }}>
-        {['home', 'watchlist'].map(page => (
-          <button
-            key={page}
-            onClick={() => setCurrentPage(page)}
-            style={{
-              background: currentPage === page ? 'var(--bg3)' : 'transparent',
-              color: currentPage === page ? 'var(--text)' : 'var(--text2)',
-              padding: isMobile ? '6px 10px' : '8px 16px',
-              borderRadius: 8,
-              fontWeight: currentPage === page ? 600 : 400,
-              fontSize: isMobile ? 12 : 14,
-              transition: 'all 0.2s',
-              textTransform: 'capitalize'
-            }}
-          >
-            {isMobile ? page.slice(0, 1) : page}
-          </button>
-        ))}
+        <NavLink to="/" end style={navBtnStyle}>
+          {isMobile ? 'H' : 'Home'}
+        </NavLink>
+
+        <NavLink to="/watchlist" style={navBtnStyle}>
+          {isMobile ? 'W' : 'Watchlist'}
+        </NavLink>
+
+        <NavLink to="/tv" style={navBtnStyle}>
+          {isMobile ? 'TV' : 'TV Shows'}
+        </NavLink>
+
+        <NavLink to="/movies" style={navBtnStyle}>
+          {isMobile ? 'M' : 'Movies'}
+        </NavLink>
 
         {user ? (
           <div style={{ position: 'relative' }}>
@@ -88,32 +105,39 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
             </div>
 
             {menuOpen && (
-              <div style={{
-                position: 'absolute',
-                right: 0,
-                top: isMobile ? 40 : 48,
-                background: 'var(--bg2)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                padding: 6,
-                minWidth: isMobile ? 160 : 180,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
-              }}>
-                <div style={{
-                  padding: '8px 10px',
-                  color: 'var(--text2)',
-                  fontSize: 12,
-                  borderBottom: '1px solid var(--border)',
-                  marginBottom: 4,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: isMobile ? 40 : 48,
+                  background: 'var(--bg2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)',
+                  padding: 6,
+                  minWidth: isMobile ? 160 : 180,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
+                }}
+              >
+                <div
+                  style={{
+                    padding: '8px 10px',
+                    color: 'var(--text2)',
+                    fontSize: 12,
+                    borderBottom: '1px solid var(--border)',
+                    marginBottom: 4,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
                   @{profile?.username || user.email}
                 </div>
 
                 <button
-                  onClick={() => { setCurrentPage('profile'); setMenuOpen(false) }}
+                  onClick={() => {
+                    navigate('/profile')
+                    setMenuOpen(false)
+                  }}
                   style={{
                     width: '100%',
                     textAlign: 'left',
@@ -121,17 +145,17 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
                     borderRadius: 6,
                     background: 'transparent',
                     color: 'var(--text)',
-                    fontSize: 13,
-                    transition: 'background 0.2s'
+                    fontSize: 13
                   }}
-                  onMouseEnter={e => e.target.style.background = 'var(--bg3)'}
-                  onMouseLeave={e => e.target.style.background = 'transparent'}
                 >
                   Profile
                 </button>
 
                 <button
-                  onClick={() => { setCurrentPage('currently-watching'); setMenuOpen(false) }}
+                  onClick={() => {
+                    navigate('/currently-watching')
+                    setMenuOpen(false)
+                  }}
                   style={{
                     width: '100%',
                     textAlign: 'left',
@@ -139,11 +163,8 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
                     borderRadius: 6,
                     background: 'transparent',
                     color: 'var(--text)',
-                    fontSize: 13,
-                    transition: 'background 0.2s'
+                    fontSize: 13
                   }}
-                  onMouseEnter={e => e.target.style.background = 'var(--bg3)'}
-                  onMouseLeave={e => e.target.style.background = 'transparent'}
                 >
                   Currently Watching
                 </button>
@@ -157,11 +178,8 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
                     borderRadius: 6,
                     background: 'transparent',
                     color: 'var(--accent)',
-                    fontSize: 13,
-                    transition: 'background 0.2s'
+                    fontSize: 13
                   }}
-                  onMouseEnter={e => e.target.style.background = 'var(--bg3)'}
-                  onMouseLeave={e => e.target.style.background = 'transparent'}
                 >
                   Logout
                 </button>
@@ -181,8 +199,6 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
               transition: 'opacity 0.2s',
               whiteSpace: 'nowrap'
             }}
-            onMouseEnter={e => e.target.style.opacity = 0.85}
-            onMouseLeave={e => e.target.style.opacity = 1}
           >
             Sign In
           </button>
