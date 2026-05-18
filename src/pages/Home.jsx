@@ -18,18 +18,26 @@ export default function Home({ user, onAuthRequired, onSelect }) {
   }, [])
 
   useEffect(() => {
-    setLoading(true)
     const url = query
       ? `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=20&sfw=true`
       : `https://api.jikan.moe/v4/top/anime?limit=20`
 
+    let cancelled = false
+
     fetch(url)
       .then(r => r.json())
       .then(d => {
+        if (cancelled) return
         setAnime(d.data || [])
         setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [query])
 
   useEffect(() => {
@@ -56,6 +64,7 @@ export default function Home({ user, onAuthRequired, onSelect }) {
 
   const handleSearch = (e) => {
     e.preventDefault()
+    setLoading(true)
     setQuery(search.trim())
   }
 
@@ -111,7 +120,7 @@ export default function Home({ user, onAuthRequired, onSelect }) {
           marginBottom: 8,
           textShadow: '0 4px 4px rgba(0,0,0,0.4)'
         }}>
-          Watch Anime Your Way
+          Anime, without the noise
         </h2>
         <p style={{
           maxWidth: 700,
@@ -120,7 +129,7 @@ export default function Home({ user, onAuthRequired, onSelect }) {
           fontSize: isMobile ? 12 : 15,
           textShadow: '0 4px 8px rgba(0,0,0,0.4)'
         }}>
-          
+          Discover, track, and organize your watch list from one place.
         </p>
       </div>
     </section>
@@ -158,7 +167,7 @@ export default function Home({ user, onAuthRequired, onSelect }) {
       {query && (
         <button
           type="button"
-          onClick={() => { setQuery(''); setSearch('') }}
+          onClick={() => { setLoading(true); setQuery(''); setSearch('') }}
           style={{
             background: 'var(--bg3)',
             color: 'var(--text2)',

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import VideoPlayer from '../components/VideoPlayer'
+import { addSiteDownload } from '../utils/siteDownloads'
 
 async function getEpCount(malId) {
   try {
@@ -103,6 +104,19 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
   const handlePlay = (epNum) => {
     setPlayingEp(epNum)
     if (user) upsertWatching(user, details, epNum)
+  }
+
+  const handleSaveDownload = ({ episode, source, dub, url }) => {
+    addSiteDownload({
+      malId: details.mal_id,
+      title: details.title_english || details.title,
+      episode,
+      source,
+      dub,
+      url,
+      poster: details?.images?.jpg?.large_image_url || details?.images?.jpg?.image_url || null,
+      type: 'anime',
+    })
   }
 
   const toggleWatchlist = async () => {
@@ -528,10 +542,12 @@ export default function AnimeDetail({ anime, user, onAuthRequired, onBack }) {
 
       {playingEp && (
         <VideoPlayer
+          open={!!playingEp}
           malId={details?.mal_id}
           title={details?.title_english || details?.title}
           episode={playingEp}
           onClose={() => setPlayingEp(null)}
+          onSave={handleSaveDownload}
         />
       )}
     </div>
