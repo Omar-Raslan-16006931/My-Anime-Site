@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import VideoPlayer from '../components/VideoPlayer'
+import DownloadButton from '../components/DownloadButton'
 
 async function getEpCount(malId) {
   try {
@@ -215,6 +216,11 @@ export default function AnimeDetail({ user, onAuthRequired }) {
         .slice((epPage - 1) * EP_GROUP, epPage * EP_GROUP)
         .map(ep => ({ num: ep.episode ?? ep.mal_id, ep }))
 
+  const getEpisodeDownloadUrl = (epNum) => {
+    const downloads = details?.download_links || details?.downloads || {}
+    return downloads?.[epNum] || downloads?.[String(epNum)] || ''
+  }
+
   const renderThumb = (epNum, ep) => {
     const yt = details?.trailer?.youtube_id
       ? `https://img.youtube.com/vi/${details.trailer.youtube_id}/hqdefault.jpg`
@@ -241,23 +247,43 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   }
 
   const EpisodeRow = ({ epNum, title, romanji, aired, epObj }) => {
-    const isLastSeen = lastWatchedEp === epNum
+  const isLastSeen = lastWatchedEp === epNum
+  const downloadUrl = getEpisodeDownloadUrl(epNum)
 
-    return (
+  return (
+    <div
+      style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        gap: isMobile ? 10 : 14,
+        background: isLastSeen ? 'rgba(225,29,72,0.08)' : 'var(--card)',
+        border: isLastSeen ? '1px solid rgba(225,29,72,0.35)' : '1px solid var(--border)',
+        borderRadius: isMobile ? 10 : 12,
+        padding: isMobile ? 8 : 10,
+        textAlign: 'left',
+        transition: 'background 0.2s ease, border-color 0.2s ease, transform 0.2s ease'
+      }}
+    >
       <button
+        type="button"
         onClick={() => handlePlay(epNum)}
         style={{
-          width: '100%',
           display: 'flex',
           alignItems: 'center',
           gap: isMobile ? 10 : 14,
-          background: isLastSeen ? 'rgba(225,29,72,0.08)' : 'var(--card)',
-          border: isLastSeen ? '1px solid rgba(225,29,72,0.35)' : '1px solid var(--border)',
-          borderRadius: isMobile ? 10 : 12,
-          padding: isMobile ? 8 : 10,
-          cursor: 'pointer',
+          flex: 1,
+          minWidth: 0,
           textAlign: 'left',
-          transition: 'background 0.2s ease, border-color 0.2s ease, transform 0.2s ease'
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          margin: 0,
+          font: 'inherit',
+          color: 'inherit',
+          cursor: 'pointer',
+          appearance: 'none',
+          WebkitAppearance: 'none'
         }}
       >
         <div
@@ -386,41 +412,57 @@ export default function AnimeDetail({ user, onAuthRequired }) {
             {aired && <span>• {aired.split('T')[0]}</span>}
           </div>
         </div>
+      </button>
 
-        <div
+      <div
+        style={{
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          flexDirection: isMobile ? 'column' : 'row'
+        }}
+      >
+        <DownloadButton
+          url={downloadUrl}
+          label={isMobile ? '⬇' : 'Download'}
+          isMobile={isMobile}
           style={{
-            flexShrink: 0,
-            alignSelf: 'center'
+            minWidth: isMobile ? 42 : undefined
+          }}
+        />
+
+        <button
+          type="button"
+          onClick={() => handlePlay(epNum)}
+          style={{
+            minWidth: isMobile ? 44 : 64,
+            height: isMobile ? 36 : 40,
+            padding: isMobile ? '0 10px' : '0 14px',
+            borderRadius: 999,
+            background: isLastSeen
+              ? 'rgba(225,29,72,0.18)'
+              : (isMobile ? 'var(--bg3)' : 'rgba(225,29,72,0.14)'),
+            border: isLastSeen
+              ? '1px solid rgba(225,29,72,0.35)'
+              : (isMobile ? '1px solid var(--border)' : '1px solid rgba(225,29,72,0.28)'),
+            color: isMobile ? 'var(--text)' : 'var(--accent)',
+            fontSize: isMobile ? 12 : 13,
+            fontWeight: 700,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            lineHeight: 1,
+            whiteSpace: 'nowrap',
+            cursor: 'pointer'
           }}
         >
-          <span
-            style={{
-              minWidth: isMobile ? 44 : 64,
-              height: isMobile ? 36 : 40,
-              padding: isMobile ? '0 10px' : '0 14px',
-              borderRadius: 999,
-              background: isLastSeen
-                ? 'rgba(225,29,72,0.18)'
-                : (isMobile ? 'var(--bg3)' : 'rgba(225,29,72,0.14)'),
-              border: isLastSeen
-                ? '1px solid rgba(225,29,72,0.35)'
-                : (isMobile ? '1px solid var(--border)' : '1px solid rgba(225,29,72,0.28)'),
-              color: isMobile ? 'var(--text)' : 'var(--accent)',
-              fontSize: isMobile ? 12 : 13,
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              lineHeight: 1,
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {isLastSeen ? (isMobile ? 'Seen' : 'Last seen') : (isMobile ? '▶' : 'Play')}
-          </span>
-        </div>
-      </button>
-    )
-  }
+          {isLastSeen ? (isMobile ? 'Seen' : 'Last seen') : (isMobile ? '▶' : 'Play')}
+        </button>
+      </div>
+    </div>
+  )
+}
 
   const contentPadding = isMobile ? '12px' : '24px 24px'
 
@@ -740,6 +782,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
           malId={details?.mal_id}
           title={details?.title_english || details?.title}
           episode={playingEp}
+          downloadUrl={getEpisodeDownloadUrl(playingEp)}
           onClose={() => setPlayingEp(null)}
         />
       )}
