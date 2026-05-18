@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
-export default function Navbar({ user, profile, onAuthClick, currentPage, setCurrentPage }) {
+const PRIMARY_PAGES = [
+  { id: 'home', label: 'Discover' },
+  { id: 'watchlist', label: 'Watchlist' },
+  { id: 'downloads', label: 'Downloads' },
+  { id: 'currently-watching', label: 'Watching' },
+  { id: 'settings', label: 'Settings' },
+]
+
+export default function Navbar({ user, profile, onAuthClick, currentPage, setCurrentPage, onOpenDownloads, onOpenSettings, isElectron }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
 
@@ -17,151 +25,89 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
   }
 
   return (
-    <nav style={{
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      background: 'rgba(10,10,15,0.85)',
-      backdropFilter: 'blur(12px)',
-      borderBottom: '1px solid var(--border)',
-      padding: isMobile ? '0 12px' : '0 24px',
-      height: isMobile ? 56 : 64,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between'
-    }}>
-      <div
+    <nav className="topbar">
+      <button
+        className="brand-lockup"
         onClick={() => setCurrentPage('home')}
-        style={{
-          fontWeight: 800,
-          fontSize: isMobile ? 18 : 22,
-          cursor: 'pointer',
-          background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          whiteSpace: 'nowrap'
-        }}
+        type="button"
       >
-        AniWave
-      </div>
+        <span className="brand-lockup__mark">AV</span>
+        <span className="brand-lockup__text">
+          <strong>Anime Vault</strong>
+          <small>Discover, track, and download</small>
+        </span>
+      </button>
 
-      <div style={{ display: 'flex', gap: isMobile ? 4 : 8, alignItems: 'center' }}>
-        {['home', 'watchlist'].map(page => (
+      <div className="topbar__center">
+        {PRIMARY_PAGES.map((page) => (
           <button
-            key={page}
-            onClick={() => setCurrentPage(page)}
-            style={{
-              background: currentPage === page ? 'var(--bg3)' : 'transparent',
-              color: currentPage === page ? 'var(--text)' : 'var(--text2)',
-              padding: isMobile ? '6px 10px' : '8px 16px',
-              borderRadius: 8,
-              fontWeight: currentPage === page ? 600 : 400,
-              fontSize: isMobile ? 12 : 14,
-              transition: 'all 0.2s',
-              textTransform: 'capitalize'
+            key={page.id}
+            className={`nav-pill${currentPage === page.id ? ' nav-pill--active' : ''}`}
+            onClick={() => {
+              if (page.id === 'downloads' && onOpenDownloads) return onOpenDownloads()
+              if (page.id === 'settings' && onOpenSettings) return onOpenSettings()
+              setCurrentPage(page.id)
             }}
+            type="button"
           >
-            {isMobile ? page.slice(0, 1) : page}
+            {isMobile ? page.label.slice(0, 1) : page.label}
           </button>
         ))}
+      </div>
+
+      <div className="topbar__actions">
+        {isElectron && (
+          <button className="topbar__ghost" type="button" onClick={onOpenDownloads}>
+            Desktop
+          </button>
+        )}
 
         {user ? (
-          <div style={{ position: 'relative' }}>
+          <div className="profile-menu-wrap">
             <div
               onClick={() => setMenuOpen(!menuOpen)}
-              style={{
-                width: isMobile ? 32 : 38,
-                height: isMobile ? 32 : 38,
-                borderRadius: '50%',
-                cursor: 'pointer',
-                background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 700,
-                fontSize: isMobile ? 13 : 16,
-                color: '#fff',
-                userSelect: 'none'
-              }}
+              className="profile-badge"
             >
               {(profile?.username || user.email)[0].toUpperCase()}
             </div>
 
             {menuOpen && (
-              <div style={{
-                position: 'absolute',
-                right: 0,
-                top: isMobile ? 40 : 48,
-                background: 'var(--bg2)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                padding: 6,
-                minWidth: isMobile ? 160 : 180,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
-              }}>
-                <div style={{
-                  padding: '8px 10px',
-                  color: 'var(--text2)',
-                  fontSize: 12,
-                  borderBottom: '1px solid var(--border)',
-                  marginBottom: 4,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
-                  @{profile?.username || user.email}
+              <div className="profile-menu">
+                <div className="profile-menu__head">
+                  <span>@{profile?.username || user.email}</span>
                 </div>
 
                 <button
+                  className="profile-menu__item"
                   onClick={() => { setCurrentPage('profile'); setMenuOpen(false) }}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '8px 10px',
-                    borderRadius: 6,
-                    background: 'transparent',
-                    color: 'var(--text)',
-                    fontSize: 13,
-                    transition: 'background 0.2s'
-                  }}
-                  onMouseEnter={e => e.target.style.background = 'var(--bg3)'}
-                  onMouseLeave={e => e.target.style.background = 'transparent'}
                 >
                   Profile
                 </button>
 
                 <button
+                  className="profile-menu__item"
                   onClick={() => { setCurrentPage('currently-watching'); setMenuOpen(false) }}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '8px 10px',
-                    borderRadius: 6,
-                    background: 'transparent',
-                    color: 'var(--text)',
-                    fontSize: 13,
-                    transition: 'background 0.2s'
-                  }}
-                  onMouseEnter={e => e.target.style.background = 'var(--bg3)'}
-                  onMouseLeave={e => e.target.style.background = 'transparent'}
                 >
                   Currently Watching
                 </button>
 
                 <button
+                  className="profile-menu__item"
+                  onClick={() => { setCurrentPage('downloads'); setMenuOpen(false) }}
+                >
+                  Downloads
+                </button>
+
+                <button
+                  className="profile-menu__item"
+                  onClick={() => { setCurrentPage('settings'); setMenuOpen(false) }}
+                >
+                  Settings
+                </button>
+
+                <button
+                  className="profile-menu__item profile-menu__item--danger"
                   onClick={handleLogout}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '8px 10px',
-                    borderRadius: 6,
-                    background: 'transparent',
-                    color: 'var(--accent)',
-                    fontSize: 13,
-                    transition: 'background 0.2s'
-                  }}
-                  onMouseEnter={e => e.target.style.background = 'var(--bg3)'}
-                  onMouseLeave={e => e.target.style.background = 'transparent'}
                 >
                   Logout
                 </button>
@@ -170,19 +116,9 @@ export default function Navbar({ user, profile, onAuthClick, currentPage, setCur
           </div>
         ) : (
           <button
+            className="topbar__auth"
             onClick={onAuthClick}
-            style={{
-              background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
-              color: '#fff',
-              padding: isMobile ? '7px 12px' : '8px 20px',
-              borderRadius: 8,
-              fontWeight: 600,
-              fontSize: isMobile ? 12 : 14,
-              transition: 'opacity 0.2s',
-              whiteSpace: 'nowrap'
-            }}
-            onMouseEnter={e => e.target.style.opacity = 0.85}
-            onMouseLeave={e => e.target.style.opacity = 1}
+            type="button"
           >
             Sign In
           </button>
