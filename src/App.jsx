@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './supabase'
 import Navbar from './components/Navbar'
@@ -19,37 +19,97 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
-      else setLoading(false)
-    })
+  const lastUserIdRef = useRef(null)
+  const initializedRef = useRef(false)
 
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
-      else {
-        setProfile(null)
-        setLoading(false)
-      }
-    })
+  const fetchProfile = useCallback(async (id) => {
+    if (!id) {
+      setProfile(null)
+      setLoading(false)
+      return
+    }
 
-    return () => subscription.unsubscribe()
-  }, [])
-
-  const fetchProfile = async (id) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', id)
       .single()
 
-    setProfile(data)
+    if (!error) {
+      setProfile(data)
+    }
+
     setLoading(false)
-  }
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+
+    const init = async () => {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession()
+
+      if (!mounted) return
+
+      const nextUser = session?.user ?? null
+      setUser(nextUser)
+
+      if (nextUser?.id) {
+        lastUserIdRef.current = nextUser.id
+        await fetchProfile(nextUser.id)
+      } else {
+        lastUserIdRef.current = null
+        setProfile(null)
+        setLoading(false)
+      }
+
+      initializedRef.current = true
+    }
+
+    init()
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return
+
+      const nextUser = session?.user ?? null
+      const nextUserId = nextUser?.id ?? null
+      const prevUserId = lastUserIdRef.current
+
+      if (!initializedRef.current) return
+
+      if (event === 'SIGNED_OUT') {
+        lastUserIdRef.current = null
+        setUser(null)
+        setProfile(null)
+        setLoading(false)
+        return
+      }
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        setUser(nextUser)
+
+        if (nextUserId && nextUserId !== prevUserId) {
+          lastUserIdRef.current = nextUserId
+          setLoading(true)
+          await fetchProfile(nextUserId)
+        }
+
+        return
+      }
+
+      if (event === 'INITIAL_SESSION') {
+        return
+      }
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [fetchProfile])
 
   const handleAuthRequired = () => setShowAuth(true)
 
