@@ -15,10 +15,26 @@ export default function VideoPlayer({
   const getDefaultSource = (type) => (type === 'anime' ? 'dropfile' : 'vidsrc')
 
   const [src, setSrc] = useState(() => getDefaultSource(mediaType))
+  const [dub, setDub] = useState(false)
   const [loading, setLoading] = useState(true)
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth <= 768 : false
   )
+
+  function getAnimeSeasonFromTitle(t = '') {
+    if (!t) return null
+    const str = String(t).toLowerCase()
+    const sMatch = str.match(/season\s+(\d+)/)
+    if (sMatch) return parseInt(sMatch[1], 10)
+    const cMatch = str.match(/cour\s+(\d+)/)
+    if (cMatch) return parseInt(cMatch[1], 10)
+    return null
+  }
+
+  const inferredSeason = mediaType === 'anime' ? getAnimeSeasonFromTitle(title || movieTitle) : null
+  const safeEpisode = Number(episode) || 1
+  const defaultSeason = Number(season) || 1
+  const safeSeason = inferredSeason && defaultSeason === 1 ? inferredSeason : defaultSeason
 
   useEffect(() => {
     setSrc(getDefaultSource(mediaType))
@@ -44,7 +60,7 @@ export default function VideoPlayer({
   }, [])
 
   useEffect(() => {
-    const onKeyDown = e => {
+    const onKeyDown = (e) => {
       if (e.key === 'Escape') onClose?.()
     }
 
@@ -54,32 +70,59 @@ export default function VideoPlayer({
 
   useEffect(() => {
     setLoading(true)
-  }, [mediaType, malId, tmdbId, season, episode, src])
+  }, [mediaType, malId, tmdbId, safeSeason, safeEpisode, src, dub])
 
   const playerUrl = useMemo(() => {
+    const audio = dub ? 'dub' : 'sub'
+
     if (mediaType === 'movie') {
+      if (!tmdbId) return ''
       return `https://vidsrc.to/embed/movie/${tmdbId}`
     }
 
     if (mediaType === 'tv') {
-      return `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${episode}`
+      if (!tmdbId) return ''
+      return `https://vidsrc.to/embed/tv/${tmdbId}/${safeSeason}/${safeEpisode}`
     }
+
+    if (!malId) return ''
 
     switch (src) {
       case 'vidsrc':
-        return `https://vidsrc.to/embed/anime/${malId}/${episode}`
+        return `https://vidsrc.to/embed/anime/${malId}/${safeSeason}-${safeEpisode}`
+      case 'animepahe':
+        return `https://animepahe.ru/anime/${malId}`
+      case 'gogoanime':
+        return `https://gogoanime.tel/search.html?keyword=${encodeURIComponent(title || '')}`
+      case 'zoro':
+        return `https://aniwatch.to/search?keyword=${encodeURIComponent(title || '')}`
       case 'dropfile':
       default:
-        return `https://dropfile.cc/player/tv/mal-${malId}/1/${episode}?audio=sub&lang=en`
+        return `https://dropfile.cc/player/tv/mal-${malId}/${safeSeason}/${safeEpisode}?audio=${audio}&lang=en`
     }
-  }, [mediaType, src, tmdbId, season, episode, malId])
+  }, [mediaType, src, dub, tmdbId, malId, safeSeason, safeEpisode, title])
+
+  const frameKey = useMemo(() => {
+    return [
+      mediaType,
+      src,
+      dub ? 'dub' : 'sub',
+      tmdbId || 'no-tmdb',
+      malId || 'no-mal',
+      safeSeason,
+      safeEpisode,
+      playerUrl
+    ].join(':')
+  }, [mediaType, src, dub, tmdbId, malId, safeSeason, safeEpisode, playerUrl])
 
   const nowPlayingLabel =
     mediaType === 'movie'
       ? 'Movie'
       : mediaType === 'tv'
-        ? `S${season} • E${episode}`
-        : `Episode ${episode}`
+        ? `S${safeSeason} • E${safeEpisode}`
+        : safeSeason && safeSeason > 1
+          ? `S${safeSeason} • E${safeEpisode}`
+          : `Episode ${safeEpisode}`
 
   const displayTitle = movieTitle || title
 
@@ -87,15 +130,26 @@ export default function VideoPlayer({
     mediaType === 'anime'
       ? [
           { value: 'dropfile', label: 'dropfile.cc' },
-          { value: 'vidsrc', label: 'vidsrc.to' }
+          { value: 'vidsrc', label: 'vidsrc.to' },
+          { value: 'animepahe', label: 'animepahe.ru' },
+          { value: 'gogoanime', label: 'gogoanime' },
+          { value: 'zoro', label: 'aniwatch' }
         ]
       : [{ value: 'vidsrc', label: 'vidsrc.to' }]
 
-  const useExternalMobilePlayer = isMobile && (mediaType === 'tv' || mediaType === 'movie')
-
   const openExternalPlayer = () => {
+    if (!playerUrl) return
     window.open(playerUrl, '_blank', 'noopener,noreferrer')
   }
+
+  const alwaysExternal =
+    mediaType === 'anime' &&
+    ['animepahe', 'gogoanime', 'zoro'].includes(src)
+
+  const useExternalMobilePlayer =
+    isMobile && (mediaType === 'tv' || mediaType === 'movie')
+
+  const openExternally = alwaysExternal || useExternalMobilePlayer
 
   return (
     <div
@@ -109,21 +163,20 @@ export default function VideoPlayer({
         display: 'flex',
         alignItems: isMobile ? 'flex-start' : 'center',
         justifyContent: 'center',
-        padding: isMobile ? '12px 12px 20px' : 12,
+        padding: isMobile ? '12px 12px 20px' : 24,
         overflowY: 'auto'
       }}
     >
       <div
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         style={{
           background: 'var(--bg2)',
           border: '1px solid var(--border)',
           borderRadius: isMobile ? 14 : 'var(--radius)',
           width: '100%',
-          maxWidth: 1100,
+          maxWidth: openExternally ? 520 : 1100,
           overflow: 'hidden',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
-          marginTop: isMobile ? 0 : undefined
+          boxShadow: '0 24px 64px rgba(0,0,0,0.6)'
         }}
       >
         <div
@@ -147,7 +200,7 @@ export default function VideoPlayer({
                 marginBottom: 2
               }}
             >
-              Now Playing
+              Now Selected
             </div>
 
             <div style={{ fontWeight: 700, fontSize: isMobile ? 16 : 18 }}>
@@ -174,8 +227,8 @@ export default function VideoPlayer({
             style={{
               background: 'var(--bg3)',
               color: 'var(--text2)',
-              width: 36,
-              height: 36,
+              width: 34,
+              height: 34,
               borderRadius: '50%',
               fontSize: 20,
               display: 'flex',
@@ -191,12 +244,48 @@ export default function VideoPlayer({
 
         <div
           style={{
-            padding: isMobile ? 12 : 16,
+            padding: isMobile ? '14px' : '20px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 14
+            gap: 16
           }}
         >
+          {mediaType === 'anime' && (
+            <div
+              style={{
+                display: 'flex',
+                background: 'var(--bg3)',
+                borderRadius: 999,
+                padding: 3,
+                gap: 3,
+                width: 'fit-content'
+              }}
+            >
+              {['SUB', 'DUB'].map((t, i) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => {
+                    setDub(i === 1)
+                    setLoading(true)
+                  }}
+                  style={{
+                    padding: '4px 16px',
+                    borderRadius: 999,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: '0.05em',
+                    background: dub === (i === 1) ? 'var(--accent)' : 'transparent',
+                    color: dub === (i === 1) ? '#fff' : 'var(--text2)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div
             style={{
               display: 'flex',
@@ -216,7 +305,7 @@ export default function VideoPlayer({
             >
               <select
                 value={src}
-                onChange={e => {
+                onChange={(e) => {
                   setLoading(true)
                   setSrc(e.target.value)
                 }}
@@ -232,7 +321,7 @@ export default function VideoPlayer({
                   outline: 'none'
                 }}
               >
-                {sourceOptions.map(option => (
+                {sourceOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -248,14 +337,54 @@ export default function VideoPlayer({
 
             <div style={{ fontSize: 12, color: 'var(--text2)' }}>
               {mediaType === 'anime'
-                ? 'Anime defaults to dropfile'
+                ? 'Anime may use provider-specific season mapping'
                 : useExternalMobilePlayer
                   ? 'Mobile opens external player'
                   : 'Player source'}
             </div>
           </div>
 
-          {useExternalMobilePlayer ? (
+          {openExternally ? (
+            <div
+              style={{
+                background: 'var(--bg3)',
+                borderRadius: 10,
+                border: '1px solid var(--border)',
+                padding: '18px 16px'
+              }}
+            >
+              <button
+                type="button"
+                onClick={openExternalPlayer}
+                style={{
+                  background: 'var(--accent)',
+                  color: '#fff',
+                  padding: '14px',
+                  borderRadius: 999,
+                  fontWeight: 700,
+                  fontSize: 15,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  width: '100%',
+                  boxShadow: '0 4px 20px rgba(225,29,72,0.35)',
+                  transition: 'background 0.2s, transform 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5,3 19,12 5,21" />
+                </svg>
+                Watch Now
+              </button>
+            </div>
+          ) : !playerUrl ? (
             <div
               style={{
                 background: '#000',
@@ -266,65 +395,11 @@ export default function VideoPlayer({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: 20
+                padding: 20,
+                color: 'var(--text2)'
               }}
             >
-              <div style={{ textAlign: 'center', maxWidth: 420 }}>
-                <div
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 800,
-                    marginBottom: 10,
-                    color: 'var(--text)'
-                  }}
-                >
-                  Open player in a new tab
-                </div>
-
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: 'var(--text2)',
-                    lineHeight: 1.7,
-                    marginBottom: 16
-                  }}
-                >
-                  TV and movie providers can fail inside mobile iframes. Opening the stream
-                  directly is more stable on phone view.
-                </div>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: 10,
-                    flexWrap: 'wrap'
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={openExternalPlayer}
-                    style={{
-                      background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 10,
-                      padding: '12px 18px',
-                      fontSize: 14,
-                      fontWeight: 800,
-                      minHeight: 44
-                    }}
-                  >
-                    Open Player
-                  </button>
-
-                  <DownloadButton
-                    url={downloadUrl}
-                    label="Download"
-                    isMobile={isMobile}
-                  />
-                </div>
-              </div>
+              Missing player data.
             </div>
           ) : (
             <div
@@ -358,15 +433,9 @@ export default function VideoPlayer({
               )}
 
               <iframe
-                key={playerUrl}
+                key={frameKey}
                 src={playerUrl}
-                title={
-                  mediaType === 'movie'
-                    ? `${displayTitle}`
-                    : mediaType === 'tv'
-                      ? `${displayTitle} Season ${season} Episode ${episode}`
-                      : `${displayTitle} Episode ${episode}`
-                }
+                title={`${displayTitle} ${nowPlayingLabel}`}
                 width="100%"
                 height="100%"
                 frameBorder="0"
@@ -388,14 +457,21 @@ export default function VideoPlayer({
             style={{
               fontSize: 12,
               color: 'var(--text2)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
               padding: '8px 12px',
               background: 'var(--bg3)',
               borderRadius: 6
             }}
           >
-            {useExternalMobilePlayer
-              ? 'External open is used only for TV and movies on mobile view.'
-              : 'If the player stays blank, that source may block embedding.'}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4M12 16h.01" />
+            </svg>
+            {openExternally
+              ? 'Opens in a new tab for sources that work better outside iframes.'
+              : 'Anime providers may split seasons into separate entries, so source behavior can differ by title.'}
           </div>
         </div>
       </div>

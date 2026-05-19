@@ -1,5 +1,20 @@
 # React + Vite
 
+## Environment Variables
+
+Create a `.env` file in the root of the project with the following:
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_KEY=your_supabase_anon_key
+VITE_TMDB_API_KEY=your_tmdb_api_key
+VITE_TMDB_BASE_URL=https://api.themoviedb.org/3
+VITE_TMDB_IMAGE_BASE_URL=https://image.tmdb.org/t/p
+```
+
+### Why do I need a TMDB API Key?
+The TMDB API Key is required to fetch details, search, and load images for Movies and TV Shows. You can get one by registering at [TMDB](https://www.themoviedb.org/documentation/api). Restart your dev server after saving the `.env` file.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
