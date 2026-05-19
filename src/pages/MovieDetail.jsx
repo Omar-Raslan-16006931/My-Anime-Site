@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import VideoPlayer from '../components/VideoPlayer'
-import DownloadButton from '../components/DownloadButton'
 import { supabase } from '../supabase'
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
@@ -85,18 +84,6 @@ export default function MovieDetail({ user, onAuthRequired }) {
     }
   }
 
-  const getMovieDownloadUrl = () => {
-    if (!movie) return ''
-
-    return (
-      movie.download_url ||
-      movie.downloadUrl ||
-      movie.google_drive_url ||
-      movie.googleDriveUrl ||
-      ''
-    )
-  }
-
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: 80, color: 'var(--text2)' }}>
@@ -116,7 +103,6 @@ export default function MovieDetail({ user, onAuthRequired }) {
   const year = movie.release_date ? movie.release_date.slice(0, 4) : 'N/A'
   const runtime = movie.runtime ? `${movie.runtime} min` : 'N/A'
   const score = movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'
-  const movieDownloadUrl = getMovieDownloadUrl()
 
   return (
     <div
@@ -312,12 +298,6 @@ export default function MovieDetail({ user, onAuthRequired }) {
             >
               ▶ Play Movie
             </button>
-
-            <DownloadButton
-              url={movieDownloadUrl}
-              label="Download"
-              isMobile={isMobile}
-            />
           </div>
 
           <p
@@ -338,7 +318,6 @@ export default function MovieDetail({ user, onAuthRequired }) {
           mediaType="movie"
           tmdbId={movie.id}
           movieTitle={movie.title}
-          downloadUrl={movieDownloadUrl}
           onClose={() => setPlayingMovie(false)}
         />
       )}
