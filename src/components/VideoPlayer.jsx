@@ -16,7 +16,7 @@ export default function VideoPlayer({
   downloadUrl,
   onClose
 }) {
-  const [src, setSrc] = useState(() => (mediaType === 'anime' ? 'dropfile' : 'vidsrc'))
+  const [src, setSrc] = useState(mediaType === 'anime' ? 'dropfile' : 'vidsrc')
   const [dub, setDub] = useState(false)
   const [quality, setQuality] = useState('auto')
   const [loading, setLoading] = useState(true)
@@ -28,6 +28,8 @@ export default function VideoPlayer({
 
   const videoRef = useRef(null)
   const hlsRef = useRef(null)
+  const resolvedCacheRef = useRef(new Map())
+  const iframeRef = useRef(null)
 
   function getAnimeSeasonFromTitle(t = '') {
     if (!t) return null
@@ -46,9 +48,48 @@ export default function VideoPlayer({
   const displayTitle = movieTitle || title
   const audio = dub ? 'dub' : 'sub'
 
-  useEffect(() => {
-    setSrc(mediaType === 'anime' ? 'dropfile' : 'vidsrc')
-  }, [mediaType])
+  const progressKey = useMemo(() => {
+    return [
+      'vp-progress',
+      mediaType,
+      malId || 'no-mal',
+      tmdbId || 'no-tmdb',
+      imdbId || 'no-imdb',
+      anilistId || 'no-anilist',
+      `s${safeSeason}`,
+      `e${safeEpisode}`,
+      src,
+      audio
+    ].join(':')
+  }, [mediaType, malId, tmdbId, imdbId, anilistId, safeSeason, safeEpisode, src, audio])
+
+  const playbackSignature = useMemo(() => {
+    return JSON.stringify({
+      mediaType,
+      malId: malId || null,
+      tmdbId: tmdbId || null,
+      imdbId: imdbId || null,
+      anilistId: anilistId || null,
+      safeSeason,
+      safeEpisode,
+      src,
+      audio,
+      quality,
+      displayTitle
+    })
+  }, [
+    mediaType,
+    malId,
+    tmdbId,
+    imdbId,
+    anilistId,
+    safeSeason,
+    safeEpisode,
+    src,
+    audio,
+    quality,
+    displayTitle
+  ])
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 768)
@@ -81,10 +122,17 @@ export default function VideoPlayer({
   useEffect(() => {
     let cancelled = false
 
+    const cached = resolvedCacheRef.current.get(playbackSignature)
+    if (cached) {
+      setResolvedSource(cached)
+      setError('')
+      setLoading(false)
+      return
+    }
+
     const loadSource = async () => {
       setLoading(true)
       setError('')
-      setResolvedSource(null)
 
       try {
         const source = await resolvePlayableSource({
@@ -111,7 +159,9 @@ export default function VideoPlayer({
           return
         }
 
+        resolvedCacheRef.current.set(playbackSignature, source)
         setResolvedSource(source)
+        setError('')
         setLoading(false)
       } catch {
         if (!cancelled) {
@@ -126,7 +176,20 @@ export default function VideoPlayer({
     return () => {
       cancelled = true
     }
-  }, [mediaType, imdbId, tmdbId, malId, anilistId, safeSeason, safeEpisode, src, audio, quality, displayTitle])
+  }, [
+    playbackSignature,
+    mediaType,
+    imdbId,
+    tmdbId,
+    malId,
+    anilistId,
+    safeSeason,
+    safeEpisode,
+    audio,
+    quality,
+    src,
+    displayTitle
+  ])
 
   useEffect(() => {
     if (hlsRef.current) {
@@ -140,9 +203,49 @@ export default function VideoPlayer({
     const hlsUrl = resolvedSource.finalUrl || resolvedSource.url
     if (!hlsUrl) return
 
+    const restoreSavedTime = () => {
+      const saved = Number(sessionStorage.getItem(progressKey) || '0')
+      if (Number.isFinite(saved) && saved > 0) {
+        try {
+          video.currentTime = saved
+        } catch {}
+      }
+    }
+
+    const saveCurrentTime = () => {
+      if (!Number.isFinite(video.currentTime)) return
+      sessionStorage.setItem(progressKey, String(video.currentTime))
+    }
+
+    const clearSavedTime = () => {
+      sessionStorage.removeItem(progressKey)
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) saveCurrentTime()
+    }
+
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = hlsUrl
-      return
+      if (video.src !== hlsUrl) {
+        video.src = hlsUrl
+      }
+
+      video.addEventListener('loadedmetadata', restoreSavedTime)
+      video.addEventListener('timeupdate', saveCurrentTime)
+      video.addEventListener('pause', saveCurrentTime)
+      video.addEventListener('ended', clearSavedTime)
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+      window.addEventListener('beforeunload', saveCurrentTime)
+
+      return () => {
+        saveCurrentTime()
+        video.removeEventListener('loadedmetadata', restoreSavedTime)
+        video.removeEventListener('timeupdate', saveCurrentTime)
+        video.removeEventListener('pause', saveCurrentTime)
+        video.removeEventListener('ended', clearSavedTime)
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+        window.removeEventListener('beforeunload', saveCurrentTime)
+      }
     }
 
     if (Hls.isSupported()) {
@@ -151,6 +254,18 @@ export default function VideoPlayer({
       hls.loadSource(hlsUrl)
       hls.attachMedia(video)
 
+      const onMediaAttached = () => {
+        restoreSavedTime()
+      }
+
+      hls.on(Hls.Events.MEDIA_ATTACHED, onMediaAttached)
+      video.addEventListener('loadedmetadata', restoreSavedTime)
+      video.addEventListener('timeupdate', saveCurrentTime)
+      video.addEventListener('pause', saveCurrentTime)
+      video.addEventListener('ended', clearSavedTime)
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+      window.addEventListener('beforeunload', saveCurrentTime)
+
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (data?.fatal) {
           setError('Failed to load HLS stream.')
@@ -158,38 +273,41 @@ export default function VideoPlayer({
           hlsRef.current = null
         }
       })
+
+      return () => {
+        saveCurrentTime()
+        video.removeEventListener('loadedmetadata', restoreSavedTime)
+        video.removeEventListener('timeupdate', saveCurrentTime)
+        video.removeEventListener('pause', saveCurrentTime)
+        video.removeEventListener('ended', clearSavedTime)
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+        window.removeEventListener('beforeunload', saveCurrentTime)
+
+        if (hlsRef.current) {
+          hlsRef.current.destroy()
+          hlsRef.current = null
+        }
+      }
     } else {
       setError('This browser does not support HLS playback here.')
     }
 
-    return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy()
-        hlsRef.current = null
-      }
-    }
-  }, [resolvedSource])
+    return undefined
+  }, [resolvedSource, progressKey])
 
   const playerUrl = useMemo(() => {
     if (!resolvedSource) return ''
     return resolvedSource.finalUrl || resolvedSource.iframeUrl || resolvedSource.url || ''
   }, [resolvedSource])
 
-  const frameKey = useMemo(() => {
-    return [
-      mediaType,
-      src,
-      dub ? 'dub' : 'sub',
-      quality,
-      tmdbId || 'no-tmdb',
-      imdbId || 'no-imdb',
-      malId || 'no-mal',
-      anilistId || 'no-anilist',
-      safeSeason,
-      safeEpisode,
-      playerUrl
-    ].join(':')
-  }, [mediaType, src, dub, quality, tmdbId, imdbId, malId, anilistId, safeSeason, safeEpisode, playerUrl])
+  useEffect(() => {
+    if (!iframeRef.current || !playerUrl || resolvedSource?.type === 'hls') return
+
+    const currentSrc = iframeRef.current.getAttribute('src') || ''
+    if (currentSrc !== playerUrl) {
+      iframeRef.current.setAttribute('src', playerUrl)
+    }
+  }, [playerUrl, resolvedSource])
 
   const nowPlayingLabel =
     mediaType === 'movie'
@@ -581,8 +699,7 @@ export default function VideoPlayer({
               )}
 
               <iframe
-                key={frameKey}
-                src={playerUrl}
+                ref={iframeRef}
                 title={`${displayTitle} ${nowPlayingLabel}`}
                 width="100%"
                 height="100%"
@@ -621,7 +738,7 @@ export default function VideoPlayer({
               ? 'Opens in a new tab for sources that work better outside iframes.'
               : resolvedSource?.type === 'hls'
                 ? 'Using direct HLS playback when available.'
-                : 'Anime providers may split seasons into separate entries, so source behavior can differ by title.'}
+                : 'Iframe providers are cross-origin, so exact resume position may not be controllable from this app.'}
           </div>
         </div>
       </div>
