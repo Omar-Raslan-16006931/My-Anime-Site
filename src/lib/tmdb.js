@@ -3,6 +3,12 @@ const TMDB_BASE_URL =
   import.meta.env.VITE_TMDB_BASE_URL || 'https://api.themoviedb.org/3'
 
 export async function tmdbFetch(path, params = {}) {
+  if (!TMDB_API_KEY) {
+    throw new Error(
+      'Missing TMDB API key: set VITE_TMDB_API_KEY in your environment (.env) and restart the dev server.'
+    )
+  }
+
   const url = new URL(`${TMDB_BASE_URL}${path}`)
 
   url.searchParams.set('api_key', TMDB_API_KEY)
