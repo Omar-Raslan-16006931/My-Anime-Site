@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import Hls from 'hls.js'
 import DownloadButton from './DownloadButton'
+import { QUALITY_OPTIONS, resolvePlayableSource } from '/utils/videoSources'
 
 export default function VideoPlayer({
   mediaType = 'anime',
   malId,
   tmdbId,
+  imdbId,
+  anilistId,
   title,
   episode,
   season = 1,
@@ -12,14 +16,18 @@ export default function VideoPlayer({
   downloadUrl,
   onClose
 }) {
-  const getDefaultSource = (type) => (type === 'anime' ? 'dropfile' : 'vidsrc')
-
-  const [src, setSrc] = useState(() => getDefaultSource(mediaType))
+  const [src, setSrc] = useState(() => (mediaType === 'anime' ? 'dropfile' : 'vidsrc'))
   const [dub, setDub] = useState(false)
+  const [quality, setQuality] = useState('auto')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [resolvedSource, setResolvedSource] = useState(null)
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth <= 768 : false
   )
+
+  const videoRef = useRef(null)
+  const hlsRef = useRef(null)
 
   function getAnimeSeasonFromTitle(t = '') {
     if (!t) return null
@@ -35,9 +43,11 @@ export default function VideoPlayer({
   const safeEpisode = Number(episode) || 1
   const defaultSeason = Number(season) || 1
   const safeSeason = inferredSeason && defaultSeason === 1 ? inferredSeason : defaultSeason
+  const displayTitle = movieTitle || title
+  const audio = dub ? 'dub' : 'sub'
 
   useEffect(() => {
-    setSrc(getDefaultSource(mediaType))
+    setSrc(mediaType === 'anime' ? 'dropfile' : 'vidsrc')
   }, [mediaType])
 
   useEffect(() => {
@@ -69,51 +79,117 @@ export default function VideoPlayer({
   }, [onClose])
 
   useEffect(() => {
-    setLoading(true)
-  }, [mediaType, malId, tmdbId, safeSeason, safeEpisode, src, dub])
+    let cancelled = false
+
+    const loadSource = async () => {
+      setLoading(true)
+      setError('')
+      setResolvedSource(null)
+
+      try {
+        const source = await resolvePlayableSource({
+          mediaType: mediaType === 'anime' ? 'tv' : mediaType,
+          isAnime: mediaType === 'anime',
+          imdbId,
+          tmdbId,
+          malId,
+          anilistId,
+          season: safeSeason,
+          episode: safeEpisode,
+          audio,
+          lang: 'en',
+          quality,
+          preferredProvider: src,
+          title: displayTitle
+        })
+
+        if (cancelled) return
+
+        if (!source) {
+          setError('No playable source found.')
+          setLoading(false)
+          return
+        }
+
+        setResolvedSource(source)
+        setLoading(false)
+      } catch {
+        if (!cancelled) {
+          setError('Failed to load player source.')
+          setLoading(false)
+        }
+      }
+    }
+
+    loadSource()
+
+    return () => {
+      cancelled = true
+    }
+  }, [mediaType, imdbId, tmdbId, malId, anilistId, safeSeason, safeEpisode, src, audio, quality, displayTitle])
+
+  useEffect(() => {
+    if (hlsRef.current) {
+      hlsRef.current.destroy()
+      hlsRef.current = null
+    }
+
+    const video = videoRef.current
+    if (!video || !resolvedSource || resolvedSource.type !== 'hls') return
+
+    const hlsUrl = resolvedSource.finalUrl || resolvedSource.url
+    if (!hlsUrl) return
+
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = hlsUrl
+      return
+    }
+
+    if (Hls.isSupported()) {
+      const hls = new Hls()
+      hlsRef.current = hls
+      hls.loadSource(hlsUrl)
+      hls.attachMedia(video)
+
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data?.fatal) {
+          setError('Failed to load HLS stream.')
+          hls.destroy()
+          hlsRef.current = null
+        }
+      })
+    } else {
+      setError('This browser does not support HLS playback here.')
+    }
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+        hlsRef.current = null
+      }
+    }
+  }, [resolvedSource])
 
   const playerUrl = useMemo(() => {
-    const audio = dub ? 'dub' : 'sub'
-
-    if (mediaType === 'movie') {
-      if (!tmdbId) return ''
-      return `https://vidsrc.to/embed/movie/${tmdbId}`
-    }
-
-    if (mediaType === 'tv') {
-      if (!tmdbId) return ''
-      return `https://vidsrc.to/embed/tv/${tmdbId}/${safeSeason}/${safeEpisode}`
-    }
-
-    if (!malId) return ''
-
-    switch (src) {
-      case 'vidsrc':
-        return `https://vidsrc.to/embed/anime/${malId}/${safeSeason}-${safeEpisode}`
-      case 'animepahe':
-        return `https://animepahe.ru/anime/${malId}`
-      case 'gogoanime':
-        return `https://gogoanime.tel/search.html?keyword=${encodeURIComponent(title || '')}`
-      case 'zoro':
-        return `https://aniwatch.to/search?keyword=${encodeURIComponent(title || '')}`
-      case 'dropfile':
-      default:
-        return `https://dropfile.cc/player/tv/mal-${malId}/${safeSeason}/${safeEpisode}?audio=${audio}&lang=en`
-    }
-  }, [mediaType, src, dub, tmdbId, malId, safeSeason, safeEpisode, title])
+    if (!resolvedSource) return ''
+    return resolvedSource.finalUrl || resolvedSource.iframeUrl || resolvedSource.url || ''
+  }, [resolvedSource])
 
   const frameKey = useMemo(() => {
     return [
       mediaType,
       src,
       dub ? 'dub' : 'sub',
+      quality,
       tmdbId || 'no-tmdb',
+      imdbId || 'no-imdb',
       malId || 'no-mal',
+      anilistId || 'no-anilist',
       safeSeason,
       safeEpisode,
       playerUrl
     ].join(':')
-  }, [mediaType, src, dub, tmdbId, malId, safeSeason, safeEpisode, playerUrl])
+  }, [mediaType, src, dub, quality, tmdbId, imdbId, malId, anilistId, safeSeason, safeEpisode, playerUrl])
 
   const nowPlayingLabel =
     mediaType === 'movie'
@@ -124,16 +200,11 @@ export default function VideoPlayer({
           ? `S${safeSeason} • E${safeEpisode}`
           : `Episode ${safeEpisode}`
 
-  const displayTitle = movieTitle || title
-
   const sourceOptions =
     mediaType === 'anime'
       ? [
           { value: 'dropfile', label: 'dropfile.cc' },
-          { value: 'vidsrc', label: 'vidsrc.to' },
-          { value: 'animepahe', label: 'animepahe.ru' },
-          { value: 'gogoanime', label: 'gogoanime' },
-          { value: 'zoro', label: 'aniwatch' }
+          { value: 'vidsrc', label: 'vidsrc.to' }
         ]
       : [{ value: 'vidsrc', label: 'vidsrc.to' }]
 
@@ -142,14 +213,9 @@ export default function VideoPlayer({
     window.open(playerUrl, '_blank', 'noopener,noreferrer')
   }
 
-  const alwaysExternal =
-    mediaType === 'anime' &&
-    ['animepahe', 'gogoanime', 'zoro'].includes(src)
-
-  const useExternalMobilePlayer =
-    isMobile && (mediaType === 'tv' || mediaType === 'movie')
-
-  const openExternally = alwaysExternal || useExternalMobilePlayer
+  const useExternalMobilePlayer = isMobile && (mediaType === 'tv' || mediaType === 'movie')
+  const openExternally = resolvedSource?.provider === 'vidsrc' && useExternalMobilePlayer
+  const supportsQuality = src === 'dropfile' || src === 'vidsrc'
 
   return (
     <div
@@ -328,11 +394,34 @@ export default function VideoPlayer({
                 ))}
               </select>
 
-              <DownloadButton
-                url={downloadUrl}
-                label="Download"
-                isMobile={isMobile}
-              />
+              {supportsQuality && (
+                <select
+                  value={quality}
+                  onChange={(e) => {
+                    setLoading(true)
+                    setQuality(e.target.value)
+                  }}
+                  style={{
+                    background: 'var(--bg3)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                    borderRadius: 8,
+                    padding: '8px 12px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  {QUALITY_OPTIONS.map((q) => (
+                    <option key={q} value={q}>
+                      {q.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              <DownloadButton url={downloadUrl} label="Download" isMobile={isMobile} />
             </div>
 
             <div style={{ fontSize: 12, color: 'var(--text2)' }}>
@@ -371,18 +460,30 @@ export default function VideoPlayer({
                   boxShadow: '0 4px 20px rgba(225,29,72,0.35)',
                   transition: 'background 0.2s, transform 0.2s'
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="5,3 19,12 5,21" />
                 </svg>
                 Watch Now
               </button>
+            </div>
+          ) : error ? (
+            <div
+              style={{
+                background: '#000',
+                borderRadius: 10,
+                overflow: 'hidden',
+                border: '1px solid var(--border)',
+                minHeight: 240,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 20,
+                color: 'var(--text2)',
+                textAlign: 'center'
+              }}
+            >
+              {error}
             </div>
           ) : !playerUrl ? (
             <div
@@ -400,6 +501,53 @@ export default function VideoPlayer({
               }}
             >
               Missing player data.
+            </div>
+          ) : resolvedSource?.type === 'hls' ? (
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: isMobile ? '16 / 10' : '16 / 9',
+                minHeight: isMobile ? 240 : undefined,
+                background: '#000',
+                borderRadius: 10,
+                overflow: 'hidden',
+                border: '1px solid var(--border)'
+              }}
+            >
+              {loading && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--text2)',
+                    fontSize: 14,
+                    background: 'rgba(0,0,0,0.35)',
+                    zIndex: 1
+                  }}
+                >
+                  Loading player...
+                </div>
+              )}
+
+              <video
+                ref={videoRef}
+                controls
+                autoPlay
+                playsInline
+                disableremoteplayback
+                width="100%"
+                height="100%"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'block',
+                  background: '#000'
+                }}
+              />
             </div>
           ) : (
             <div
@@ -471,7 +619,9 @@ export default function VideoPlayer({
             </svg>
             {openExternally
               ? 'Opens in a new tab for sources that work better outside iframes.'
-              : 'Anime providers may split seasons into separate entries, so source behavior can differ by title.'}
+              : resolvedSource?.type === 'hls'
+                ? 'Using direct HLS playback when available.'
+                : 'Anime providers may split seasons into separate entries, so source behavior can differ by title.'}
           </div>
         </div>
       </div>

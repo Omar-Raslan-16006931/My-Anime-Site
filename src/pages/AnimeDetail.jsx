@@ -27,9 +27,11 @@ async function getEpCount(malId) {
     const media = json?.data?.Media
 
     if (!media) return null
+
     if (media.nextAiringEpisode?.episode) {
       return { n: media.nextAiringEpisode.episode - 1, airing: true }
     }
+
     if (media.episodes) {
       return { n: media.episodes, airing: false }
     }
@@ -70,6 +72,7 @@ export default function AnimeDetail({ user, onAuthRequired, onBack }) {
   const [inWatchlist, setInWatchlist] = useState(false)
   const [loading, setLoading] = useState(true)
   const [epLoading, setEpLoading] = useState(false)
+  const [loadError, setLoadError] = useState('')
   const [activeTab, setActiveTab] = useState('overview')
   const [playingEp, setPlayingEp] = useState(null)
   const [epPage, setEpPage] = useState(1)
@@ -89,6 +92,8 @@ export default function AnimeDetail({ user, onAuthRequired, onBack }) {
     let cancelled = false
 
     setLoading(true)
+    setEpLoading(false)
+    setLoadError('')
     setEpisodes([])
     setEpCount(null)
     setIsAiring(false)
@@ -98,17 +103,28 @@ export default function AnimeDetail({ user, onAuthRequired, onBack }) {
     setDetails(null)
     setInWatchlist(false)
 
-    fetch(`https://api.jikan.moe/v4/anime/${malId}/full`)
-      .then(r => r.json())
-      .then(d => {
+    const fetchDetails = async () => {
+      try {
+        const r = await fetch(`https://api.jikan.moe/v4/anime/${malId}/full`)
+        const d = await r.json()
+
         if (cancelled) return
-        setDetails(d.data || null)
-        setLoading(false)
-      })
-      .catch(() => {
-        if (cancelled) return
-        setLoading(false)
-      })
+
+        if (!r.ok || !d?.data) {
+          throw new Error('DETAILS_FAILED')
+        }
+
+        setDetails(d.data)
+      } catch {
+        if (!cancelled) {
+          setLoadError('Failed to load anime details.')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
 
     const fetchAllEpisodes = async () => {
       setEpLoading(true)
@@ -121,6 +137,7 @@ export default function AnimeDetail({ user, onAuthRequired, onBack }) {
           const d = await r.json()
 
           if (cancelled) return
+          if (!r.ok) break
           if (!d.data || d.data.length === 0) break
 
           all = [...all, ...d.data]
@@ -132,15 +149,19 @@ export default function AnimeDetail({ user, onAuthRequired, onBack }) {
 
         if (!cancelled) {
           setEpisodes(all)
-          setEpLoading(false)
         }
       } catch {
+        if (!cancelled) {
+          setEpisodes([])
+        }
+      } finally {
         if (!cancelled) {
           setEpLoading(false)
         }
       }
     }
 
+    fetchDetails()
     fetchAllEpisodes()
 
     getEpCount(malId).then(data => {
@@ -359,7 +380,7 @@ export default function AnimeDetail({ user, onAuthRequired, onBack }) {
 
           <div
             style={{
-              fontSize: mobileLayout ? 11 : 11,
+              fontSize: 11,
               color: 'var(--text2)',
               lineHeight: 1.2
             }}
@@ -407,10 +428,61 @@ export default function AnimeDetail({ user, onAuthRequired, onBack }) {
     )
   }
 
-  if (!details) {
+  if (loadError || !details) {
     return (
-      <div style={{ textAlign: 'center', padding: 80, color: 'var(--text2)' }}>
-        Anime not found.
+      <div
+        style={{
+          maxWidth: 900,
+          margin: '0 auto',
+          padding: contentPadding
+        }}
+      >
+        <button
+          onClick={() => (onBack ? onBack() : navigate(-1))}
+          style={{
+            background: 'var(--bg3)',
+            color: 'var(--text2)',
+            padding: isMobile ? '6px 12px' : '8px 16px',
+            borderRadius: 8,
+            fontSize: 14,
+            marginBottom: isMobile ? 14 : 24,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6
+          }}
+        >
+          ← Back
+        </button>
+
+        <div
+          style={{
+            border: '1px solid var(--border)',
+            background: 'var(--bg2)',
+            borderRadius: 14,
+            padding: isMobile ? 16 : 24,
+            color: 'var(--text)'
+          }}
+        >
+          <h2 style={{ marginBottom: 8, fontSize: isMobile ? 18 : 22, fontWeight: 800 }}>
+            Anime unavailable
+          </h2>
+          <p style={{ color: 'var(--text2)', lineHeight: 1.6, marginBottom: 16 }}>
+            We could not load this anime right now. Jikan can temporarily fail because it is an unofficial API that scrapes MyAnimeList pages. [web:1410][web:1123]
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
+              color: '#fff',
+              padding: '10px 18px',
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 14
+            }}
+          >
+            Retry
+          </button>
+        </div>
       </div>
     )
   }
@@ -670,9 +742,11 @@ export default function AnimeDetail({ user, onAuthRequired, onBack }) {
       {playingEp != null && (
         <VideoPlayer
           key={`${malId}-${playingEp}`}
+          mediaType="anime"
           malId={details.mal_id}
           title={details.title_english || details.title}
           episode={playingEp}
+          season={1}
           onClose={() => setPlayingEp(null)}
         />
       )}
