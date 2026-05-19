@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import VideoPlayer from '../components/VideoPlayer'
-import DownloadButton from '../components/DownloadButton'
 
 async function getEpCount(malId) {
   try {
@@ -17,6 +16,7 @@ async function getEpCount(malId) {
     if (!m) return null
     if (m.nextAiringEpisode?.episode) return { n: m.nextAiringEpisode.episode - 1, airing: true }
     if (m.episodes) return { n: m.episodes, airing: false }
+    return null
   } catch {
     return null
   }
@@ -24,7 +24,6 @@ async function getEpCount(malId) {
 
 async function upsertWatching(user, details, epNum) {
   if (!user || !details) return
-
   await supabase.from('currently_watching').upsert(
     {
       user_id: user.id,
@@ -40,7 +39,7 @@ async function upsertWatching(user, details, epNum) {
   )
 }
 
-export default function AnimeDetail({ user, onAuthRequired }) {
+export default function AnimeDetail({ user, onAuthRequired, onBack }) {
   const { id } = useParams()
   const navigate = useNavigate()
   const malId = Number(id)
@@ -50,7 +49,6 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   const [epCount, setEpCount] = useState(null)
   const [isAiring, setIsAiring] = useState(false)
   const [inWatchlist, setInWatchlist] = useState(false)
-  const [lastWatchedEp, setLastWatchedEp] = useState(null)
   const [loading, setLoading] = useState(true)
   const [epLoading, setEpLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
@@ -69,20 +67,29 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   useEffect(() => {
     if (!malId) return
 
+    let cancelled = false
+
     setLoading(true)
     setEpisodes([])
     setEpCount(null)
     setIsAiring(false)
     setEpPage(1)
-    setLastWatchedEp(null)
+    setActiveTab('overview')
+    setPlayingEp(null)
+    setDetails(null)
+    setInWatchlist(false)
 
     fetch(`https://api.jikan.moe/v4/anime/${malId}/full`)
       .then(r => r.json())
       .then(d => {
-        setDetails(d.data)
+        if (cancelled) return
+        setDetails(d.data || null)
         setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch(() => {
+        if (cancelled) return
+        setLoading(false)
+      })
 
     const fetchAllEpisodes = async () => {
       setEpLoading(true)
@@ -93,6 +100,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
         const r = await fetch(`https://api.jikan.moe/v4/anime/${malId}/episodes?page=${page}`)
         const d = await r.json()
 
+        if (cancelled) return
         if (!d.data || d.data.length === 0) break
 
         all = [...all, ...d.data]
@@ -103,17 +111,18 @@ export default function AnimeDetail({ user, onAuthRequired }) {
         await new Promise(res => setTimeout(res, 400))
       }
 
-      setEpisodes(all)
-      setEpLoading(false)
+      if (!cancelled) {
+        setEpisodes(all)
+        setEpLoading(false)
+      }
     }
 
     fetchAllEpisodes()
 
     getEpCount(malId).then(data => {
-      if (data) {
-        setEpCount(data.n)
-        setIsAiring(data.airing)
-      }
+      if (cancelled || !data) return
+      setEpCount(data.n)
+      setIsAiring(data.airing)
     })
 
     if (user) {
@@ -123,70 +132,18 @@ export default function AnimeDetail({ user, onAuthRequired }) {
         .eq('user_id', user.id)
         .eq('mal_id', malId)
         .single()
-        .then(({ data }) => setInWatchlist(!!data))
+        .then(({ data }) => {
+          if (!cancelled) setInWatchlist(!!data)
+        })
+        .catch(() => {
+          if (!cancelled) setInWatchlist(false)
+        })
+    }
 
-      supabase
-        .from('currently_watching')
-        .select('last_episode')
-        .eq('user_id', user.id)
-        .eq('mal_id', malId)
-        .single()
-        .then(({ data }) => setLastWatchedEp(data?.last_episode ?? null))
-    } else {
-      setInWatchlist(false)
-      setLastWatchedEp(null)
+    return () => {
+      cancelled = true
     }
   }, [malId, user])
-
-  const handlePlay = (epNum) => {
-    setPlayingEp(epNum)
-    setLastWatchedEp(epNum)
-    if (user) upsertWatching(user, details, epNum)
-  }
-
-  const toggleWatchlist = async () => {
-    if (!user) return onAuthRequired()
-
-    try {
-      if (inWatchlist) {
-        const { error } = await supabase
-          .from('watchlist')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('mal_id', malId)
-
-        if (!error) setInWatchlist(false)
-      } else {
-        const { error } = await supabase.from('watchlist').insert({
-          user_id: user.id,
-          mal_id: malId,
-          title: details.title_english || details.title,
-          poster: details.images?.jpg?.large_image_url,
-          score: details.score
-        })
-
-        if (!error) setInWatchlist(true)
-      }
-    } catch (err) {
-      console.error('Watchlist toggle error:', err)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: 80, color: 'var(--text2)' }}>
-        Loading...
-      </div>
-    )
-  }
-
-  if (!details) {
-    return (
-      <div style={{ textAlign: 'center', padding: 80, color: 'var(--text2)' }}>
-        Anime not found.
-      </div>
-    )
-  }
 
   const trailer = details?.trailer?.embed_url
   const totalEps = epCount || details?.episodes || '?'
@@ -204,10 +161,14 @@ export default function AnimeDetail({ user, onAuthRequired }) {
     ? Array.from({ length: pageEnd - pageStart + 1 }, (_, i) => pageStart + i)
     : []
 
-  const episodesByNumber = new Map(
-    episodes
-      .filter(ep => typeof ep.episode === 'number')
-      .map(ep => [ep.episode, ep])
+  const episodesByNumber = useMemo(
+    () =>
+      new Map(
+        episodes
+          .filter(ep => typeof ep.episode === 'number')
+          .map(ep => [ep.episode, ep])
+      ),
+    [episodes]
   )
 
   const pageItems = totalEpsNumber
@@ -216,16 +177,46 @@ export default function AnimeDetail({ user, onAuthRequired }) {
         .slice((epPage - 1) * EP_GROUP, epPage * EP_GROUP)
         .map(ep => ({ num: ep.episode ?? ep.mal_id, ep }))
 
-  const getEpisodeDownloadUrl = (epNum) => {
-    const downloads = details?.download_links || details?.downloads || {}
-    return downloads?.[epNum] || downloads?.[String(epNum)] || ''
+  const handlePlay = (epNum, epObj) => {
+    const exactEp = Number(epNum)
+    if (!Number.isFinite(exactEp)) return
+    console.log('PLAY EP', { malId, epNum: exactEp, epObj })
+    setPlayingEp(exactEp)
+    if (user) upsertWatching(user, details, exactEp)
+  }
+
+  const toggleWatchlist = async () => {
+    if (!user) return onAuthRequired?.()
+
+    try {
+      if (inWatchlist) {
+        const { error } = await supabase
+          .from('watchlist')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('mal_id', malId)
+
+        if (!error) setInWatchlist(false)
+      } else {
+        const { error } = await supabase.from('watchlist').insert({
+          user_id: user.id,
+          mal_id: malId,
+          title: details?.title_english || details?.title,
+          poster: details?.images?.jpg?.large_image_url,
+          score: details?.score
+        })
+
+        if (!error) setInWatchlist(true)
+      }
+    } catch (err) {
+      console.error('Watchlist toggle error:', err)
+    }
   }
 
   const renderThumb = (epNum, ep) => {
     const yt = details?.trailer?.youtube_id
       ? `https://img.youtube.com/vi/${details.trailer.youtube_id}/hqdefault.jpg`
       : null
-
     const poster = details?.images?.jpg?.large_image_url || details?.images?.jpg?.image_url || null
     const epThumb = ep?.images?.jpg?.image_url || null
     const src = yt || poster || epThumb
@@ -246,228 +237,120 @@ export default function AnimeDetail({ user, onAuthRequired }) {
     )
   }
 
-  const EpisodeRow = ({ epNum, title, romanji, aired, epObj }) => {
-  const isLastSeen = lastWatchedEp === epNum
-  const downloadUrl = getEpisodeDownloadUrl(epNum)
-
-  return (
+  const EpisodeRow = ({ epNum, title, romanji, aired, epObj }) => (
     <div
+      onClick={() => handlePlay(epNum, epObj)}
       style={{
-        width: '100%',
         display: 'flex',
-        alignItems: 'center',
-        gap: isMobile ? 10 : 14,
-        background: isLastSeen ? 'rgba(225,29,72,0.08)' : 'var(--card)',
-        border: isLastSeen ? '1px solid rgba(225,29,72,0.35)' : '1px solid var(--border)',
-        borderRadius: isMobile ? 10 : 12,
-        padding: isMobile ? 8 : 10,
-        textAlign: 'left',
-        transition: 'background 0.2s ease, border-color 0.2s ease, transform 0.2s ease'
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: isMobile ? 8 : 16,
+        background: 'var(--card)',
+        border: '1px solid var(--border)',
+        borderRadius: 10,
+        overflow: 'hidden',
+        cursor: 'pointer',
+        transition: 'border-color 0.2s, transform 0.15s'
       }}
     >
-      <button
-        type="button"
-        onClick={() => handlePlay(epNum)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: isMobile ? 10 : 14,
-          flex: 1,
-          minWidth: 0,
-          textAlign: 'left',
-          background: 'transparent',
-          border: 'none',
-          padding: 0,
-          margin: 0,
-          font: 'inherit',
-          color: 'inherit',
-          cursor: 'pointer',
-          appearance: 'none',
-          WebkitAppearance: 'none'
-        }}
-      >
-        <div
-          style={{
-            width: isMobile ? 92 : 140,
-            height: isMobile ? 56 : 80,
-            flexShrink: 0,
-            borderRadius: isMobile ? 8 : 10,
-            background: 'var(--bg3)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-          {renderThumb(epNum, epObj)}
-
-          <div
-            className="thumb-fallback"
-            style={{
-              display: 'none',
-              position: 'absolute',
-              inset: 0,
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--text2)',
-              fontSize: isMobile ? 16 : 20,
-              background: 'var(--bg3)'
-            }}
-          >
-            ▶
-          </div>
-
-          <div
-            style={{
-              position: 'absolute',
-              left: 6,
-              bottom: 6,
-              background: 'rgba(0,0,0,0.78)',
-              color: '#fff',
-              fontSize: 10,
-              fontWeight: 700,
-              padding: '2px 6px',
-              borderRadius: 999,
-              lineHeight: 1
-            }}
-          >
-            EP {epNum}
-          </div>
-        </div>
-
-        <div
-          style={{
-            flex: 1,
-            minWidth: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            gap: 4
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              flexWrap: 'wrap'
-            }}
-          >
-            <div
-              style={{
-                fontWeight: 700,
-                fontSize: isMobile ? 13 : 14,
-                lineHeight: 1.25,
-                color: 'var(--text)',
-                display: '-webkit-box',
-                WebkitLineClamp: isMobile ? 2 : 1,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden'
-              }}
-            >
-              {title || `Episode ${epNum}`}
-            </div>
-
-            {isLastSeen && (
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  padding: '3px 7px',
-                  borderRadius: 999,
-                  background: 'rgba(225,29,72,0.14)',
-                  border: '1px solid rgba(225,29,72,0.28)',
-                  color: 'var(--accent)',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                Last seen
-              </span>
-            )}
-          </div>
-
-          {romanji && romanji !== title && !isMobile && (
-            <div
-              style={{
-                fontSize: 12,
-                color: 'var(--text2)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {romanji}
-            </div>
-          )}
-
-          <div
-            style={{
-              fontSize: 11,
-              color: 'var(--text2)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              flexWrap: 'wrap'
-            }}
-          >
-            <span>Episode {epNum}</span>
-            {aired && <span>• {aired.split('T')[0]}</span>}
-          </div>
-        </div>
-      </button>
-
       <div
         style={{
+          width: isMobile ? '100%' : 160,
+          height: isMobile ? 120 : 90,
           flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          flexDirection: isMobile ? 'column' : 'row'
+          background: 'var(--bg3)',
+          position: 'relative',
+          overflow: 'hidden'
         }}
       >
-        <DownloadButton
-          url={downloadUrl}
-          label={isMobile ? '⬇' : 'Download'}
-          isMobile={isMobile}
+        {renderThumb(epNum, epObj)}
+        <div
+          className="thumb-fallback"
           style={{
-            minWidth: isMobile ? 42 : undefined
-          }}
-        />
-
-        <button
-          type="button"
-          onClick={() => handlePlay(epNum)}
-          style={{
-            minWidth: isMobile ? 44 : 64,
-            height: isMobile ? 36 : 40,
-            padding: isMobile ? '0 10px' : '0 14px',
-            borderRadius: 999,
-            background: isLastSeen
-              ? 'rgba(225,29,72,0.18)'
-              : (isMobile ? 'var(--bg3)' : 'rgba(225,29,72,0.14)'),
-            border: isLastSeen
-              ? '1px solid rgba(225,29,72,0.35)'
-              : (isMobile ? '1px solid var(--border)' : '1px solid rgba(225,29,72,0.28)'),
-            color: isMobile ? 'var(--text)' : 'var(--accent)',
-            fontSize: isMobile ? 12 : 13,
-            fontWeight: 700,
-            display: 'inline-flex',
+            display: 'none',
+            position: 'absolute',
+            inset: 0,
             alignItems: 'center',
             justifyContent: 'center',
-            lineHeight: 1,
-            whiteSpace: 'nowrap',
-            cursor: 'pointer'
+            color: 'var(--text2)',
+            fontSize: 22,
+            background: 'var(--bg3)'
           }}
         >
-          {isLastSeen ? (isMobile ? 'Seen' : 'Last seen') : (isMobile ? '▶' : 'Play')}
-        </button>
+          ▶
+        </div>
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 4,
+            left: 4,
+            background: 'rgba(0,0,0,0.75)',
+            color: '#fff',
+            fontSize: 11,
+            fontWeight: 700,
+            padding: '2px 6px',
+            borderRadius: 4
+          }}
+        >
+          EP {epNum}
+        </div>
       </div>
+
+      <div style={{ flex: 1, padding: isMobile ? '0 10px 10px' : '8px 0' }}>
+        <div style={{ fontWeight: 600, fontSize: isMobile ? 13 : 14, marginBottom: 3 }}>
+          {title || `Episode ${epNum}`}
+        </div>
+        {romanji && romanji !== title && (
+          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 3 }}>
+            {romanji}
+          </div>
+        )}
+        {aired && <div style={{ fontSize: 11, color: 'var(--text2)' }}>{aired.split('T')[0]}</div>}
+      </div>
+
+      {!isMobile && (
+        <div style={{ paddingRight: 16 }}>
+          <span
+            style={{
+              background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
+              color: '#fff',
+              padding: '7px 16px',
+              borderRadius: 6,
+              fontSize: 13,
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            ▶ Play
+          </span>
+        </div>
+      )}
     </div>
   )
-}
 
   const contentPadding = isMobile ? '12px' : '24px 24px'
 
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: 80, color: 'var(--text2)' }}>
+        Loading...
+      </div>
+    )
+  }
+
+  if (!details) {
+    return (
+      <div style={{ textAlign: 'center', padding: 80, color: 'var(--text2)' }}>
+        Anime not found.
+      </div>
+    )
+  }
+
   return (
     <div
+      key={malId}
       style={{
         maxWidth: 1100,
         margin: '0 auto',
@@ -475,7 +358,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
       }}
     >
       <button
-        onClick={() => navigate(-1)}
+        onClick={() => (onBack ? onBack() : navigate(-1))}
         style={{
           background: 'var(--bg3)',
           color: 'var(--text2)',
@@ -494,61 +377,43 @@ export default function AnimeDetail({ user, onAuthRequired }) {
       <div
         style={{
           display: 'flex',
-          gap: isMobile ? 12 : 32,
-          marginBottom: isMobile ? 16 : 32,
+          gap: isMobile ? 16 : 32,
+          marginBottom: isMobile ? 18 : 32,
           flexWrap: 'wrap',
-          flexDirection: isMobile ? 'column' : 'row',
-          alignItems: isMobile ? 'flex-start' : 'stretch'
+          flexDirection: isMobile ? 'column' : 'row'
         }}
       >
         <img
           src={details?.images?.jpg?.large_image_url || details?.images?.jpg?.image_url}
           alt={details?.title_english || details?.title}
           style={{
-            width: isMobile ? 124 : 200,
-            maxWidth: isMobile ? 124 : 200,
+            width: isMobile ? '100%' : 200,
+            maxWidth: isMobile ? '100%' : 200,
             borderRadius: 'var(--radius)',
             flexShrink: 0,
-            objectFit: 'cover',
-            alignSelf: isMobile ? 'center' : 'flex-start'
+            objectFit: 'cover'
           }}
         />
 
-        <div style={{ flex: 1, minWidth: isMobile ? 0 : 280, width: '100%' }}>
+        <div style={{ flex: 1, minWidth: isMobile ? 0 : 280 }}>
           <h1
             style={{
-              fontSize: isMobile ? 18 : 28,
+              fontSize: isMobile ? 20 : 28,
               fontWeight: 800,
-              marginBottom: 6,
-              lineHeight: 1.18,
-              textAlign: isMobile ? 'center' : 'left'
+              marginBottom: 8,
+              lineHeight: 1.15
             }}
           >
             {details?.title_english || details?.title}
           </h1>
 
           {details?.title && details?.title_english && details.title_english !== details.title && (
-            <p
-              style={{
-                color: 'var(--text2)',
-                marginBottom: 10,
-                fontSize: isMobile ? 11 : 14,
-                textAlign: isMobile ? 'center' : 'left'
-              }}
-            >
+            <p style={{ color: 'var(--text2)', marginBottom: 12, fontSize: isMobile ? 12 : 14 }}>
               {details.title}
             </p>
           )}
 
-          <div
-            style={{
-              display: 'flex',
-              gap: 8,
-              flexWrap: 'wrap',
-              marginBottom: 12,
-              justifyContent: isMobile ? 'center' : 'flex-start'
-            }}
-          >
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
             {[
               { label: '⭐ Score', value: details?.score || 'N/A' },
               { label: '📺 Episodes', value: `${totalEps}${isAiring ? ' aired' : ''}` },
@@ -561,54 +426,17 @@ export default function AnimeDetail({ user, onAuthRequired }) {
                   background: 'var(--bg3)',
                   border: '1px solid var(--border)',
                   borderRadius: 8,
-                  padding: isMobile ? '5px 8px' : '8px 14px',
-                  textAlign: 'center',
-                  minWidth: isMobile ? 86 : 'auto'
+                  padding: isMobile ? '6px 10px' : '8px 14px',
+                  textAlign: 'center'
                 }}
               >
-                <div style={{ fontSize: 10, color: 'var(--text2)' }}>{s.label}</div>
-                <div style={{ fontWeight: 700, fontSize: isMobile ? 12 : 15 }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: 'var(--text2)' }}>{s.label}</div>
+                <div style={{ fontWeight: 700, fontSize: isMobile ? 13 : 15 }}>{s.value}</div>
               </div>
             ))}
           </div>
 
-          {isAiring && (
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                background: '#16a34a22',
-                color: '#4ade80',
-                border: '1px solid #4ade8044',
-                borderRadius: 999,
-                padding: isMobile ? '4px 10px' : '4px 12px',
-                fontSize: 12,
-                fontWeight: 700,
-                marginBottom: 12
-              }}
-            >
-              <span
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  background: '#4ade80'
-                }}
-              />
-              Airing · {totalEps} eps out
-            </div>
-          )}
-
-          <div
-            style={{
-              display: 'flex',
-              gap: 6,
-              flexWrap: 'wrap',
-              marginBottom: 14,
-              justifyContent: isMobile ? 'center' : 'flex-start'
-            }}
-          >
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
             {details?.genres?.map(g => (
               <span
                 key={g.mal_id}
@@ -626,14 +454,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
             ))}
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              gap: 10,
-              flexWrap: 'wrap',
-              justifyContent: isMobile ? 'center' : 'flex-start'
-            }}
-          >
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
               onClick={toggleWatchlist}
               style={{
@@ -642,12 +463,11 @@ export default function AnimeDetail({ user, onAuthRequired }) {
                   : 'linear-gradient(135deg, var(--accent), var(--accent2))',
                 color: inWatchlist ? 'var(--accent)' : '#fff',
                 border: inWatchlist ? '1px solid var(--accent)' : 'none',
-                padding: isMobile ? '8px 14px' : '10px 24px',
+                padding: isMobile ? '9px 16px' : '10px 24px',
                 borderRadius: 8,
                 fontWeight: 600,
-                fontSize: isMobile ? 13 : 14,
-                width: isMobile ? '100%' : 'auto',
-                maxWidth: isMobile ? 260 : 'none'
+                fontSize: 14,
+                width: isMobile ? '100%' : 'auto'
               }}
             >
               {inWatchlist ? '★ In Watchlist' : '☆ Add to Watchlist'}
@@ -703,7 +523,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
       )}
 
       {activeTab === 'episodes' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {hasPagedDropdown && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
               <select
@@ -737,7 +557,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
           ) : pageItems.length > 0 ? (
             pageItems.map(({ num, ep }) => (
               <EpisodeRow
-                key={num}
+                key={`${malId}-${num}`}
                 epNum={num}
                 title={ep?.title}
                 romanji={ep?.title_romanji}
@@ -777,12 +597,12 @@ export default function AnimeDetail({ user, onAuthRequired }) {
         </div>
       )}
 
-      {playingEp && (
+      {playingEp != null && (
         <VideoPlayer
+          key={`${malId}-${playingEp}`}
           malId={details?.mal_id}
           title={details?.title_english || details?.title}
           episode={playingEp}
-          downloadUrl={getEpisodeDownloadUrl(playingEp)}
           onClose={() => setPlayingEp(null)}
         />
       )}

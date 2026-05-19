@@ -8,6 +8,7 @@ export default function TVShows() {
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState('')
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth <= 768 : false
   )
@@ -21,6 +22,7 @@ export default function TVShows() {
   useEffect(() => {
     const load = async () => {
       setLoading(true)
+      setErrorMsg('')
       try {
         const data = query
           ? await searchTV(query)
@@ -29,6 +31,7 @@ export default function TVShows() {
         setShows(data?.results || [])
       } catch (err) {
         console.error('TV load error:', err)
+        setErrorMsg(err.message || 'Failed to load TV shows.')
         setShows([])
       }
       setLoading(false)
@@ -125,7 +128,11 @@ export default function TVShows() {
         {query ? `Results for "${query}"` : 'Popular TV Shows'}
       </h2>
 
-      {loading ? (
+      {errorMsg ? (
+        <div style={{ color: '#ef4444', padding: 40, textAlign: 'center', background: 'rgba(239, 68, 68, 0.1)', borderRadius: 10, border: '1px solid #ef4444' }}>
+          {errorMsg}
+        </div>
+      ) : loading ? (
         <div style={{ color: 'var(--text2)', padding: 40, textAlign: 'center' }}>
           Loading...
         </div>

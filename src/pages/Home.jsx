@@ -96,77 +96,9 @@ export default function Home({ user, onAuthRequired }) {
     return 'Anime'
   }
 
-  const renderBanner = () => (
-    <section
-      style={{
-        marginBottom: isMobile ? 16 : 32,
-        borderRadius: isMobile ? 14 : 18,
-        overflow: 'hidden',
-        position: 'relative',
-        minHeight: isMobile ? 140 : 260,
-        background: 'linear-gradient(135deg, rgba(225,29,72,0.15), rgba(168,85,247,0.18))',
-        border: '1px solid var(--border)'
-      }}
-    >
-      <img
-        src="/LuffyCrunchyroll.png"
-        alt="Banner"
-        style={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'fill',
-          opacity: 0.72
-        }}
-      />
+  
 
-      <div style={{
-        position: 'relative',
-        zIndex: 1,
-        padding: isMobile ? '14px 12px' : '28px 24px',
-        minHeight: isMobile ? 140 : 210,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        textAlign: 'center',
-        backdropFilter: 'blur(0px)'
-      }}>
-        <p style={{
-          fontSize: isMobile ? 11 : 13,
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase',
-          color: 'var(--text2)',
-          marginBottom: 8,
-          fontWeight: 700,
-          textShadow: '0 4px 4px rgba(0,0,0,0.4)'
-        }}>
-         
-        </p>
-        <h2 style={{
-          fontSize: isMobile ? 18 : 'clamp(21px, 4vw, 41px)',
-          lineHeight: 1.05,
-          fontWeight: 900,
-          color: '#f2a049',
-          marginBottom: 8,
-          textShadow: '0 4px 4px rgba(0,0,0,0.4)'
-        }}>
-          Fuck Crunchyroll And The Jews
-        </h2>
-        <p style={{
-          maxWidth: 700,
-          margin: '0 auto',
-          color: 'rgba(255,255,255,0.78)',
-          fontSize: isMobile ? 12 : 15,
-          textShadow: '0 4px 8px rgba(0,0,0,0.4)'
-        }}>
-          
-        </p>
-      </div>
-    </section>
-  )
-
- const renderSearch = () => (
+  const renderSearch = () => (
     <form
       onSubmit={handleSearch}
       style={{
@@ -183,7 +115,14 @@ export default function Home({ user, onAuthRequired }) {
         onChange={e => setSearch(e.target.value)}
         style={{
           flex: 1,
-          padding: isMobile ? '10px 12px' : undefined
+          padding: isMobile ? '12px 14px' : '10px 14px',
+          background: 'var(--bg3)',
+          color: 'var(--text)',
+          border: '1px solid var(--border)',
+          borderRadius: 10,
+          outline: 'none',
+          fontSize: 14,
+          minHeight: 44
         }}
       />
 
@@ -193,11 +132,12 @@ export default function Home({ user, onAuthRequired }) {
           background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
           color: '#fff',
           padding: '10px 18px',
-          borderRadius: 8,
-          fontWeight: 600,
+          borderRadius: 10,
+          fontWeight: 700,
           fontSize: 14,
           whiteSpace: 'nowrap',
-          width: isMobile ? '100%' : 'auto'
+          width: isMobile ? '100%' : 'auto',
+          minHeight: 44
         }}
       >
         Search
@@ -213,10 +153,13 @@ export default function Home({ user, onAuthRequired }) {
           style={{
             background: 'var(--bg3)',
             color: 'var(--text2)',
+            border: '1px solid var(--border)',
             padding: '10px 16px',
-            borderRadius: 8,
+            borderRadius: 10,
             fontSize: 14,
-            width: isMobile ? '100%' : 'auto'
+            fontWeight: 600,
+            width: isMobile ? '100%' : 'auto',
+            minHeight: 44
           }}
         >
           Clear
@@ -402,99 +345,101 @@ export default function Home({ user, onAuthRequired }) {
       </div>
     )
   }
-const renderBrowseButtons = () => (
-  <div
-    style={{
-      display: 'flex',
-      gap: 10,
-      flexWrap: 'wrap',
-      marginBottom: isMobile ? 14 : 20,
-      justifyContent: isMobile ? 'stretch' : 'flex-start'
-    }}
-  >
-    <button
-      type="button"
-      onClick={() => navigate('/tv')}
+
+  const renderBrowseButtons = () => (
+    <div
       style={{
-        flex: isMobile ? '1 1 0' : '0 0 auto',
-        background: 'var(--bg3)',
-        color: 'var(--text)',
-        border: '1px solid var(--border)',
-        padding: isMobile ? '10px 12px' : '10px 16px',
-        borderRadius: 10,
-        fontSize: 14,
-        fontWeight: 700,
-        minHeight: 42
+        display: 'flex',
+        gap: 10,
+        flexWrap: 'wrap',
+        marginBottom: isMobile ? 14 : 20,
+        justifyContent: isMobile ? 'stretch' : 'flex-start'
       }}
     >
-      📺 TV Shows
-    </button>
-
-    <button
-      type="button"
-      onClick={() => navigate('/movies')}
-      style={{
-        flex: isMobile ? '1 1 0' : '0 0 auto',
-        background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
-        color: '#fff',
-        padding: isMobile ? '10px 12px' : '10px 16px',
-        borderRadius: 10,
-        fontSize: 14,
-        fontWeight: 700,
-        minHeight: 42
-      }}
-    >
-      🎬 Movies
-    </button>
-  </div>
-)
-
-const renderAnimeGrid = () => (
-  <div style={{ flex: 1, minWidth: 0 }}>
-    {renderBrowseButtons()}
-
-    <h2
-      style={{
-        fontSize: isMobile ? 16 : 20,
-        fontWeight: 700,
-        marginBottom: isMobile ? 14 : 24,
-        color: 'var(--text2)'
-      }}
-    >
-      {query ? `Results for "${query}"` : '🔥 Top Anime'}
-    </h2>
-
-    {loading ? (
-      <div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)' }}>
-        Loading...
-      </div>
-    ) : (
-      <div
+      <button
+        type="button"
+        onClick={() => navigate('/tv')}
         style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile
-            ? 'repeat(2, minmax(0, 1fr))'
-            : 'repeat(auto-fill, minmax(160px, 1fr))',
-          gap: isMobile ? 10 : 20
+          flex: isMobile ? '1 1 0' : '0 0 auto',
+          background: 'var(--bg3)',
+          color: 'var(--text)',
+          border: '1px solid var(--border)',
+          padding: isMobile ? '10px 12px' : '10px 16px',
+          borderRadius: 10,
+          fontSize: 14,
+          fontWeight: 700,
+          minHeight: 42
         }}
       >
-        {anime.map(a => (
-          <AnimeCard
-            key={a.mal_id}
-            anime={a}
-            user={user}
-            onAuthRequired={onAuthRequired}
-            compact={isMobile}
-          />
-        ))}
-      </div>
-    )}
-  </div>
-)
+        📺 TV Shows
+      </button>
+
+      <button
+        type="button"
+        onClick={() => navigate('/movies')}
+        style={{
+          flex: isMobile ? '1 1 0' : '0 0 auto',
+          background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
+          color: '#fff',
+          padding: isMobile ? '10px 12px' : '10px 16px',
+          borderRadius: 10,
+          fontSize: 14,
+          fontWeight: 700,
+          minHeight: 42
+        }}
+      >
+        🎬 Movies
+      </button>
+    </div>
+  )
+
+  const renderAnimeGrid = () => (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      {renderBrowseButtons()}
+
+      <h2
+        style={{
+          fontSize: isMobile ? 16 : 20,
+          fontWeight: 700,
+          marginBottom: isMobile ? 14 : 24,
+          color: 'var(--text2)'
+        }}
+      >
+        {query ? `Results for "${query}"` : '🔥 Top Anime'}
+      </h2>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)' }}>
+          Loading...
+        </div>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile
+              ? 'repeat(2, minmax(0, 1fr))'
+              : 'repeat(auto-fill, minmax(160px, 1fr))',
+            gap: isMobile ? 10 : 20
+          }}
+        >
+          {anime.map(a => (
+            <AnimeCard
+              key={a.mal_id}
+              anime={a}
+              user={user}
+              onAuthRequired={onAuthRequired}
+              compact={isMobile}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <div style={{ padding: isMobile ? 12 : 24 }}>
-      {renderBanner()}
+      
+      {renderSearch()}
       <div style={{ display: 'flex', gap: 24, flexDirection: isMobile ? 'column' : 'row' }}>
         {renderWatching()}
         {renderAnimeGrid()}
