@@ -62,7 +62,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
           whiteSpace: 'nowrap'
         }}
       >
-        Gojo3mk
+        AniWave
       </Link>
 
       <div style={{ display: 'flex', gap: isMobile ? 4 : 8, alignItems: 'center' }}>
