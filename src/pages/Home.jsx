@@ -3,6 +3,21 @@ import { useNavigate } from 'react-router-dom'
 import AnimeCard from '../components/AnimeCard'
 import { supabase } from '../supabase'
 
+async function fetchJikan(url, retries = 3) {
+  let res;
+  for (let i = 0; i < retries; i++) {
+    res = await fetch(url);
+    if (res.status === 429) {
+      const retryAfter = res.headers.get('retry-after');
+      const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 1000 * (i + 1);
+      await new Promise(r => setTimeout(r, waitTime));
+      continue;
+    }
+    return res;
+  }
+  return res;
+}
+
 export default function Home({ user, onAuthRequired }) {
   const navigate = useNavigate()
 
@@ -34,7 +49,7 @@ export default function Home({ user, onAuthRequired }) {
       ? `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=20&sfw=true`
       : `https://api.jikan.moe/v4/top/anime?limit=20`
 
-    fetch(url)
+    fetchJikan(url)
       .then(r => r.json())
       .then(d => {
         setAnime(d.data || [])

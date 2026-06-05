@@ -3,6 +3,21 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import VideoPlayer from '../components/VideoPlayer'
 
+async function fetchJikan(url, options = {}, retries = 3) {
+  let res;
+  for (let i = 0; i < retries; i++) {
+    res = await fetch(url, options);
+    if (res.status === 429) {
+      const retryAfter = res.headers.get('retry-after');
+      const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 1000 * (i + 1);
+      await new Promise(r => setTimeout(r, waitTime));
+      continue;
+    }
+    return res;
+  }
+  return res;
+}
+
 async function getEpCount(malId) {
   try {
     const query = `
@@ -17,11 +32,21 @@ async function getEpCount(malId) {
       }
     `
 
-    const res = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables: { id: malId } })
-    })
+    let res;
+    for (let i = 0; i < 3; i++) {
+      res = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables: { id: malId } })
+      });
+      if (res.status === 429) {
+        const retryAfter = res.headers.get('retry-after');
+        const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 1000 * (i + 1);
+        await new Promise(r => setTimeout(r, waitTime));
+        continue;
+      }
+      break;
+    }
 
     const json = await res.json()
     const media = json?.data?.Media
@@ -155,7 +180,7 @@ export default function AnimeDetail({ user, onAuthRequired, onBack }) {
 
     const fetchDetails = async () => {
       try {
-        const r = await fetch(`https://api.jikan.moe/v4/anime/${malId}/full`)
+        const r = await fetchJikan(`https://api.jikan.moe/v4/anime/${malId}/full`)
         const d = await r.json()
 
         if (cancelled) return
@@ -176,7 +201,7 @@ export default function AnimeDetail({ user, onAuthRequired, onBack }) {
 
       try {
         while (true) {
-          const r = await fetch(`https://api.jikan.moe/v4/anime/${malId}/episodes?page=${page}`)
+          const r = await fetchJikan(`https://api.jikan.moe/v4/anime/${malId}/episodes?page=${page}`)
           const d = await r.json()
 
           if (cancelled) return
