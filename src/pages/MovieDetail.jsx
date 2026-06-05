@@ -7,6 +7,21 @@ const API_KEY = import.meta.env.VITE_TMDB_API_KEY
 const IMG = 'https://image.tmdb.org/t/p/w500'
 const BACKDROP = 'https://image.tmdb.org/t/p/original'
 
+async function fetchRetry(url, retries = 3) {
+  let res;
+  for (let i = 0; i < retries; i++) {
+    res = await fetch(url);
+    if (res.status === 429) {
+      const retryAfter = res.headers.get('retry-after');
+      const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 1000 * (i + 1);
+      await new Promise(r => setTimeout(r, waitTime));
+      continue;
+    }
+    return res;
+  }
+  return res;
+}
+
 export default function MovieDetail({ user, onAuthRequired }) {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -28,7 +43,7 @@ export default function MovieDetail({ user, onAuthRequired }) {
     const loadMovie = async () => {
       try {
         setLoading(true)
-        const res = await fetch(
+        const res = await fetchRetry(
           `https://api.themoviedb.org/3/movie/${id}?api_key=${API_KEY}`
         )
         const data = await res.json()

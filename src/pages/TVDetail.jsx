@@ -27,6 +27,21 @@ async function upsertWatching(user, details, seasonNumber, episodeNumber) {
 )
 }
 
+async function fetchRetry(url, retries = 3) {
+  let res;
+  for (let i = 0; i < retries; i++) {
+    res = await fetch(url);
+    if (res.status === 429) {
+      const retryAfter = res.headers.get('retry-after');
+      const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 1000 * (i + 1);
+      await new Promise(r => setTimeout(r, waitTime));
+      continue;
+    }
+    return res;
+  }
+  return res;
+}
+
 export default function TVDetail({ user, onAuthRequired }) {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -64,7 +79,7 @@ export default function TVDetail({ user, onAuthRequired }) {
       setLastWatchedSeason(null)
 
       try {
-        const res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${API_KEY}`)
+        const res = await fetchRetry(`https://api.themoviedb.org/3/tv/${id}?api_key=${API_KEY}`)
         const json = await res.json()
         setDetails(json)
 
@@ -130,7 +145,7 @@ export default function TVDetail({ user, onAuthRequired }) {
         setSeasonLoading(true)
         setSeasonData(null)
 
-        const res = await fetch(
+        const res = await fetchRetry(
           `https://api.themoviedb.org/3/tv/${id}/season/${selectedSeason}?api_key=${API_KEY}`
         )
         const data = await res.json()
