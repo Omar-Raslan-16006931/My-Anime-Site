@@ -1,114 +1,278 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import Hls from 'hls.js'
+import Icon from './Icons'
+import { availableSources, DEFAULT_SOURCE } from '../lib/sources'
+import { allmangaResolve } from '../lib/allmanga'
+import { anilistIdFromMal, animeTmdbInfo } from '../lib/anilist'
 
-export default function VideoPlayer({ malId, title, episode, onClose }) {
-  const [src, setSrc] = useState('dropfile')
-  const [dub, setDub] = useState(false)
+export default function VideoPlayer({
+  mediaType = 'anime',
+  malId,
+  tmdbId,
+  imdbId,
+  anilistId: anilistIdProp,
+  title,
+  movieTitle,
+  episode = 1,
+  season = 1,
+  onClose,
+}) {
+  const type = mediaType === 'anime' ? 'anime' : mediaType
+  const displayTitle = movieTitle || title
+  const [audio, setAudio] = useState('sub')
+  const [sourceId, setSourceId] = useState(DEFAULT_SOURCE[type] || 'videasy')
+  const [anilistId, setAnilistId] = useState(anilistIdProp || null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [streams, setStreams] = useState([])      // for resolve sources
+  const [streamIdx, setStreamIdx] = useState(0)
 
- const buildURL = () => {
-  const audio = dub ? 'dub' : 'sub'
-  switch (src) {
-    case 'vidsrc':
-      return `https://vidsrc.to/embed/anime/${malId}/1-${episode}`
-    case 'animepahe':
-      return `https://animepahe.ru/anime/${malId}`
-    case 'gogoanime':
-      return `https://gogoanime.tel/search.html?keyword=${encodeURIComponent(title)}`
-    case 'zoro':
-      return `https://aniwatch.to/search?keyword=${encodeURIComponent(title)}`
-    default: // dropfile
-      return `https://dropfile.cc/player/tv/mal-${malId}/1/${episode}?audio=${audio}&lang=en`
+  const videoRef = useRef(null)
+  const hlsRef = useRef(null)
+  const iframeRef = useRef(null)
+
+  const safeEpisode = Number(episode) || 1
+  const safeSeason = Number(season) || 1
+
+  // Lock background scroll + ESC to close.
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e) => e.key === 'Escape' && onClose?.()
+    window.addEventListener('keydown', onKey)
+    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey) }
+  }, [onClose])
+
+  // Resolve AniList id for anime embeds that need it.
+  useEffect(() => {
+    if (type === 'anime' && !anilistId && malId) {
+      anilistIdFromMal(malId).then((id) => id && setAnilistId(id))
+    }
+  }, [type, malId, anilistId])
+
+  // Map anime → TMDB id + real season/episode (ani.zip) so every TV source
+  // also works for anime with correct season numbering.
+  const [animeTmdb, setAnimeTmdb] = useState(null)
+  useEffect(() => {
+    if (type !== 'anime' || !anilistId) return
+    let on = true
+    animeTmdbInfo(anilistId, safeEpisode).then((m) => { if (on) setAnimeTmdb(m) })
+    return () => { on = false }
+  }, [type, anilistId, safeEpisode])
+
+  const ctx = useMemo(() => ({
+    type, tmdbId, imdbId, malId, anilistId, animeTmdb,
+    season: safeSeason, episode: safeEpisode, title: displayTitle, audio,
+  }), [type, tmdbId, imdbId, malId, anilistId, animeTmdb, safeSeason, safeEpisode, displayTitle, audio])
+
+  const sources = useMemo(() => availableSources(ctx), [ctx])
+  const active = sources.find((s) => s.source.id === sourceId) || sources[0]
+  const activeId = active?.source.id
+
+  const progressKey = useMemo(
+    () => `vp:${type}:${malId || tmdbId || imdbId}:s${safeSeason}:e${safeEpisode}:${audio}`,
+    [type, malId, tmdbId, imdbId, safeSeason, safeEpisode, audio]
+  )
+
+  // Auto-advance to the next source when the current one can't deliver.
+  const advanceSource = () => {
+    const idx = sources.findIndex((s) => s.source.id === activeId)
+    const next = sources[idx + 1]
+    if (next) { setSourceId(next.source.id); return true }
+    return false
   }
-}
 
-  const watchNow = () => {
-    window.open(buildURL(), '_blank', 'noopener,noreferrer')
-  }
+  // Resolve the active source.
+  useEffect(() => {
+    let cancelled = false
+    setError('')
+    setStreams([])
+    setStreamIdx(0)
+
+    if (!active) { setError('No source available for this title.'); setLoading(false); return }
+
+    if (active.target.kind === 'resolve') {
+      setLoading(true)
+      allmangaResolve({ title: displayTitle, episode: safeEpisode, translationType: audio })
+        .then((res) => {
+          if (cancelled) return
+          if (!res?.ok || !res.streams?.length) {
+            // AllManga miss → fall back to the next source automatically.
+            if (!advanceSource()) { setError('No working source found. Try a different one.'); setLoading(false) }
+            return
+          }
+          setStreams(res.streams)
+          setLoading(false)
+        })
+        .catch(() => { if (!cancelled && !advanceSource()) { setError('Source failed. Try another.'); setLoading(false) } })
+    } else {
+      setLoading(true) // iframe onLoad clears it
+    }
+
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, displayTitle, safeEpisode, audio, active])
+
+  // Watchdog: never spin forever — clear the loader after a grace period so the
+  // user can read the source list and switch manually.
+  useEffect(() => {
+    if (!loading) return
+    const t = setTimeout(() => setLoading(false), 12000)
+    return () => clearTimeout(t)
+  }, [loading, activeId])
+
+  const currentStream = streams[streamIdx] || null
+
+  // HLS / direct video playback for resolve sources.
+  useEffect(() => {
+    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null }
+    const video = videoRef.current
+    if (!video || !currentStream) return
+
+    const url = currentStream.url
+    const isHls = currentStream.type === 'hls' || url.includes('.m3u8')
+    let dead = false
+
+    // A broken stream tries the next server, then the next source, before erroring.
+    const failStream = () => {
+      if (dead) return
+      dead = true
+      if (streamIdx + 1 < streams.length) { setStreamIdx(streamIdx + 1); return }
+      if (!advanceSource()) setError('Stream failed — try another server or source.')
+    }
+
+    const restore = () => {
+      const saved = Number(sessionStorage.getItem(progressKey) || '0')
+      if (saved > 0) { try { video.currentTime = saved } catch { /* ignore */ } }
+    }
+    const save = () => { if (Number.isFinite(video.currentTime)) sessionStorage.setItem(progressKey, String(video.currentTime)) }
+    const clear = () => sessionStorage.removeItem(progressKey)
+    const onVideoError = () => { if (video.src && !isHls) failStream() }
+
+    video.addEventListener('loadedmetadata', restore)
+    video.addEventListener('timeupdate', save)
+    video.addEventListener('ended', clear)
+    video.addEventListener('error', onVideoError)
+
+    if (isHls && Hls.isSupported()) {
+      let retried = false
+      const hls = new Hls()
+      hlsRef.current = hls
+      hls.loadSource(url)
+      hls.attachMedia(video)
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (!data?.fatal) return
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && !retried) { retried = true; hls.startLoad(); return }
+        if (data.type === Hls.ErrorTypes.MEDIA_ERROR && !retried) { retried = true; hls.recoverMediaError(); return }
+        hls.destroy()
+        if (hlsRef.current === hls) hlsRef.current = null
+        failStream()
+      })
+    } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = url // Safari native HLS
+    } else {
+      video.src = url
+    }
+    video.play?.().catch(() => {})
+
+    return () => {
+      dead = true
+      save()
+      video.removeEventListener('loadedmetadata', restore)
+      video.removeEventListener('timeupdate', save)
+      video.removeEventListener('ended', clear)
+      video.removeEventListener('error', onVideoError)
+      if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStream, progressKey])
+
+  const embedUrl = active?.target.kind === 'embed' ? active.target.url : ''
+  const nowLabel =
+    type === 'movie' ? 'Movie'
+      : type === 'tv' ? `S${safeSeason} · E${safeEpisode}`
+        : `Episode ${safeEpisode}`
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 1000,
-      background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(8px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 24
-    }}>
-      <div style={{
-        background: 'var(--bg2)', border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)', width: '100%', maxWidth: 520,
-        overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.6)'
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: '16px 20px', borderBottom: '1px solid var(--border)',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-        }}>
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--text2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 2 }}>Now Selected</div>
-            <div style={{ fontWeight: 700, fontSize: 18 }}>Episode <span style={{ color: 'var(--accent)' }}>{episode}</span></div>
-            <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 2 }}>{title}</div>
+    <div className="modal" onClick={onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <div style={{ minWidth: 0 }}>
+            <div className="eyebrow">Now Playing</div>
+            <div className="ttl">{nowLabel}</div>
+            <div className="sub">{displayTitle}</div>
           </div>
-          <button onClick={onClose} style={{
-            background: 'var(--bg3)', color: 'var(--text2)',
-            width: 34, height: 34, borderRadius: '50%', fontSize: 20,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: '1px solid var(--border)'
-          }}>×</button>
+          <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon.close width="18" height="18" /></button>
         </div>
 
-        {/* Controls */}
-        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="modal-body">
+          <div className="player-bar">
+            {type === 'anime' && (
+              <div className="seg">
+                {['sub', 'dub'].map((t) => (
+                  <button key={t} className={'seg-btn' + (audio === t ? ' on' : '')} onClick={() => setAudio(t)}>
+                    {t.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          {/* Sub / Dub */}
-          <div style={{ display: 'flex', background: 'var(--bg3)', borderRadius: 999, padding: 3, gap: 3, width: 'fit-content' }}>
-            {['SUB', 'DUB'].map((t, i) => (
-              <button key={t} onClick={() => setDub(i === 1)} style={{
-                padding: '4px 16px', borderRadius: 999, fontSize: 12, fontWeight: 700,
-                letterSpacing: '0.05em',
-                background: dub === (i === 1) ? 'var(--accent)' : 'transparent',
-                color: dub === (i === 1) ? '#fff' : 'var(--text2)',
-                transition: 'all 0.2s'
-              }}>{t}</button>
-            ))}
+            <select className="select-min" value={activeId || ''} onChange={(e) => setSourceId(e.target.value)}>
+              {sources.map(({ source }) => (
+                <option key={source.id} value={source.id}>
+                  {source.label}{source.badge ? ` · ${source.badge}` : ''}
+                </option>
+              ))}
+            </select>
+
+            {currentStream && streams.length > 1 && (
+              <select className="select-min" value={streamIdx} onChange={(e) => setStreamIdx(Number(e.target.value))}>
+                {streams.map((s, i) => (
+                  <option key={i} value={i}>{s.sourceName || 'Server'} · {s.quality || 'auto'}</option>
+                ))}
+              </select>
+            )}
+
+            <div className="grow" />
+
+            {(currentStream?.url || embedUrl) && (
+              <a className="icon-btn" href={currentStream?.url || embedUrl} target="_blank" rel="noopener noreferrer" aria-label="Open externally">
+                <Icon.external width="17" height="17" />
+              </a>
+            )}
           </div>
 
-          {/* Source selector */}
-          <select value={src} onChange={e => setSrc(e.target.value)} style={{
-            background: 'var(--bg3)', border: '1px solid var(--border)',
-            color: 'var(--text)', borderRadius: 8, padding: '8px 12px',
-            fontSize: 13, fontWeight: 600, cursor: 'pointer', outline: 'none'
-          }}>
-            <option value="dropfile">dropfile.cc</option>
-            <option value="vidsrc">vidsrc.to</option>
-            <option value="animepahe">animepahe.ru</option>
-          </select>
+          <div className="player-frame">
+            {loading && (
+              <div className="player-loading"><span className="spinner" /> Loading {active?.source.label || 'player'}…</div>
+            )}
 
-          {/* Play button */}
-          <button onClick={watchNow} style={{
-            background: 'var(--accent)', color: '#fff',
-            padding: '14px', borderRadius: 999, fontWeight: 700,
-            fontSize: 15, display: 'flex', alignItems: 'center',
-            justifyContent: 'center', gap: 8,
-            boxShadow: '0 4px 20px rgba(225,29,72,0.35)',
-            transition: 'background 0.2s, transform 0.2s'
-          }}
-            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="5,3 19,12 5,21" />
-            </svg>
-            Watch Now
-          </button>
+            {error ? (
+              <div className="player-loading" style={{ flexDirection: 'column', textAlign: 'center', padding: 20 }}>
+                <span>{error}</span>
+                <span style={{ fontSize: 12, color: 'var(--text3)' }}>Pick another source from the dropdown above.</span>
+              </div>
+            ) : active?.target.kind === 'resolve' ? (
+              <video ref={videoRef} controls autoPlay playsInline />
+            ) : (
+              <iframe
+                ref={iframeRef}
+                key={embedUrl}
+                src={embedUrl}
+                title={displayTitle}
+                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                allowFullScreen
+                referrerPolicy="origin"
+                onLoad={() => setLoading(false)}
+              />
+            )}
+          </div>
 
-          {/* Hint */}
-          <div style={{
-            fontSize: 12, color: 'var(--text2)', display: 'flex',
-            alignItems: 'center', gap: 6, padding: '8px 12px',
-            background: 'var(--bg3)', borderRadius: 6
-          }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
-            </svg>
-            Opens in a new tab · works on all sources, no iframe blocking
+          <div className="player-note">
+            <Icon.info width="14" height="14" />
+            {active?.target.kind === 'resolve'
+              ? 'Direct stream via AllManga. If it stalls, switch server or source.'
+              : 'Embedded provider. Use an ad-blocker; pop-ups come from the provider, not this site.'}
           </div>
         </div>
       </div>

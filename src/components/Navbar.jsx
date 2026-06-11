@@ -1,6 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
+import Icon from './Icons'
+
+const NAV = [
+  { to: '/', label: 'Home', icon: Icon.home, end: true },
+  { to: '/anime', label: 'Anime', icon: Icon.bolt },
+  { to: '/tv', label: 'TV', icon: Icon.tv },
+  { to: '/movies', label: 'Movies', icon: Icon.film },
+  { to: '/watchlist', label: 'List', icon: Icon.bookmark },
+]
 import Icon from './Icons'
 
 const NAV = [
@@ -12,7 +23,20 @@ const NAV = [
 ]
 
 export default function Navbar({ user, profile, onAuthClick, onSearchClick }) {
+export default function Navbar({ user, profile, onAuthClick, onSearchClick }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const [q, setQ] = useState('')
+  const menuRef = useRef(null)
+  const navigate = useNavigate()
+
+  // Netflix behavior: transparent over the hero, solid once you scroll.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
   const [scrolled, setScrolled] = useState(false)
   const [q, setQ] = useState('')
   const menuRef = useRef(null)
@@ -32,11 +56,25 @@ export default function Navbar({ user, profile, onAuthClick, onSearchClick }) {
     }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
+    const onClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
   }, [])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setMenuOpen(false)
+    navigate('/')
+  }
+
+  const submitSearch = (e) => {
+    e.preventDefault()
+    if (q.trim()) navigate(`/anime?q=${encodeURIComponent(q.trim())}`)
+  }
+
+  const initial = (profile?.username || user?.email || 'G')[0].toUpperCase()
     navigate('/')
   }
 
@@ -75,7 +113,15 @@ export default function Navbar({ user, profile, onAuthClick, onSearchClick }) {
         {user ? (
           <div style={{ position: 'relative' }} ref={menuRef}>
             <button className="avatar" onClick={() => setMenuOpen((v) => !v)}>{initial}</button>
+          <div style={{ position: 'relative' }} ref={menuRef}>
+            <button className="avatar" onClick={() => setMenuOpen((v) => !v)}>{initial}</button>
             {menuOpen && (
+              <div className="menu fade-in">
+                <div className="menu-head">@{profile?.username || user.email}</div>
+                <button className="menu-item" onClick={() => { navigate('/profile'); setMenuOpen(false) }}>Profile</button>
+                <button className="menu-item" onClick={() => { navigate('/currently-watching'); setMenuOpen(false) }}>Currently Watching</button>
+                <button className="menu-item" onClick={() => { navigate('/watchlist'); setMenuOpen(false) }}>My List</button>
+                <button className="menu-item danger" onClick={handleLogout}>Log out</button>
               <div className="menu fade-in">
                 <div className="menu-head">@{profile?.username || user.email}</div>
                 <button className="menu-item" onClick={() => { navigate('/profile'); setMenuOpen(false) }}>Profile</button>
@@ -100,5 +146,20 @@ export default function Navbar({ user, profile, onAuthClick, onSearchClick }) {
         ))}
       </nav>
     </>
+          <button className="btn btn-primary btn-sm" onClick={onAuthClick}>Sign In</button>
+        )}
+      </header>
+
+      <nav className="tabbar">
+        {NAV.map((n) => (
+          <NavLink key={n.to} to={n.to} end={n.end}
+            className={({ isActive }) => 'tab' + (isActive ? ' active' : '')}>
+            <n.icon />
+            {n.label}
+          </NavLink>
+        ))}
+      </nav>
+    </>
   )
 }
+
