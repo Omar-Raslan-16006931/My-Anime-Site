@@ -48,9 +48,40 @@ export default function Navbar({ user, profile, onAuthClick, onSearchClick }) {
   const initial = (profile?.username || user?.email || 'G')[0].toUpperCase()
 
   return (
-    <>
-      <header className={'topbar' + (scrolled ? ' scrolled' : '')}>
-        <Link to="/" className="brand">AniWave</Link>
+    <nav
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        background: 'rgba(10,10,15,0.85)',
+        backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid var(--border)',
+        padding: isMobile ? '0 12px' : '0 24px',
+        height: isMobile ? 56 : 64,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}
+    >
+      <Link
+        to="/"
+        style={{
+          fontWeight: 800,
+          fontSize: isMobile ? 18 : 22,
+          cursor: 'pointer',
+          background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          whiteSpace: 'nowrap'
+        }}
+      >
+        AniWave
+      </Link>
+
+      <div style={{ display: 'flex', gap: isMobile ? 4 : 8, alignItems: 'center' }}>
+        <NavLink to="/" end style={navBtnStyle}>
+          {isMobile ? 'H' : 'Home'}
+        </NavLink>
 
         <nav className="nav-links">
           {NAV.map((n) => (
