@@ -1,744 +1,278 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Hls from 'hls.js'
-import DownloadButton from './DownloadButton'
-import { QUALITY_OPTIONS, resolvePlayableSource } from '/utils/videoSources'
+import Icon from './Icons'
+import { availableSources, DEFAULT_SOURCE } from '../lib/sources'
+import { allmangaResolve } from '../lib/allmanga'
+import { anilistIdFromMal, animeTmdbInfo } from '../lib/anilist'
 
 export default function VideoPlayer({
   mediaType = 'anime',
   malId,
   tmdbId,
   imdbId,
-  anilistId,
+  anilistId: anilistIdProp,
   title,
-  episode,
-  season = 1,
   movieTitle,
-  downloadUrl,
-  onClose
+  episode = 1,
+  season = 1,
+  onClose,
 }) {
-  const [src, setSrc] = useState(mediaType === 'anime' ? 'dropfile' : 'vidsrc')
-  const [dub, setDub] = useState(false)
-  const [quality, setQuality] = useState('auto')
+  const type = mediaType === 'anime' ? 'anime' : mediaType
+  const displayTitle = movieTitle || title
+  const [audio, setAudio] = useState('sub')
+  const [sourceId, setSourceId] = useState(DEFAULT_SOURCE[type] || 'videasy')
+  const [anilistId, setAnilistId] = useState(anilistIdProp || null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [resolvedSource, setResolvedSource] = useState(null)
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== 'undefined' ? window.innerWidth <= 768 : false
-  )
+  const [streams, setStreams] = useState([])      // for resolve sources
+  const [streamIdx, setStreamIdx] = useState(0)
 
   const videoRef = useRef(null)
   const hlsRef = useRef(null)
-  const resolvedCacheRef = useRef(new Map())
   const iframeRef = useRef(null)
 
-  function getAnimeSeasonFromTitle(t = '') {
-    if (!t) return null
-    const str = String(t).toLowerCase()
-    const sMatch = str.match(/season\s+(\d+)/)
-    if (sMatch) return parseInt(sMatch[1], 10)
-    const cMatch = str.match(/cour\s+(\d+)/)
-    if (cMatch) return parseInt(cMatch[1], 10)
-    return null
-  }
-
-  const inferredSeason = mediaType === 'anime' ? getAnimeSeasonFromTitle(title || movieTitle) : null
   const safeEpisode = Number(episode) || 1
-  const defaultSeason = Number(season) || 1
-  const safeSeason = inferredSeason && defaultSeason === 1 ? inferredSeason : defaultSeason
-  const displayTitle = movieTitle || title
-  const audio = dub ? 'dub' : 'sub'
+  const safeSeason = Number(season) || 1
 
-  const progressKey = useMemo(() => {
-    return [
-      'vp-progress',
-      mediaType,
-      malId || 'no-mal',
-      tmdbId || 'no-tmdb',
-      imdbId || 'no-imdb',
-      anilistId || 'no-anilist',
-      `s${safeSeason}`,
-      `e${safeEpisode}`,
-      src,
-      audio
-    ].join(':')
-  }, [mediaType, malId, tmdbId, imdbId, anilistId, safeSeason, safeEpisode, src, audio])
-
-  const playbackSignature = useMemo(() => {
-    return JSON.stringify({
-      mediaType,
-      malId: malId || null,
-      tmdbId: tmdbId || null,
-      imdbId: imdbId || null,
-      anilistId: anilistId || null,
-      safeSeason,
-      safeEpisode,
-      src,
-      audio,
-      quality,
-      displayTitle
-    })
-  }, [
-    mediaType,
-    malId,
-    tmdbId,
-    imdbId,
-    anilistId,
-    safeSeason,
-    safeEpisode,
-    src,
-    audio,
-    quality,
-    displayTitle
-  ])
-
+  // Lock background scroll + ESC to close.
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 768)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-
-  useEffect(() => {
-    const htmlOverflow = document.documentElement.style.overflow
-    const bodyOverflow = document.body.style.overflow
-
-    document.documentElement.style.overflow = 'hidden'
+    const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-
-    return () => {
-      document.documentElement.style.overflow = htmlOverflow
-      document.body.style.overflow = bodyOverflow
-    }
-  }, [])
-
-  useEffect(() => {
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') onClose?.()
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    const onKey = (e) => e.key === 'Escape' && onClose?.()
+    window.addEventListener('keydown', onKey)
+    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey) }
   }, [onClose])
 
+  // Resolve AniList id for anime embeds that need it.
   useEffect(() => {
-    let cancelled = false
-
-    const cached = resolvedCacheRef.current.get(playbackSignature)
-    if (cached) {
-      setResolvedSource(cached)
-      setError('')
-      setLoading(false)
-      return
+    if (type === 'anime' && !anilistId && malId) {
+      anilistIdFromMal(malId).then((id) => id && setAnilistId(id))
     }
+  }, [type, malId, anilistId])
 
-    const loadSource = async () => {
-      setLoading(true)
-      setError('')
-
-      try {
-        const source = await resolvePlayableSource({
-          mediaType: mediaType === 'anime' ? 'tv' : mediaType,
-          isAnime: mediaType === 'anime',
-          imdbId,
-          tmdbId,
-          malId,
-          anilistId,
-          season: safeSeason,
-          episode: safeEpisode,
-          audio,
-          lang: 'en',
-          quality,
-          preferredProvider: src,
-          title: displayTitle
-        })
-
-        if (cancelled) return
-
-        if (!source) {
-          setError('No playable source found.')
-          setLoading(false)
-          return
-        }
-
-        resolvedCacheRef.current.set(playbackSignature, source)
-        setResolvedSource(source)
-        setError('')
-        setLoading(false)
-      } catch {
-        if (!cancelled) {
-          setError('Failed to load player source.')
-          setLoading(false)
-        }
-      }
-    }
-
-    loadSource()
-
-    return () => {
-      cancelled = true
-    }
-  }, [
-    playbackSignature,
-    mediaType,
-    imdbId,
-    tmdbId,
-    malId,
-    anilistId,
-    safeSeason,
-    safeEpisode,
-    audio,
-    quality,
-    src,
-    displayTitle
-  ])
-
+  // Map anime → TMDB id + real season/episode (ani.zip) so every TV source
+  // also works for anime with correct season numbering.
+  const [animeTmdb, setAnimeTmdb] = useState(null)
   useEffect(() => {
-    if (hlsRef.current) {
-      hlsRef.current.destroy()
-      hlsRef.current = null
-    }
+    if (type !== 'anime' || !anilistId) return
+    let on = true
+    animeTmdbInfo(anilistId, safeEpisode).then((m) => { if (on) setAnimeTmdb(m) })
+    return () => { on = false }
+  }, [type, anilistId, safeEpisode])
 
-    const video = videoRef.current
-    if (!video || !resolvedSource || resolvedSource.type !== 'hls') return
+  const ctx = useMemo(() => ({
+    type, tmdbId, imdbId, malId, anilistId, animeTmdb,
+    season: safeSeason, episode: safeEpisode, title: displayTitle, audio,
+  }), [type, tmdbId, imdbId, malId, anilistId, animeTmdb, safeSeason, safeEpisode, displayTitle, audio])
 
-    const hlsUrl = resolvedSource.finalUrl || resolvedSource.url
-    if (!hlsUrl) return
+  const sources = useMemo(() => availableSources(ctx), [ctx])
+  const active = sources.find((s) => s.source.id === sourceId) || sources[0]
+  const activeId = active?.source.id
 
-    const restoreSavedTime = () => {
-      const saved = Number(sessionStorage.getItem(progressKey) || '0')
-      if (Number.isFinite(saved) && saved > 0) {
-        try {
-          video.currentTime = saved
-        } catch {}
-      }
-    }
+  const progressKey = useMemo(
+    () => `vp:${type}:${malId || tmdbId || imdbId}:s${safeSeason}:e${safeEpisode}:${audio}`,
+    [type, malId, tmdbId, imdbId, safeSeason, safeEpisode, audio]
+  )
 
-    const saveCurrentTime = () => {
-      if (!Number.isFinite(video.currentTime)) return
-      sessionStorage.setItem(progressKey, String(video.currentTime))
-    }
-
-    const clearSavedTime = () => {
-      sessionStorage.removeItem(progressKey)
-    }
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) saveCurrentTime()
-    }
-
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      if (video.src !== hlsUrl) {
-        video.src = hlsUrl
-      }
-
-      video.addEventListener('loadedmetadata', restoreSavedTime)
-      video.addEventListener('timeupdate', saveCurrentTime)
-      video.addEventListener('pause', saveCurrentTime)
-      video.addEventListener('ended', clearSavedTime)
-      document.addEventListener('visibilitychange', handleVisibilityChange)
-      window.addEventListener('beforeunload', saveCurrentTime)
-
-      return () => {
-        saveCurrentTime()
-        video.removeEventListener('loadedmetadata', restoreSavedTime)
-        video.removeEventListener('timeupdate', saveCurrentTime)
-        video.removeEventListener('pause', saveCurrentTime)
-        video.removeEventListener('ended', clearSavedTime)
-        document.removeEventListener('visibilitychange', handleVisibilityChange)
-        window.removeEventListener('beforeunload', saveCurrentTime)
-      }
-    }
-
-    if (Hls.isSupported()) {
-      const hls = new Hls()
-      hlsRef.current = hls
-      hls.loadSource(hlsUrl)
-      hls.attachMedia(video)
-
-      const onMediaAttached = () => {
-        restoreSavedTime()
-      }
-
-      hls.on(Hls.Events.MEDIA_ATTACHED, onMediaAttached)
-      video.addEventListener('loadedmetadata', restoreSavedTime)
-      video.addEventListener('timeupdate', saveCurrentTime)
-      video.addEventListener('pause', saveCurrentTime)
-      video.addEventListener('ended', clearSavedTime)
-      document.addEventListener('visibilitychange', handleVisibilityChange)
-      window.addEventListener('beforeunload', saveCurrentTime)
-
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data?.fatal) {
-          setError('Failed to load HLS stream.')
-          hls.destroy()
-          hlsRef.current = null
-        }
-      })
-
-      return () => {
-        saveCurrentTime()
-        video.removeEventListener('loadedmetadata', restoreSavedTime)
-        video.removeEventListener('timeupdate', saveCurrentTime)
-        video.removeEventListener('pause', saveCurrentTime)
-        video.removeEventListener('ended', clearSavedTime)
-        document.removeEventListener('visibilitychange', handleVisibilityChange)
-        window.removeEventListener('beforeunload', saveCurrentTime)
-
-        if (hlsRef.current) {
-          hlsRef.current.destroy()
-          hlsRef.current = null
-        }
-      }
-    } else {
-      setError('This browser does not support HLS playback here.')
-    }
-
-    return undefined
-  }, [resolvedSource, progressKey])
-
-  const playerUrl = useMemo(() => {
-    if (!resolvedSource) return ''
-    return resolvedSource.finalUrl || resolvedSource.iframeUrl || resolvedSource.url || ''
-  }, [resolvedSource])
-
-  useEffect(() => {
-    if (!iframeRef.current || !playerUrl || resolvedSource?.type === 'hls') return
-
-    const currentSrc = iframeRef.current.getAttribute('src') || ''
-    if (currentSrc !== playerUrl) {
-      iframeRef.current.setAttribute('src', playerUrl)
-    }
-  }, [playerUrl, resolvedSource])
-
-  const nowPlayingLabel =
-    mediaType === 'movie'
-      ? 'Movie'
-      : mediaType === 'tv'
-        ? `S${safeSeason} • E${safeEpisode}`
-        : safeSeason && safeSeason > 1
-          ? `S${safeSeason} • E${safeEpisode}`
-          : `Episode ${safeEpisode}`
-
-  const sourceOptions =
-    mediaType === 'anime'
-      ? [
-          { value: 'dropfile', label: 'dropfile.cc' },
-          { value: 'vidsrc', label: 'vidsrc.to' }
-        ]
-      : [{ value: 'vidsrc', label: 'vidsrc.to' }]
-
-  const openExternalPlayer = () => {
-    if (!playerUrl) return
-    window.open(playerUrl, '_blank', 'noopener,noreferrer')
+  // Auto-advance to the next source when the current one can't deliver.
+  const advanceSource = () => {
+    const idx = sources.findIndex((s) => s.source.id === activeId)
+    const next = sources[idx + 1]
+    if (next) { setSourceId(next.source.id); return true }
+    return false
   }
 
-  const useExternalMobilePlayer = isMobile && (mediaType === 'tv' || mediaType === 'movie')
-  const openExternally = resolvedSource?.provider === 'vidsrc' && useExternalMobilePlayer
-  const supportsQuality = src === 'dropfile' || src === 'vidsrc'
+  // Resolve the active source.
+  useEffect(() => {
+    let cancelled = false
+    setError('')
+    setStreams([])
+    setStreamIdx(0)
+
+    if (!active) { setError('No source available for this title.'); setLoading(false); return }
+
+    if (active.target.kind === 'resolve') {
+      setLoading(true)
+      allmangaResolve({ title: displayTitle, episode: safeEpisode, translationType: audio })
+        .then((res) => {
+          if (cancelled) return
+          if (!res?.ok || !res.streams?.length) {
+            // AllManga miss → fall back to the next source automatically.
+            if (!advanceSource()) { setError('No working source found. Try a different one.'); setLoading(false) }
+            return
+          }
+          setStreams(res.streams)
+          setLoading(false)
+        })
+        .catch(() => { if (!cancelled && !advanceSource()) { setError('Source failed. Try another.'); setLoading(false) } })
+    } else {
+      setLoading(true) // iframe onLoad clears it
+    }
+
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, displayTitle, safeEpisode, audio, active])
+
+  // Watchdog: never spin forever — clear the loader after a grace period so the
+  // user can read the source list and switch manually.
+  useEffect(() => {
+    if (!loading) return
+    const t = setTimeout(() => setLoading(false), 12000)
+    return () => clearTimeout(t)
+  }, [loading, activeId])
+
+  const currentStream = streams[streamIdx] || null
+
+  // HLS / direct video playback for resolve sources.
+  useEffect(() => {
+    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null }
+    const video = videoRef.current
+    if (!video || !currentStream) return
+
+    const url = currentStream.url
+    const isHls = currentStream.type === 'hls' || url.includes('.m3u8')
+    let dead = false
+
+    // A broken stream tries the next server, then the next source, before erroring.
+    const failStream = () => {
+      if (dead) return
+      dead = true
+      if (streamIdx + 1 < streams.length) { setStreamIdx(streamIdx + 1); return }
+      if (!advanceSource()) setError('Stream failed — try another server or source.')
+    }
+
+    const restore = () => {
+      const saved = Number(sessionStorage.getItem(progressKey) || '0')
+      if (saved > 0) { try { video.currentTime = saved } catch { /* ignore */ } }
+    }
+    const save = () => { if (Number.isFinite(video.currentTime)) sessionStorage.setItem(progressKey, String(video.currentTime)) }
+    const clear = () => sessionStorage.removeItem(progressKey)
+    const onVideoError = () => { if (video.src && !isHls) failStream() }
+
+    video.addEventListener('loadedmetadata', restore)
+    video.addEventListener('timeupdate', save)
+    video.addEventListener('ended', clear)
+    video.addEventListener('error', onVideoError)
+
+    if (isHls && Hls.isSupported()) {
+      let retried = false
+      const hls = new Hls()
+      hlsRef.current = hls
+      hls.loadSource(url)
+      hls.attachMedia(video)
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (!data?.fatal) return
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && !retried) { retried = true; hls.startLoad(); return }
+        if (data.type === Hls.ErrorTypes.MEDIA_ERROR && !retried) { retried = true; hls.recoverMediaError(); return }
+        hls.destroy()
+        if (hlsRef.current === hls) hlsRef.current = null
+        failStream()
+      })
+    } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = url // Safari native HLS
+    } else {
+      video.src = url
+    }
+    video.play?.().catch(() => {})
+
+    return () => {
+      dead = true
+      save()
+      video.removeEventListener('loadedmetadata', restore)
+      video.removeEventListener('timeupdate', save)
+      video.removeEventListener('ended', clear)
+      video.removeEventListener('error', onVideoError)
+      if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStream, progressKey])
+
+  const embedUrl = active?.target.kind === 'embed' ? active.target.url : ''
+  const nowLabel =
+    type === 'movie' ? 'Movie'
+      : type === 'tv' ? `S${safeSeason} · E${safeEpisode}`
+        : `Episode ${safeEpisode}`
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1000,
-        background: 'rgba(0,0,0,0.92)',
-        backdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: isMobile ? 'flex-start' : 'center',
-        justifyContent: 'center',
-        padding: isMobile ? '12px 12px 20px' : 24,
-        overflowY: 'auto'
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: 'var(--bg2)',
-          border: '1px solid var(--border)',
-          borderRadius: isMobile ? 14 : 'var(--radius)',
-          width: '100%',
-          maxWidth: openExternally ? 520 : 1100,
-          overflow: 'hidden',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6)'
-        }}
-      >
-        <div
-          style={{
-            padding: isMobile ? '14px 14px 12px' : '16px 20px',
-            borderBottom: '1px solid var(--border)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 12
-          }}
-        >
+    <div className="modal" onClick={onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
           <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 11,
-                color: 'var(--text2)',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                marginBottom: 2
-              }}
-            >
-              Now Selected
-            </div>
-
-            <div style={{ fontWeight: 700, fontSize: isMobile ? 16 : 18 }}>
-              {nowPlayingLabel}
-            </div>
-
-            <div
-              style={{
-                fontSize: 13,
-                color: 'var(--text2)',
-                marginTop: 2,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {displayTitle}
-            </div>
+            <div className="eyebrow">Now Playing</div>
+            <div className="ttl">{nowLabel}</div>
+            <div className="sub">{displayTitle}</div>
           </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: 'var(--bg3)',
-              color: 'var(--text2)',
-              width: 34,
-              height: 34,
-              borderRadius: '50%',
-              fontSize: 20,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid var(--border)',
-              flexShrink: 0
-            }}
-          >
-            ×
-          </button>
+          <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon.close width="18" height="18" /></button>
         </div>
 
-        <div
-          style={{
-            padding: isMobile ? '14px' : '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16
-          }}
-        >
-          {mediaType === 'anime' && (
-            <div
-              style={{
-                display: 'flex',
-                background: 'var(--bg3)',
-                borderRadius: 999,
-                padding: 3,
-                gap: 3,
-                width: 'fit-content'
-              }}
-            >
-              {['SUB', 'DUB'].map((t, i) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => {
-                    setDub(i === 1)
-                    setLoading(true)
-                  }}
-                  style={{
-                    padding: '4px 16px',
-                    borderRadius: 999,
-                    fontSize: 12,
-                    fontWeight: 700,
-                    letterSpacing: '0.05em',
-                    background: dub === (i === 1) ? 'var(--accent)' : 'transparent',
-                    color: dub === (i === 1) ? '#fff' : 'var(--text2)',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="modal-body">
+          <div className="player-bar">
+            {type === 'anime' && (
+              <div className="seg">
+                {['sub', 'dub'].map((t) => (
+                  <button key={t} className={'seg-btn' + (audio === t ? ' on' : '')} onClick={() => setAudio(t)}>
+                    {t.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 12,
-              flexWrap: 'wrap'
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                flexWrap: 'wrap'
-              }}
-            >
-              <select
-                value={src}
-                onChange={(e) => {
-                  setLoading(true)
-                  setSrc(e.target.value)
-                }}
-                style={{
-                  background: 'var(--bg3)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--text)',
-                  borderRadius: 8,
-                  padding: '8px 12px',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  outline: 'none'
-                }}
-              >
-                {sourceOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
+            <select className="select-min" value={activeId || ''} onChange={(e) => setSourceId(e.target.value)}>
+              {sources.map(({ source }) => (
+                <option key={source.id} value={source.id}>
+                  {source.label}{source.badge ? ` · ${source.badge}` : ''}
+                </option>
+              ))}
+            </select>
+
+            {currentStream && streams.length > 1 && (
+              <select className="select-min" value={streamIdx} onChange={(e) => setStreamIdx(Number(e.target.value))}>
+                {streams.map((s, i) => (
+                  <option key={i} value={i}>{s.sourceName || 'Server'} · {s.quality || 'auto'}</option>
                 ))}
               </select>
+            )}
 
-              {supportsQuality && (
-                <select
-                  value={quality}
-                  onChange={(e) => {
-                    setLoading(true)
-                    setQuality(e.target.value)
-                  }}
-                  style={{
-                    background: 'var(--bg3)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text)',
-                    borderRadius: 8,
-                    padding: '8px 12px',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    outline: 'none'
-                  }}
-                >
-                  {QUALITY_OPTIONS.map((q) => (
-                    <option key={q} value={q}>
-                      {q.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
-              )}
+            <div className="grow" />
 
-              <DownloadButton url={downloadUrl} label="Download" isMobile={isMobile} />
-            </div>
-
-            <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-              {mediaType === 'anime'
-                ? 'Anime may use provider-specific season mapping'
-                : useExternalMobilePlayer
-                  ? 'Mobile opens external player'
-                  : 'Player source'}
-            </div>
+            {(currentStream?.url || embedUrl) && (
+              <a className="icon-btn" href={currentStream?.url || embedUrl} target="_blank" rel="noopener noreferrer" aria-label="Open externally">
+                <Icon.external width="17" height="17" />
+              </a>
+            )}
           </div>
 
-          {openExternally ? (
-            <div
-              style={{
-                background: 'var(--bg3)',
-                borderRadius: 10,
-                border: '1px solid var(--border)',
-                padding: '18px 16px'
-              }}
-            >
-              <button
-                type="button"
-                onClick={openExternalPlayer}
-                style={{
-                  background: 'var(--accent)',
-                  color: '#fff',
-                  padding: '14px',
-                  borderRadius: 999,
-                  fontWeight: 700,
-                  fontSize: 15,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  width: '100%',
-                  boxShadow: '0 4px 20px rgba(225,29,72,0.35)',
-                  transition: 'background 0.2s, transform 0.2s'
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5,3 19,12 5,21" />
-                </svg>
-                Watch Now
-              </button>
-            </div>
-          ) : error ? (
-            <div
-              style={{
-                background: '#000',
-                borderRadius: 10,
-                overflow: 'hidden',
-                border: '1px solid var(--border)',
-                minHeight: 240,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 20,
-                color: 'var(--text2)',
-                textAlign: 'center'
-              }}
-            >
-              {error}
-            </div>
-          ) : !playerUrl ? (
-            <div
-              style={{
-                background: '#000',
-                borderRadius: 10,
-                overflow: 'hidden',
-                border: '1px solid var(--border)',
-                minHeight: 240,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 20,
-                color: 'var(--text2)'
-              }}
-            >
-              Missing player data.
-            </div>
-          ) : resolvedSource?.type === 'hls' ? (
-            <div
-              style={{
-                position: 'relative',
-                width: '100%',
-                aspectRatio: isMobile ? '16 / 10' : '16 / 9',
-                minHeight: isMobile ? 240 : undefined,
-                background: '#000',
-                borderRadius: 10,
-                overflow: 'hidden',
-                border: '1px solid var(--border)'
-              }}
-            >
-              {loading && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--text2)',
-                    fontSize: 14,
-                    background: 'rgba(0,0,0,0.35)',
-                    zIndex: 1
-                  }}
-                >
-                  Loading player...
-                </div>
-              )}
+          <div className="player-frame">
+            {loading && (
+              <div className="player-loading"><span className="spinner" /> Loading {active?.source.label || 'player'}…</div>
+            )}
 
-              <video
-                ref={videoRef}
-                controls
-                autoPlay
-                playsInline
-                disableremoteplayback
-                width="100%"
-                height="100%"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'block',
-                  background: '#000'
-                }}
-              />
-            </div>
-          ) : (
-            <div
-              style={{
-                position: 'relative',
-                width: '100%',
-                aspectRatio: isMobile ? '16 / 10' : '16 / 9',
-                minHeight: isMobile ? 240 : undefined,
-                background: '#000',
-                borderRadius: 10,
-                overflow: 'hidden',
-                border: '1px solid var(--border)'
-              }}
-            >
-              {loading && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--text2)',
-                    fontSize: 14,
-                    background: 'rgba(0,0,0,0.35)',
-                    zIndex: 1
-                  }}
-                >
-                  Loading player...
-                </div>
-              )}
-
+            {error ? (
+              <div className="player-loading" style={{ flexDirection: 'column', textAlign: 'center', padding: 20 }}>
+                <span>{error}</span>
+                <span style={{ fontSize: 12, color: 'var(--text3)' }}>Pick another source from the dropdown above.</span>
+              </div>
+            ) : active?.target.kind === 'resolve' ? (
+              <video ref={videoRef} controls autoPlay playsInline />
+            ) : (
               <iframe
                 ref={iframeRef}
-                title={`${displayTitle} ${nowPlayingLabel}`}
-                width="100%"
-                height="100%"
-                frameBorder="0"
-                allow="autoplay; fullscreen; picture-in-picture"
+                key={embedUrl}
+                src={embedUrl}
+                title={displayTitle}
+                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
                 allowFullScreen
                 referrerPolicy="origin"
                 onLoad={() => setLoading(false)}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'block',
-                  background: '#000'
-                }}
               />
-            </div>
-          )}
+            )}
+          </div>
 
-          <div
-            style={{
-              fontSize: 12,
-              color: 'var(--text2)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 12px',
-              background: 'var(--bg3)',
-              borderRadius: 6
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 8v4M12 16h.01" />
-            </svg>
-            {openExternally
-              ? 'Opens in a new tab for sources that work better outside iframes.'
-              : resolvedSource?.type === 'hls'
-                ? 'Using direct HLS playback when available.'
-                : 'Iframe providers are cross-origin, so exact resume position may not be controllable from this app.'}
+          <div className="player-note">
+            <Icon.info width="14" height="14" />
+            {active?.target.kind === 'resolve'
+              ? 'Direct stream via AllManga. If it stalls, switch server or source.'
+              : 'Embedded provider. Use an ad-blocker; pop-ups come from the provider, not this site.'}
           </div>
         </div>
       </div>
