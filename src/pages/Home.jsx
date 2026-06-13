@@ -4,11 +4,29 @@ import Hero from '../components/Hero'
 import Row from '../components/Row'
 import MediaCard from '../components/MediaCard'
 import { getPopularMovies, getPopularTV, getTmdbImage } from '../lib/tmdb'
-import { getRecent, hrefFor, progressLabel, progressFraction } from '../lib/progress'
-import { animeArtFromMal } from '../lib/anilist'
+import { animeArtFromMal, recentlyAiredEpisodes } from '../lib/anilist'
+import { supabase } from '../supabase'
 import Icon from '../components/Icons'
 
 const backdrop = (path) => (path ? `https://image.tmdb.org/t/p/original${path}` : null)
+
+// Curated billboard line-up. Order = rotation order in the hero.
+const HERO_PICKS = [
+  { mal_id: 57658, kind: 'ANIME · SEASON 3', banner: '/jjk-hero.avif' },   // Jujutsu Kaisen: The Culling Game
+  { mal_id: 37991, kind: 'ANIME' },              // JoJo's Bizarre Adventure: Golden Wind (Part 5)
+  { mal_id: 16498, kind: 'ANIME' },              // Attack on Titan
+  { mal_id: 21,    kind: 'ANIME' },              // One Piece
+  { mal_id: 5114,  kind: 'ANIME' },              // Fullmetal Alchemist: Brotherhood
+]
+
+// "just now" / "3h ago" / "2d ago" from a unix-seconds timestamp.
+function timeAgo(unix) {
+  if (!unix) return ''
+  const s = Math.max(0, Math.floor(Date.now() / 1000) - unix)
+  if (s < 3600) return `${Math.max(1, Math.floor(s / 60))}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  return `${Math.floor(s / 86400)}d ago`
+}
 
 async function jikan(url, retries = 2) {
   for (let i = 0; i <= retries; i++) {
@@ -20,44 +38,73 @@ async function jikan(url, retries = 2) {
   return { data: [] }
 }
 
-export default function Home() {
+export default function Home({ user }) {
   const navigate = useNavigate()
-  const [hero, setHero] = useState(null)
+  const [heroList, setHeroList] = useState([])
+  const [recentEps, setRecentEps] = useState([])
   const [topAnime, setTopAnime] = useState([])
   const [airing, setAiring] = useState([])
   const [movies, setMovies] = useState([])
   const [tv, setTv] = useState([])
-  const [recent, setRecent] = useState([])
+  const [watching, setWatching] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { setRecent(getRecent()) }, [])
+  // Currently Watching — sourced from the database (not local storage).
+  useEffect(() => {
+    if (!user) { setWatching([]); return }
+    let active = true
+    ;(async () => {
+      const [a, t] = await Promise.all([
+        supabase.from('currently_watching').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
+        supabase.from('currently_watching_tmdb').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
+      ])
+      if (!active) return
+      const merged = [
+        ...(a.data || []).map((i) => ({ ...i, source_table: 'currently_watching' })),
+        ...(t.data || []).map((i) => ({ ...i, source_table: 'currently_watching_tmdb' })),
+      ]
+        .filter((i) => !i.is_completed)
+        .sort((x, y) => new Date(y.updated_at) - new Date(x.updated_at))
+      setWatching(merged)
+    })()
+    return () => { active = false }
+  }, [user])
 
   useEffect(() => {
     let active = true
     ;(async () => {
-      const top = await jikan('https://api.jikan.moe/v4/top/anime?limit=20&filter=bypopularity')
-      if (!active) return
-      const list = top.data || []
-      setTopAnime(list)
-      const h = list[Math.floor(Math.random() * Math.min(5, list.length))] || list[0]
-      if (h) {
-        setHero({
-          kind: 'ANIME',
+      // Build the curated billboard from the hand-picked MAL ids. Fetched
+      // sequentially so we stay under Jikan's rate limit.
+      for (let n = 0; n < HERO_PICKS.length; n++) {
+        const pick = HERO_PICKS[n]
+        const res = await jikan(`https://api.jikan.moe/v4/anime/${pick.mal_id}`)
+        if (!active) return
+        const h = res.data
+        if (!h || Array.isArray(h) || !h.mal_id) continue
+        const item = {
+          kind: pick.kind,
           title: h.title_english || h.title,
-          backdrop: h.images?.jpg?.large_image_url,
+          backdrop: pick.banner || h.images?.jpg?.large_image_url,
           score: h.score,
           year: h.year || h.aired?.prop?.from?.year,
           genres: (h.genres || []).map((g) => g.name),
           desc: h.synopsis,
           href: `/anime/${h.mal_id}`,
-        })
-        // Upgrade the stretched portrait poster to AniList's true wide banner.
-        animeArtFromMal(h.mal_id).then((art) => {
-          if (!active || !art?.banner) return
-          setHero((prev) => (prev ? { ...prev, backdrop: art.banner } : prev))
-        })
+        }
+        setHeroList((prev) => [...prev, item])
+        setLoading(false)
+        // A custom local banner wins; otherwise upgrade the stretched portrait
+        // poster to AniList's true wide banner.
+        if (!pick.banner) {
+          animeArtFromMal(pick.mal_id).then((art) => {
+            if (!active || !art?.banner) return
+            setHeroList((prev) => prev.map((x) => (x.href === item.href ? { ...x, backdrop: art.banner } : x)))
+          })
+        }
       }
-      setLoading(false)
+
+      const top = await jikan('https://api.jikan.moe/v4/top/anime?limit=20&filter=bypopularity')
+      if (active) setTopAnime(top.data || [])
 
       const air = await jikan('https://api.jikan.moe/v4/seasons/now?limit=20')
       if (active) setAiring(air.data || [])
@@ -69,6 +116,8 @@ export default function Home() {
       setTv(t?.results || [])
     })
 
+    recentlyAiredEpisodes(24).then((eps) => { if (active) setRecentEps(eps) })
+
     return () => { active = false }
   }, [])
 
@@ -79,30 +128,43 @@ export default function Home() {
     score: a.score,
     kind: a.type,
   })
+  const epCard = (e) => ({
+    href: `/anime/${e.malId}`,
+    poster: e.poster,
+    title: e.title,
+    score: e.score,
+    kind: `EP ${e.episode}`,
+    sub: timeAgo(e.airingAt),
+  })
   const movieCard = (m) => ({ href: `/movie/${m.id}`, poster: getTmdbImage(m.poster_path), title: m.title, score: m.vote_average, sub: m.release_date?.slice(0, 4) })
   const tvCard = (s) => ({ href: `/tv/${s.id}`, poster: getTmdbImage(s.poster_path), title: s.name, score: s.vote_average, sub: s.first_air_date?.slice(0, 4) })
+
+  const watchKey = (i) => `${i.source_table}-${i.id}`
+  const watchHref = (i) => (i.media_type === 'tv' && i.tmdb_id ? `/tv/${i.tmdb_id}` : i.media_type === 'movie' && i.tmdb_id ? `/movie/${i.tmdb_id}` : i.mal_id ? `/anime/${i.mal_id}` : '/')
+  const watchMeta = (i) => i.media_type === 'tv' ? `S${i.season_number || 1} · E${i.last_episode || 1}` : i.media_type === 'movie' ? 'Movie' : `Ep. ${i.last_episode || 1}${i.total_episodes ? ` / ${i.total_episodes}` : ''}`
+  const watchFrac = (i) => (i.total_episodes && i.last_episode ? Math.min(1, i.last_episode / i.total_episodes) : 0)
 
   return (
     <div className="page" style={{ paddingTop: 0 }}>
       {loading ? (
         <div className="skel" style={{ height: 'clamp(420px,56vw,82vh)', margin: '0 calc(-1 * clamp(16px,4vw,60px))', borderRadius: 0 }} />
       ) : (
-        <Hero item={hero} onPlay={(h) => navigate(h.href)} />
+        <Hero items={heroList} onPlay={(h) => navigate(h.href)} />
       )}
 
-      {recent.length > 0 && (
-        <Row title="Continue Watching">
-          {recent.map((r) => (
-            <div key={r.key} className="pcard" onClick={() => navigate(hrefFor(r))}>
+      {watching.length > 0 && (
+        <Row title="Currently Watching" onMore={() => navigate('/currently-watching')}>
+          {watching.map((i) => (
+            <div key={watchKey(i)} className="pcard" onClick={() => navigate(watchHref(i))}>
               <div className="pcard-img">
-                {r.backdrop || r.poster ? <img src={r.backdrop || r.poster} alt={r.title} /> : null}
+                {i.poster ? <img src={i.poster} alt={i.title} /> : null}
                 <div className="pcard-play"><Icon.play width="34" height="34" /></div>
-                <div className="pcard-badge">{progressLabel(r)}</div>
-                {progressFraction(r) > 0 && (
-                  <div className="card-progress"><span style={{ width: `${Math.round(progressFraction(r) * 100)}%` }} /></div>
+                <div className="pcard-badge">{watchMeta(i)}</div>
+                {watchFrac(i) > 0 && (
+                  <div className="card-progress"><span style={{ width: `${Math.round(watchFrac(i) * 100)}%` }} /></div>
                 )}
               </div>
-              <div className="card-title" style={{ marginTop: 6 }}>{r.title}</div>
+              <div className="card-title" style={{ marginTop: 6 }}>{i.title}</div>
             </div>
           ))}
         </Row>
@@ -114,6 +176,10 @@ export default function Home() {
 
       <Row title="Airing This Season" loading={!airing.length} onMore={() => navigate('/anime')}>
         {airing.map((a) => <MediaCard key={a.mal_id} item={animeCard(a)} />)}
+      </Row>
+
+      <Row title="Recently Released Episodes" loading={!recentEps.length}>
+        {recentEps.map((e) => <MediaCard key={e.malId} item={epCard(e)} />)}
       </Row>
 
       <Row title="Popular Movies" loading={!movies.length} onMore={() => navigate('/movies')}>

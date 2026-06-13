@@ -72,6 +72,65 @@ export async function animeTmdbInfo(anilistId, episode) {
   }
 }
 
+// ── Recently aired episodes ──────────────────────────────────────────────────
+// AniList's airing schedule, newest first. Returns the most recent episode per
+// show (deduped) so the home page can surface "what just dropped".
+const recentEpCache = { at: 0, data: null }
+
+export async function recentlyAiredEpisodes(limit = 24) {
+  // Cache for 5 minutes — this list barely changes minute to minute.
+  if (recentEpCache.data && Date.now() - recentEpCache.at < 5 * 60 * 1000) return recentEpCache.data
+
+  const query = `query($before:Int){
+    Page(perPage:50){
+      airingSchedules(airingAt_lesser:$before, sort:TIME_DESC){
+        episode airingAt
+        media{
+          idMal
+          title{ english romaji }
+          coverImage{ extraLarge large }
+          averageScore
+          format
+          countryOfOrigin
+          isAdult
+        }
+      }
+    }
+  }`
+  try {
+    const r = await fetch(ANILIST, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ query, variables: { before: Math.floor(Date.now() / 1000) } }),
+    })
+    const schedules = (await r.json())?.data?.Page?.airingSchedules || []
+    const seen = new Set()
+    const out = []
+    for (const s of schedules) {
+      const m = s.media
+      if (!m || !m.idMal || m.isAdult) continue
+      if (m.countryOfOrigin && m.countryOfOrigin !== 'JP') continue
+      if (m.format && !['TV', 'TV_SHORT', 'ONA'].includes(m.format)) continue
+      if (seen.has(m.idMal)) continue
+      seen.add(m.idMal)
+      out.push({
+        malId: m.idMal,
+        title: m.title?.english || m.title?.romaji,
+        poster: m.coverImage?.extraLarge || m.coverImage?.large,
+        score: m.averageScore ? m.averageScore / 10 : null,
+        episode: s.episode,
+        airingAt: s.airingAt,
+      })
+      if (out.length >= limit) break
+    }
+    recentEpCache.at = Date.now()
+    recentEpCache.data = out
+    return out
+  } catch {
+    return []
+  }
+}
+
 export async function anilistIdFromMal(malId) {
   if (!malId) return null
   const cache = loadCache()

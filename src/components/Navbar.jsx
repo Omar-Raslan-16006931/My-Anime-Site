@@ -74,7 +74,9 @@ export default function Navbar({ user, profile, onAuthClick, onSearchClick }) {
 
         {user ? (
           <div style={{ position: 'relative' }} ref={menuRef}>
-            <button className="avatar" onClick={() => setMenuOpen((v) => !v)}>{initial}</button>
+            <button className="avatar" onClick={() => setMenuOpen((v) => !v)}>
+              {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}
+            </button>
             {menuOpen && (
               <div className="menu fade-in">
                 <div className="menu-head">@{profile?.username || user.email}</div>
