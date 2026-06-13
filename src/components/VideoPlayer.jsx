@@ -4,6 +4,7 @@ import Icon from './Icons'
 import { availableSources, DEFAULT_SOURCE } from '../lib/sources'
 import { allmangaResolve } from '../lib/allmanga'
 import { anilistIdFromMal, animeTmdbInfo } from '../lib/anilist'
+import DownloadLinks from './DownloadLinks'
 
 export default function VideoPlayer({
   mediaType = 'anime',
@@ -273,6 +274,10 @@ export default function VideoPlayer({
             {active?.target.kind === 'resolve'
               ? 'Direct stream via AllManga. If it stalls, switch server or source.'
               : 'Embedded provider. Use an ad-blocker; pop-ups come from the provider, not this site.'}
+          </div>
+
+          <div style={{ padding: '10px 0 4px' }}>
+            <DownloadLinks title={displayTitle} />
           </div>
         </div>
       </div>

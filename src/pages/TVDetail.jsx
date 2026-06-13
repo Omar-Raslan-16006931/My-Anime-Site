@@ -4,6 +4,7 @@ import { supabase } from '../supabase'
 import VideoPlayer from '../components/VideoPlayer'
 import Icon from '../components/Icons'
 import { recordRecent } from '../lib/progress'
+import DownloadLinks from '../components/DownloadLinks'
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
 const IMG = 'https://image.tmdb.org/t/p/w500'
@@ -156,6 +157,7 @@ export default function TVDetail({ user, onAuthRequired }) {
               {inWatchlist ? <><Icon.check width="16" height="16" /> In List</> : <><Icon.plus width="16" height="16" /> My List</>}
             </button>
           </div>
+          <DownloadLinks title={details.name} />
 
           <p className="synopsis">{details.overview || 'No overview available.'}</p>
         </div>

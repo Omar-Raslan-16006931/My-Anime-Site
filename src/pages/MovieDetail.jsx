@@ -4,6 +4,7 @@ import VideoPlayer from '../components/VideoPlayer'
 import { supabase } from '../supabase'
 import Icon from '../components/Icons'
 import { recordRecent } from '../lib/progress'
+import DownloadLinks from '../components/DownloadLinks'
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
 const IMG = 'https://image.tmdb.org/t/p/w500'
@@ -89,6 +90,7 @@ export default function MovieDetail({ user, onAuthRequired }) {
           <div className="detail-actions">
             <button className="btn btn-light" onClick={handlePlay}><Icon.play width="17" height="17" /> Play Movie</button>
           </div>
+          <DownloadLinks title={movie.title} />
 
           <p className="synopsis">{movie.overview || 'No overview available.'}</p>
         </div>

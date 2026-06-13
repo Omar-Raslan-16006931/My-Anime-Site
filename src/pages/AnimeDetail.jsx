@@ -5,6 +5,7 @@ import VideoPlayer from '../components/VideoPlayer'
 import Icon from '../components/Icons'
 import { recordRecent } from '../lib/progress'
 import { toast } from '../lib/toast'
+import DownloadLinks from '../components/DownloadLinks'
 
 async function jikan(url, retries = 3) {
   for (let i = 0; i < retries; i++) {
@@ -250,6 +251,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
               {inWatchlist ? <><Icon.check width="16" height="16" /> In List</> : <><Icon.plus width="16" height="16" /> My List</>}
             </button>
           </div>
+          <DownloadLinks title={details.title_english || details.title} />
         </div>
       </div>
 

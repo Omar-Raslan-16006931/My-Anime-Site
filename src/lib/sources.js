@@ -116,6 +116,29 @@ export const SOURCES = [
   },
 ]
 
+export const DOWNLOAD_SOURCES = [
+  {
+    id: 'dlhub',
+    label: 'DLHub',
+    buildUrl: (title) => `https://dlhub.cc/search?q=${encodeURIComponent(title)}`,
+  },
+  {
+    id: 'videodownloader',
+    label: 'VideoDownloader',
+    buildUrl: (title) => `https://videodownloader.site/?q=${encodeURIComponent(title)}`,
+  },
+  {
+    id: 'nyaa',
+    label: 'Nyaa',
+    buildUrl: (title) => `https://nyaa.si/?q=${encodeURIComponent(title)}`,
+  },
+  {
+    id: '1337x',
+    label: '1337x',
+    buildUrl: (title) => `https://1337x.to/search/${encodeURIComponent(title)}/1/`,
+  },
+]
+
 // Returns the available sources for a context, each with a resolved target.
 export function availableSources(ctx) {
   return SOURCES
