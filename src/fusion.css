@@ -308,10 +308,10 @@
   .fu-meta { gap: 10px; margin-bottom: 14px; font-size: 14px; }
   .fu-genres { gap: 7px; margin-bottom: 16px; }
   .fu-syn { font-size: 14.5px; -webkit-line-clamp: 3; line-clamp: 3; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 18px; }
-  .fu-actions { gap: 9px; }
-  .fu-actions .fu-btn { padding: 12px 16px; font-size: 14px; }
-  .fu-actions .fu-btn-grad { padding: 12px 18px; font-size: 14px; }
-  .fu-round { width: 44px; height: 44px; }
+  .fu-actions { gap: 8px; }
+  .fu-actions .fu-btn { padding: 10px 14px; font-size: 13px; }
+  .fu-actions .fu-btn-grad { padding: 10px 16px; font-size: 13px; }
+  .fu-round { width: 42px; height: 42px; }
 
   /* Episode section: tighter */
   .fu-eps { padding: 26px clamp(14px, 4vw, 20px) 40px; }
@@ -321,10 +321,16 @@
   .fu-ep-syn { display: none; }
   .fu-still { width: clamp(104px, 32vw, 140px); }
 
-  /* Compact (anime) hero: stack poster above info */
-  .fu-ophero { flex-direction: column; align-items: flex-start; gap: 14px; padding: calc(var(--topbar-h) + env(safe-area-inset-top) + 48px) clamp(16px, 4vw, 20px) 24px; }
-  .fu-op-poster { width: 100px; }
-  .fu-optitle { font-size: clamp(34px, 10vw, 52px); }
+  /* Compact (anime) hero: poster floats left, title/text wrap beside + below */
+  .fu-ophero { display: flow-root; gap: 0; padding: calc(var(--topbar-h) + env(safe-area-inset-top) + 40px) clamp(16px, 4vw, 20px) 18px; }
+  .fu-op-poster { float: left; width: 104px; margin: 0 14px 10px 0; }
+  .fu-op-headinfo { min-width: 0; }
+  .fu-optitle { font-size: clamp(24px, 6.6vw, 36px); line-height: 1.06; margin-bottom: 0; }
+  .fu-ophero .fu-eyebrow { margin-bottom: 7px; font-size: 10.5px; letter-spacing: 0.16em; }
+  .fu-ophero .fu-meta { font-size: 12px; gap: 7px 8px; margin-bottom: 0; }
+  .fu-ophero .fu-syn { font-size: 12.5px !important; -webkit-line-clamp: 3 !important; line-clamp: 3 !important; margin-top: 8px !important; }
+  .fu-ophero .fu-actions { clear: both; margin-top: 12px !important; gap: 8px; }
+  .fu-ophero .fu-sources { clear: both; margin-top: 12px; }
   .fu-sagas { padding-left: clamp(14px, 4vw, 20px); padding-right: clamp(14px, 4vw, 20px); }
   .fu-range { padding: 16px clamp(14px, 4vw, 20px) 14px; }
   .fu-op-grid { padding: 0 clamp(14px, 4vw, 20px) 44px; }
