@@ -149,7 +149,9 @@ export default function App() {
   useEffect(() => { prevPathRef.current = location.pathname }, [location.pathname])
 
   // Forced 0.5s loading state on every route change so pages don't snap in.
+  // Also reset scroll to the top so a new page never opens mid-scroll.
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     setRouteLoading(true)
     const t = setTimeout(() => setRouteLoading(false), 500)
     return () => clearTimeout(t)
@@ -169,7 +171,9 @@ export default function App() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar user={user} profile={profile} onAuthClick={() => setShowAuth(true)} />
 
-      {routeLoading && <div key={'np-' + location.pathname} className="nav-progress" />}
+      {routeLoading && (
+        <div key={'rl-' + location.pathname} className="route-loader"><span className="spinner lg" /></div>
+      )}
 
       <div key={location.pathname} className={'route-anim' + slide}>
         <Routes location={location}>

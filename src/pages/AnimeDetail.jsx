@@ -4,6 +4,7 @@ import { supabase } from '../supabase'
 import VideoPlayer from '../components/VideoPlayer'
 import Icon from '../components/Icons'
 import { recordRecent } from '../lib/progress'
+import { animeArtFromMal } from '../lib/anilist'
 import { toast } from '../lib/toast'
 import DownloadLinks from '../components/DownloadLinks'
 
@@ -47,7 +48,41 @@ const fmtDate = (s) => {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-const EP_GROUP = 100
+const OP_PER = 12 // episodes per page within a saga (One Piece browser)
+
+// Canonical One Piece saga model (name → inclusive episode range).
+const OP_SAGAS = [
+  { name: 'East Blue', start: 1, end: 61 },
+  { name: 'Alabasta', start: 62, end: 135 },
+  { name: 'Sky Island', start: 136, end: 206 },
+  { name: 'Water 7', start: 207, end: 325 },
+  { name: 'Thriller Bark', start: 326, end: 384 },
+  { name: 'Summit War', start: 385, end: 516 },
+  { name: 'Fish-Man Island', start: 517, end: 574 },
+  { name: 'Dressrosa', start: 575, end: 746 },
+  { name: 'Whole Cake Island', start: 747, end: 889 },
+  { name: 'Wano Country', start: 890, end: 1085 },
+  { name: 'Final Saga', start: 1086, end: 1165 },
+]
+const OP_MILESTONES = {
+  1: "I'm Luffy! The Man Who's Gonna Be King of the Pirates",
+  377: 'The Death of Portgas D. Ace',
+  1000: 'The Straw Hats Come Together',
+  1015: 'The Decisive Battle of Onigashima',
+  1071: "Luffy's Peak — Gear Five",
+  1086: 'A New Emperor — Buggy the Star Clown',
+}
+
+// Saga/range tabs for any show: canonical for One Piece (mal 21), otherwise
+// 100-episode ranges so long-runners stay navigable. Short shows get one range.
+function buildSagas(malId, total) {
+  if (malId === 21) return OP_SAGAS
+  const n = total || 0
+  if (n <= 50) return [{ name: 'Episodes', start: 1, end: Math.max(n, 1) }]
+  const out = []
+  for (let s = 1; s <= n; s += 100) out.push({ name: `Episodes ${s}–${Math.min(s + 99, n)}`, start: s, end: Math.min(s + 99, n) })
+  return out
+}
 
 export default function AnimeDetail({ user, onAuthRequired }) {
   const { id } = useParams()
@@ -55,6 +90,8 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   const malId = Number(id)
 
   const [details, setDetails] = useState(null)
+  const [banner, setBanner] = useState(null)
+  const [jump, setJump] = useState('')
   const [episodes, setEpisodes] = useState([])
   const [epCount, setEpCount] = useState(null)
   const [isAiring, setIsAiring] = useState(false)
@@ -67,7 +104,8 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   const [loadError, setLoadError] = useState('')
   const [tab, setTab] = useState('episodes')
   const [playingEp, setPlayingEp] = useState(null)
-  const [epPage, setEpPage] = useState(1)
+  const [opSaga, setOpSaga] = useState(0)
+  const [opPage, setOpPage] = useState(0)
 
   // Anime data — keyed on the title only. Deliberately NOT on `user`, so auth
   // token refreshes (e.g. returning to the browser tab) never reload the page
@@ -76,7 +114,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
     if (!malId) return
     let cancelled = false
     setLoading(true); setLoadError(''); setEpisodes([]); setEpCount(null); setIsAiring(false)
-    setEpPage(1); setDetails(null)
+    setOpSaga(0); setOpPage(0); setDetails(null); setBanner(null)
 
     ;(async () => {
       try {
@@ -88,6 +126,9 @@ export default function AnimeDetail({ user, onAuthRequired }) {
       } catch { if (!cancelled) setLoadError('Failed to load anime details.') }
       finally { if (!cancelled) setLoading(false) }
     })()
+
+    // Wide hero banner from AniList (Jikan has no banner art).
+    animeArtFromMal(malId).then((art) => { if (!cancelled && art?.banner) setBanner(art.banner) })
 
     ;(async () => {
       setEpLoading(true)
@@ -139,17 +180,23 @@ export default function AnimeDetail({ user, onAuthRequired }) {
 
   const totalEps = epCount || details?.episodes || null
   const totalForPaging = totalEps ?? episodes.length
-  const pageCount = totalForPaging ? Math.ceil(totalForPaging / EP_GROUP) : 1
   const episodesByNum = useMemo(
     () => new Map(episodes.filter((e) => typeof e.episode === 'number').map((e) => [e.episode, e])),
     [episodes]
   )
-  const pageItems = totalEps
-    ? Array.from({ length: Math.min(EP_GROUP, totalEps - (epPage - 1) * EP_GROUP) }, (_, i) => {
-        const num = (epPage - 1) * EP_GROUP + i + 1
-        return { num, ep: episodesByNum.get(num) || null }
-      })
-    : episodes.slice((epPage - 1) * EP_GROUP, epPage * EP_GROUP).map((ep) => ({ num: ep.episode ?? ep.mal_id, ep }))
+
+  // Saga browser derived state.
+  const sagas = useMemo(() => buildSagas(malId, totalForPaging), [malId, totalForPaging])
+  const saga = sagas[Math.min(opSaga, sagas.length - 1)] || sagas[0]
+  const sagaPageCount = Math.max(1, Math.ceil((saga.end - saga.start + 1) / OP_PER))
+  const rangeStart = saga.start + opPage * OP_PER
+  const rangeEnd = Math.min(rangeStart + OP_PER - 1, saga.end)
+  const opRows = Array.from({ length: Math.max(0, rangeEnd - rangeStart + 1) }, (_, i) => {
+    const num = rangeStart + i
+    return { num, ep: episodesByNum.get(num) || null }
+  })
+  const milestoneTitle = (n) => (malId === 21 ? OP_MILESTONES[n] : null)
+  const isMilestone = (n) => (malId === 21 ? !!OP_MILESTONES[n] : n === 1 || n % 100 === 0)
 
   const markSeen = async (epNum) => {
     if (!user) return onAuthRequired?.()
@@ -202,6 +249,16 @@ export default function AnimeDetail({ user, onAuthRequired }) {
     }
   }
 
+  const selectSaga = (i) => { setOpSaga(i); setOpPage(0) }
+  const changeOpPage = (d) => setOpPage((p) => Math.max(0, Math.min(sagaPageCount - 1, p + d)))
+  const jumpToEp = (n) => {
+    const num = parseInt(n, 10)
+    if (!num || num < 1) return
+    const i = sagas.findIndex((s) => num >= s.start && num <= s.end)
+    if (i < 0) return
+    setOpSaga(i); setOpPage(Math.floor((num - sagas[i].start) / OP_PER)); setJump('')
+  }
+
   if (loading) return <div className="page"><div className="center-msg"><span className="spinner" /></div></div>
   if (loadError || !details) {
     return (
@@ -215,117 +272,124 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   }
 
   const poster = details.images?.jpg?.large_image_url || details.images?.jpg?.image_url
-  const trailer = details.trailer?.embed_url
+  const title = details.title_english || details.title
+  const genreNames = (details.genres || []).map((g) => g.name)
+  const eyebrow = `Anime${details.year ? ` · ${details.year}${isAiring ? '–' : ''}` : ''}${genreNames.length ? ` · ${genreNames.slice(0, 2).join(' / ')}` : ''}`
+  const resumeLabel = lastWatched ? `Resume EP ${lastWatched}` : 'Play'
+  const share = () => {
+    if (navigator.share) navigator.share({ title, url: window.location.href }).catch(() => {})
+    else navigator.clipboard?.writeText(window.location.href)
+  }
+  const curSaga = Math.min(opSaga, sagas.length - 1)
 
   return (
-    <div className="page">
-      <button className="icon-btn detail-back" onClick={() => navigate(-1)}><Icon.back width="18" height="18" /></button>
+    <div className="fu">
+      <button className="fu-back" onClick={() => navigate(-1)} aria-label="Back"><Icon.back width="18" height="18" /></button>
 
-      <div className="detail-head">
-        <div className="detail-poster"><img src={poster} alt={details.title} /></div>
-        <div className="detail-info">
-          <h1 className="detail-title">{details.title_english || details.title}</h1>
-          {details.title && details.title_english && details.title_english !== details.title && (
-            <p className="detail-orig">{details.title}</p>
-          )}
-
-          <div className="meta-pills">
-            <div className="pill"><div className="pill-k">Score</div><div className="pill-v">{details.score || 'N/A'}</div></div>
-            <div className="pill"><div className="pill-k">Episodes</div><div className="pill-v">{totalEps || '?'}{isAiring ? ' aired' : ''}</div></div>
-            <div className="pill"><div className="pill-k">Status</div><div className="pill-v">{details.status?.split(' ')[0] || 'N/A'}</div></div>
-            <div className="pill"><div className="pill-k">Type</div><div className="pill-v">{details.type || 'N/A'}</div></div>
+      <div className="fu-ophero">
+        <div className="fu-ophero-bg"><div className="g1" /><div className="g2" /><div className="scrim" /></div>
+        <div className="fu-op-poster">{poster ? <img src={poster} alt={title} loading="lazy" /> : null}</div>
+        <div className="fu-op-headinfo">
+          <div className="fu-eyebrow" style={{ color: '#7fd4ee' }}>{eyebrow}</div>
+          <h1 className="fu-optitle">{title}</h1>
+          <div className="fu-meta">
+            {details.score ? <><span className="strong"><span className="star">★</span>{details.score}</span><span className="sep">·</span></> : null}
+            {totalEps ? <><span><strong style={{ color: '#fff' }}>{totalEps.toLocaleString()}</strong> episodes</span><span className="sep">·</span></> : null}
+            {sagas.length > 1 ? <><span>{sagas.length} sagas</span><span className="sep">·</span></> : null}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span className="fu-dot" style={isAiring ? undefined : { background: '#9b99a8', boxShadow: 'none' }} />{isAiring ? 'Ongoing' : (details.status?.split(' ')[0] || 'Finished')}</span>
           </div>
-
-          <div className="genres">{(details.genres || []).map((g) => <span key={g.mal_id} className="tag">{g.name}</span>)}</div>
-
-          {lastWatched && (
-            <div className="resume-bar">
-              <div><div className="lbl">Last watched</div><div className="val">Episode {lastWatched}{lastWatchedAt ? ` · ${fmtDate(lastWatchedAt)}` : ''}</div></div>
-              <button className="btn btn-primary btn-sm" onClick={() => play(lastWatched)}><Icon.play width="15" height="15" /> Resume</button>
-            </div>
+          {details.synopsis && (
+            <p className="fu-syn" style={{ maxWidth: 680, margin: '12px 0 0', fontSize: 13.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{details.synopsis}</p>
           )}
-
-          <div className="detail-actions">
-            <button className="btn btn-light" onClick={() => play(lastWatched || 1)}><Icon.play width="17" height="17" /> Play</button>
-            <button className={inWatchlist ? 'btn btn-outline' : 'btn btn-primary'} onClick={toggleWatchlist}>
-              {inWatchlist ? <><Icon.check width="16" height="16" /> In List</> : <><Icon.plus width="16" height="16" /> My List</>}
+          <div className="fu-actions" style={{ marginTop: 18 }}>
+            <button className="fu-btn fu-btn-grad" onClick={() => play(lastWatched || 1)}><Icon.play width="16" height="16" /> {resumeLabel}</button>
+            {lastWatched && (!totalEps || lastWatched < totalEps) && (
+              <button className="fu-btn fu-btn-glass" onClick={() => play(lastWatched + 1)}><Icon.play width="15" height="15" /> Next Ep</button>
+            )}
+            <button className="fu-btn fu-btn-glass" onClick={toggleWatchlist}>
+              {inWatchlist
+                ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a99cff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg> In Your List</>
+                : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg> My List</>}
+            </button>
+            <button className="fu-round" aria-label="Share" onClick={share}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></svg>
             </button>
           </div>
-          <DownloadLinks title={details.title_english || details.title} />
+          <div className="fu-sources"><DownloadLinks title={title} /></div>
         </div>
       </div>
 
-      <div className="tabs">
-        {['episodes', 'overview', 'trailer'].map((t) => (
-          <button key={t} className={'tab-btn' + (tab === t ? ' active' : '')} onClick={() => setTab(t)}>
-            {t === 'episodes' ? `Episodes${totalEps ? ` (${totalEps})` : ''}` : t[0].toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'overview' && <p className="synopsis">{details.synopsis || 'No synopsis available.'}</p>}
-
-      {tab === 'episodes' && (
-        <div>
-          {pageCount > 1 && (
-            <div className="ep-toolbar">
-              <span className="muted" style={{ fontSize: 13 }}>{totalEps} episodes</span>
-              <select className="select-min" value={epPage} onChange={(e) => setEpPage(Number(e.target.value))}>
-                {Array.from({ length: pageCount }, (_, i) => i + 1).map((p) => (
-                  <option key={p} value={p}>{(p - 1) * EP_GROUP + 1}–{Math.min(p * EP_GROUP, totalForPaging)}</option>
-                ))}
-              </select>
+      {sagas.length > 1 && (
+            <div className="fu-sagas">
+              {sagas.map((s, i) => (
+                <button key={i} className={'fu-saga' + (i === curSaga ? ' on' : '')} onClick={() => selectSaga(i)}>
+                  <span className="nm">{s.name}</span>
+                  <span className="rg">EP {s.start}–{s.end}</span>
+                </button>
+              ))}
             </div>
           )}
 
-          {epLoading && episodes.length === 0 ? (
-            <div className="center-msg"><span className="spinner" /></div>
-          ) : pageItems.length ? (
-            <div className="ep-list">
-              {pageItems.map(({ num, ep }) => {
-                const seen = episodeProgress[Number(num)]?.seen
-                const thumb = ep?.images?.jpg?.image_url || poster
-                return (
-                  <div key={`${malId}-${num}`} className={'ep' + (seen ? ' seen' : '')}>
-                    <div className="ep-main" onClick={() => play(num)}>
-                      <div className="ep-thumb">
-                        {thumb ? <img src={thumb} alt={`EP ${num}`} /> : null}
-                        <span className="num">EP {num}</span>
-                        {seen && <span className="seen-dot">SEEN</span>}
-                      </div>
-                      <div className="ep-body">
-                        <div className="ep-name">{ep?.title || `Episode ${num}`}</div>
-                        <div className="ep-sub">{seen ? `Seen${episodeProgress[Number(num)]?.seen_at ? ` · ${fmtDate(episodeProgress[Number(num)].seen_at)}` : ''}` : ep?.aired ? ep.aired.split('T')[0] : `Episode ${num}`}</div>
-                      </div>
-                    </div>
-                    <div className="ep-actions">
-                      <button className="btn btn-primary btn-sm" onClick={() => play(num)}><Icon.play width="14" height="14" /></button>
-                      <button className={seen ? 'chip active' : 'chip'} onClick={() => toggleSeen(num, seen)}>{seen ? 'Seen' : 'Mark'}</button>
-                    </div>
-                  </div>
-                )
-              })}
+          <div className="fu-range">
+            <div className="fu-range-l">
+              <h2 className="fu-h2">Episode {rangeStart}–{rangeEnd}</h2>
+              <span className="saga">{saga.name}{malId === 21 ? ' Saga' : ''}</span>
             </div>
-          ) : (
-            <p className="muted">No episode data available.</p>
-          )}
-        </div>
-      )}
-
-      {tab === 'trailer' && (
-        trailer ? (
-          <div className="player-frame" style={{ maxWidth: 860 }}>
-            <iframe src={trailer} title="trailer" allowFullScreen />
+            <div className="fu-range-r">
+              <form className="fu-jump" onSubmit={(e) => { e.preventDefault(); jumpToEp(jump) }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></svg>
+                <input type="number" min="1" inputMode="numeric" placeholder="Jump to episode…" value={jump} onChange={(e) => setJump(e.target.value)} />
+                <button type="submit" className="fu-jump-go">Go</button>
+              </form>
+              <div className="fu-pager">
+                <button className="fu-pager-btn" disabled={opPage <= 0} onClick={() => changeOpPage(-1)} aria-label="Previous page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg></button>
+                <span className="fu-pager-label">Page {opPage + 1} / {sagaPageCount}</span>
+                <button className="fu-pager-btn" disabled={opPage >= sagaPageCount - 1} onClick={() => changeOpPage(1)} aria-label="Next page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg></button>
+              </div>
+            </div>
           </div>
-        ) : <p className="muted">No trailer available.</p>
-      )}
+
+          <div className="fu-op-grid">
+            {opRows.map(({ num, ep }) => {
+              const seen = episodeProgress[Number(num)]?.seen
+              const thumb = ep?.images?.jpg?.image_url || poster
+              const cont = lastWatched === Number(num)
+              const mile = isMilestone(num)
+              const epTitle = milestoneTitle(num) || ep?.title || `Episode ${num}`
+              const meta = `${saga.name}${malId === 21 ? ' Arc' : ''}   ·   Subbed · Dubbed   ·   ~24 min`
+              return (
+                <div key={`${malId}-${num}`} className={'fu-op-ep' + (seen ? ' seen' : '')} onClick={() => play(num)}>
+                  <div className="fu-op-still">
+                    {thumb ? <img src={thumb} alt={`EP ${num}`} loading="lazy" /> : null}
+                    <span className="fu-op-badge">EP {num}</span>
+                    {seen && (
+                      <span className="fu-seen-check" title="Watched">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                      </span>
+                    )}
+                    {cont && <div className="fu-op-prog"><span style={{ width: '55%' }} /></div>}
+                  </div>
+                  <div className="fu-op-body">
+                    <div className="fu-op-titlerow">
+                      <h3 className="fu-op-title">{epTitle}</h3>
+                      {mile && <span className="fu-mile">★ MILESTONE</span>}
+                      {cont && <span className="fu-tag sm">CONTINUE</span>}
+                      {seen && !cont && <span className="fu-seen-pill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>WATCHED</span>}
+                    </div>
+                    <div className="fu-ep-meta">{meta}</div>
+                  </div>
+                  <button className="fu-play sm" onClick={(e) => { e.stopPropagation(); play(num) }} aria-label={`Play episode ${num}`}><Icon.play width="15" height="15" /></button>
+                </div>
+              )
+            })}
+          </div>
 
       {playingEp != null && (
         <VideoPlayer
           key={`anime-${malId}-${playingEp}`}
           mediaType="anime"
           malId={details.mal_id}
-          title={details.title_english || details.title}
+          title={title}
           episode={playingEp}
           season={1}
           onClose={() => setPlayingEp(null)}

@@ -122,82 +122,103 @@ export default function TVDetail({ user, onAuthRequired }) {
   if (!details || details.success === false) return <div className="page"><div className="empty"><div className="emoji">📺</div><p>TV show not found.</p></div></div>
 
   const seasons = (details.seasons || []).filter((s) => s?.season_number > 0)
+  const year = details.first_air_date ? details.first_air_date.slice(0, 4) : ''
+  const ongoing = /return|ongoing|airing/i.test(details.status || '')
+  const backdrop = details.backdrop_path ? `${BACKDROP}${details.backdrop_path}` : null
+  const resumeLabel = lastEp && lastSeason ? `Resume · S${lastSeason} E${lastEp}` : 'Play'
+  const heroPlay = () => {
+    if (lastEp && lastSeason) { setSelectedSeason(lastSeason); play(lastEp) }
+    else play(seasonData?.episodes?.[0]?.episode_number || 1)
+  }
+  const share = () => {
+    if (navigator.share) navigator.share({ title: details.name, url: window.location.href }).catch(() => {})
+    else navigator.clipboard?.writeText(window.location.href)
+  }
 
   return (
-    <div className="page">
-      {details.backdrop_path && (
-        <div className="detail-banner"><img src={`${BACKDROP}${details.backdrop_path}`} alt={details.name} /></div>
-      )}
-      <button className="icon-btn detail-back" onClick={() => navigate(-1)} style={{ marginTop: details.backdrop_path ? 14 : 0 }}><Icon.back width="18" height="18" /></button>
+    <div className="fu">
+      <button className="fu-back" onClick={() => navigate(-1)} aria-label="Back"><Icon.back width="18" height="18" /></button>
 
-      <div className="detail-head">
-        <div className="detail-poster"><img src={details.poster_path ? `${IMG}${details.poster_path}` : '/placeholder.jpg'} alt={details.name} /></div>
-        <div className="detail-info">
-          <h1 className="detail-title">{details.name}</h1>
-          {details.original_name && details.original_name !== details.name && <p className="detail-orig">{details.original_name}</p>}
-
-          <div className="meta-pills">
-            <div className="pill"><div className="pill-k">Score</div><div className="pill-v">{details.vote_average ? details.vote_average.toFixed(1) : 'N/A'}</div></div>
-            <div className="pill"><div className="pill-k">Seasons</div><div className="pill-v">{details.number_of_seasons || seasons.length || 'N/A'}</div></div>
-            <div className="pill"><div className="pill-k">Episodes</div><div className="pill-v">{details.number_of_episodes || 'N/A'}</div></div>
-            <div className="pill"><div className="pill-k">Status</div><div className="pill-v">{details.status?.split(' ')[0] || 'N/A'}</div></div>
+      <section className="fu-hero">
+        <div className="fu-hero-img">{backdrop && <img src={backdrop} alt={details.name} />}</div>
+        <div className="fu-hero-glow" />
+        <div className="fu-hero-scrim" />
+        <div className="fu-hero-noise" />
+        <div className="fu-hero-inner">
+          <div className="fu-eyebrow">Series{year ? ` · ${year}` : ''}{details.number_of_seasons ? ` · ${details.number_of_seasons} Season${details.number_of_seasons > 1 ? 's' : ''}` : ''}</div>
+          <h1 className="fu-title">{details.name}</h1>
+          <div className="fu-meta">
+            {details.vote_average ? <><span className="strong"><span className="star">★</span>{details.vote_average.toFixed(1)}</span><span className="sep">·</span></> : null}
+            {details.number_of_seasons ? <><span>{details.number_of_seasons} Season{details.number_of_seasons > 1 ? 's' : ''}</span><span className="sep">·</span></> : null}
+            {details.number_of_episodes ? <><span>{details.number_of_episodes} Episodes</span><span className="sep">·</span></> : null}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span className="fu-dot" />{ongoing ? 'Returning' : (details.status?.split(' ')[0] || 'Ended')}</span>
           </div>
-
-          <div className="genres">{(details.genres || []).map((g) => <span key={g.id} className="tag">{g.name}</span>)}</div>
-
-          {lastEp && lastSeason && (
-            <div className="resume-bar">
-              <div><div className="lbl">Last watched</div><div className="val">S{lastSeason} · E{lastEp}</div></div>
-              <button className="btn btn-primary btn-sm" onClick={() => { setSelectedSeason(lastSeason); play(lastEp) }}><Icon.play width="15" height="15" /> Resume</button>
-            </div>
-          )}
-
-          <div className="detail-actions">
-            <button className={inWatchlist ? 'btn btn-outline' : 'btn btn-primary'} onClick={toggleWatchlist}>
-              {inWatchlist ? <><Icon.check width="16" height="16" /> In List</> : <><Icon.plus width="16" height="16" /> My List</>}
+          <div className="fu-genres">{(details.genres || []).slice(0, 4).map((g) => <span key={g.id} className="fu-pill">{g.name}</span>)}</div>
+          {details.overview && <p className="fu-syn">{details.overview}</p>}
+          <div className="fu-actions">
+            <button className="fu-btn fu-btn-grad" onClick={heroPlay}><Icon.play width="16" height="16" /> {resumeLabel}</button>
+            {lastEp && lastSeason && (
+              <button className="fu-btn fu-btn-glass" onClick={() => { setSelectedSeason(lastSeason); play(lastEp + 1) }}><Icon.play width="15" height="15" /> Next Ep</button>
+            )}
+            <button className="fu-btn fu-btn-glass" onClick={toggleWatchlist}>
+              {inWatchlist
+                ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a99cff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg> In Your List</>
+                : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg> My List</>}
+            </button>
+            <button className="fu-round" aria-label="Share" onClick={share}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></svg>
             </button>
           </div>
-          <DownloadLinks title={details.name} />
-
-          <p className="synopsis">{details.overview || 'No overview available.'}</p>
+          <div className="fu-sources"><DownloadLinks title={details.name} /></div>
         </div>
-      </div>
+      </section>
 
-      <h2 className="section-title" style={{ fontSize: 20, margin: '26px 0 14px' }}>Seasons</h2>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
-        {seasons.map((s) => (
-          <button key={s.id || s.season_number}
-            className={'chip' + (selectedSeason === s.season_number ? ' active' : '')}
-            onClick={() => setSelectedSeason(s.season_number)}>Season {s.season_number}</button>
-        ))}
-      </div>
+      <section className="fu-eps">
+        <div className="fu-eps-head">
+          <div>
+            <div className="fu-eps-eyebrow">{(seasonData?.name || (selectedSeason ? `Season ${selectedSeason}` : 'Episodes'))}{seasonData?.episodes?.length ? ` · ${seasonData.episodes.length} Episodes` : ''}</div>
+            <h2 className="fu-h2">Episodes</h2>
+          </div>
+          {seasons.length > 0 && (
+            <div className="fu-seg">
+              {seasons.map((s) => (
+                <button key={s.id || s.season_number} className={'fu-seg-btn' + (selectedSeason === s.season_number ? ' on' : '')} onClick={() => setSelectedSeason(s.season_number)}>Season {s.season_number}</button>
+              ))}
+            </div>
+          )}
+        </div>
 
-      {seasonLoading ? (
-        <div className="center-msg"><span className="spinner" /></div>
-      ) : seasonData?.episodes?.length ? (
-        <div className="ep-list">
-          {seasonData.episodes.map((ep) => {
-            const isLast = lastSeason === selectedSeason && lastEp === ep.episode_number
-            return (
-              <div key={ep.id} className={'ep' + (isLast ? ' seen' : '')}>
-                <div className="ep-main" onClick={() => play(ep.episode_number)}>
-                  <div className="ep-thumb">
-                    {ep.still_path ? <img src={`${IMG}${ep.still_path}`} alt={ep.name} /> : null}
-                    <span className="num">EP {ep.episode_number}</span>
+        {seasonLoading ? (
+          <div className="fu-center"><span className="spinner lg" /></div>
+        ) : seasonData?.episodes?.length ? (
+          <div className="fu-ep-list">
+            {seasonData.episodes.map((ep) => {
+              const isLast = lastSeason === selectedSeason && lastEp === ep.episode_number
+              const thumb = ep.still_path ? `${IMG}${ep.still_path}` : (details.poster_path ? `${IMG}${details.poster_path}` : null)
+              const meta = [ep.air_date, typeof ep.runtime === 'number' ? `${ep.runtime} min` : null].filter(Boolean).join('   ·   ') || 'Subbed · Dubbed'
+              return (
+                <div key={ep.id} className="fu-ep" onClick={() => play(ep.episode_number)}>
+                  <div className="fu-still">
+                    {thumb ? <img src={thumb} alt={ep.name} loading="lazy" /> : null}
+                    <span className="fu-ep-badge">EP {ep.episode_number}</span>
                   </div>
-                  <div className="ep-body">
-                    <div className="ep-name">{ep.name || `Episode ${ep.episode_number}`}</div>
-                    <div className="ep-sub">{[ep.air_date, typeof ep.runtime === 'number' ? `${ep.runtime} min` : null].filter(Boolean).join(' · ')}</div>
+                  <div className="fu-ep-body">
+                    <div className="fu-ep-titlerow">
+                      <h3 className="fu-ep-title">{ep.name || `Episode ${ep.episode_number}`}</h3>
+                      {isLast && <span className="fu-tag">CONTINUE</span>}
+                    </div>
+                    <div className="fu-ep-meta">{meta}</div>
+                    {ep.overview && <p className="fu-ep-syn">{ep.overview}</p>}
                   </div>
+                  <div className="fu-play" onClick={(e) => { e.stopPropagation(); play(ep.episode_number) }}><Icon.play width="18" height="18" /></div>
                 </div>
-                <div className="ep-actions"><button className="btn btn-primary btn-sm" onClick={() => play(ep.episode_number)}><Icon.play width="14" height="14" /></button></div>
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <p className="muted">No episodes found for this season.</p>
-      )}
+              )
+            })}
+          </div>
+        ) : (
+          <p className="muted" style={{ color: 'var(--fu-mute)' }}>No episodes found for this season.</p>
+        )}
+      </section>
 
       {playing && (
         <VideoPlayer

@@ -6,7 +6,6 @@ import MediaCard from '../components/MediaCard'
 import { getPopularMovies, getPopularTV, getTmdbImage } from '../lib/tmdb'
 import { animeArtFromMal, recentlyAiredEpisodes } from '../lib/anilist'
 import { supabase } from '../supabase'
-import Icon from '../components/Icons'
 
 const backdrop = (path) => (path ? `https://image.tmdb.org/t/p/original${path}` : null)
 
@@ -144,13 +143,13 @@ export default function Home({ user }) {
   const movieCard = (m) => ({ href: `/movie/${m.id}`, poster: getTmdbImage(m.poster_path), title: m.title, score: m.vote_average, sub: m.release_date?.slice(0, 4) })
   const tvCard = (s) => ({ href: `/tv/${s.id}`, poster: getTmdbImage(s.poster_path), title: s.name, score: s.vote_average, sub: s.first_air_date?.slice(0, 4) })
 
-  // New mapper for currently watching
+  // Currently watching → standard full-size poster card with progress + meta.
   const watchCard = (i) => ({
     href: watchHref(i),
     poster: i.poster,
     title: i.title,
-    kind: watchMeta(i),
-    progress: watchFrac(i)
+    sub: watchMeta(i),
+    progress: watchFrac(i),
   })
 
   return (
