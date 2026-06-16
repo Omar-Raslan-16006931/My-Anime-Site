@@ -121,6 +121,11 @@ export default function Home({ user }) {
     return () => { active = false }
   }, [])
 
+  const watchKey = (i) => `${i.source_table}-${i.id}`
+  const watchHref = (i) => (i.media_type === 'tv' && i.tmdb_id ? `/tv/${i.tmdb_id}` : i.media_type === 'movie' && i.tmdb_id ? `/movie/${i.tmdb_id}` : i.mal_id ? `/anime/${i.mal_id}` : '/')
+  const watchMeta = (i) => i.media_type === 'tv' ? `S${i.season_number || 1} · E${i.last_episode || 1}` : i.media_type === 'movie' ? 'Movie' : `Ep. ${i.last_episode || 1}${i.total_episodes ? ` / ${i.total_episodes}` : ''}`
+  const watchFrac = (i) => (i.total_episodes && i.last_episode ? Math.min(1, i.last_episode / i.total_episodes) : 0)
+
   const animeCard = (a) => ({
     href: `/anime/${a.mal_id}`,
     poster: a.images?.jpg?.large_image_url,
@@ -139,10 +144,14 @@ export default function Home({ user }) {
   const movieCard = (m) => ({ href: `/movie/${m.id}`, poster: getTmdbImage(m.poster_path), title: m.title, score: m.vote_average, sub: m.release_date?.slice(0, 4) })
   const tvCard = (s) => ({ href: `/tv/${s.id}`, poster: getTmdbImage(s.poster_path), title: s.name, score: s.vote_average, sub: s.first_air_date?.slice(0, 4) })
 
-  const watchKey = (i) => `${i.source_table}-${i.id}`
-  const watchHref = (i) => (i.media_type === 'tv' && i.tmdb_id ? `/tv/${i.tmdb_id}` : i.media_type === 'movie' && i.tmdb_id ? `/movie/${i.tmdb_id}` : i.mal_id ? `/anime/${i.mal_id}` : '/')
-  const watchMeta = (i) => i.media_type === 'tv' ? `S${i.season_number || 1} · E${i.last_episode || 1}` : i.media_type === 'movie' ? 'Movie' : `Ep. ${i.last_episode || 1}${i.total_episodes ? ` / ${i.total_episodes}` : ''}`
-  const watchFrac = (i) => (i.total_episodes && i.last_episode ? Math.min(1, i.last_episode / i.total_episodes) : 0)
+  // New mapper for currently watching
+  const watchCard = (i) => ({
+    href: watchHref(i),
+    poster: i.poster,
+    title: i.title,
+    kind: watchMeta(i),
+    progress: watchFrac(i)
+  })
 
   return (
     <div className="page" style={{ paddingTop: 0 }}>
@@ -155,17 +164,7 @@ export default function Home({ user }) {
       {watching.length > 0 && (
         <Row title="Currently Watching" onMore={() => navigate('/currently-watching')}>
           {watching.map((i) => (
-            <div key={watchKey(i)} className="pcard" onClick={() => navigate(watchHref(i))}>
-              <div className="pcard-img">
-                {i.poster ? <img src={i.poster} alt={i.title} /> : null}
-                <div className="pcard-play"><Icon.play width="34" height="34" /></div>
-                <div className="pcard-badge">{watchMeta(i)}</div>
-                {watchFrac(i) > 0 && (
-                  <div className="card-progress"><span style={{ width: `${Math.round(watchFrac(i) * 100)}%` }} /></div>
-                )}
-              </div>
-              <div className="card-title" style={{ marginTop: 6 }}>{i.title}</div>
-            </div>
+            <MediaCard key={watchKey(i)} item={watchCard(i)} />
           ))}
         </Row>
       )}

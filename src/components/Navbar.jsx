@@ -3,6 +3,9 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import Icon from './Icons'
 
+// Brand wordmark — change this to whatever you'd like the site called.
+const BRAND = 'AniWave'
+
 const NAV = [
   { to: '/', label: 'Home', icon: Icon.home, end: true },
   { to: '/anime', label: 'Anime', icon: Icon.bolt },
@@ -11,16 +14,16 @@ const NAV = [
   { to: '/watchlist', label: 'List', icon: Icon.bookmark },
 ]
 
-export default function Navbar({ user, profile, onAuthClick, onSearchClick }) {
+export default function Navbar({ user, profile, onAuthClick }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [q, setQ] = useState('')
   const menuRef = useRef(null)
   const navigate = useNavigate()
 
-  // Netflix behavior: transparent over the hero, solid once you scroll.
+  // Transparent over the hero, frosted once you scroll.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10)
+    const onScroll = () => setScrolled(window.scrollY > 8)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
@@ -50,12 +53,19 @@ export default function Navbar({ user, profile, onAuthClick, onSearchClick }) {
   return (
     <>
       <header className={'topbar' + (scrolled ? ' scrolled' : '')}>
-        <Link to="/" className="brand">AniWave</Link>
+        <Link to="/" className="brand">
+          <span className="brand-dot" />
+          {BRAND}
+        </Link>
 
         <nav className="nav-links">
           {NAV.map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.end}
-              className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
+            <NavLink
+              key={n.to}
+              to={n.to}
+              end={n.end}
+              className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
+            >
               {n.label}
             </NavLink>
           ))}
@@ -66,15 +76,16 @@ export default function Navbar({ user, profile, onAuthClick, onSearchClick }) {
         <form className="topbar-search" onSubmit={submitSearch}>
           <Icon.search width="16" height="16" />
           <input
-            placeholder="Search anime…"
+            placeholder="Search…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            aria-label="Search anime"
           />
         </form>
 
         {user ? (
           <div style={{ position: 'relative' }} ref={menuRef}>
-            <button className="avatar" onClick={() => setMenuOpen((v) => !v)}>
+            <button className="avatar" onClick={() => setMenuOpen((v) => !v)} aria-label="Account menu">
               {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}
             </button>
             {menuOpen && (
@@ -92,12 +103,18 @@ export default function Navbar({ user, profile, onAuthClick, onSearchClick }) {
         )}
       </header>
 
-      <nav className="tabbar">
+      <nav className="dock" aria-label="Primary">
         {NAV.map((n) => (
-          <NavLink key={n.to} to={n.to} end={n.end}
-            className={({ isActive }) => 'tab' + (isActive ? ' active' : '')}>
+          <NavLink
+            key={n.to}
+            to={n.to}
+            end={n.end}
+            className={({ isActive }) => 'dock-item' + (isActive ? ' active' : '')}
+            aria-label={n.label}
+            title={n.label}
+          >
             <n.icon />
-            {n.label}
+            <span className="dock-label">{n.label}</span>
           </NavLink>
         ))}
       </nav>

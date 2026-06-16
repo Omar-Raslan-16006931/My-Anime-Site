@@ -23,6 +23,7 @@ export default function App() {
   const [profile, setProfile] = useState(null)
   const [showAuth, setShowAuth] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [routeLoading, setRouteLoading] = useState(false)
 
   const lastUserIdRef = useRef(null)
   const initializedRef = useRef(false)
@@ -114,7 +115,7 @@ export default function App() {
     const onStart = (e) => {
       valid = false
       if (window.innerWidth >= 880) return
-      if (e.target.closest('.row-track, .modal, .player-frame, .tabs, .ep-thumb, input, select, textarea, iframe, video')) return
+      if (e.target.closest('.row-track, .modal, .player-frame, .tabs, .dock, .ep-thumb, input, select, textarea, iframe, video')) return
       valid = true
       sx = e.touches[0].clientX
       sy = e.touches[0].clientY
@@ -147,6 +148,13 @@ export default function App() {
     : ''
   useEffect(() => { prevPathRef.current = location.pathname }, [location.pathname])
 
+  // Forced 0.5s loading state on every route change so pages don't snap in.
+  useEffect(() => {
+    setRouteLoading(true)
+    const t = setTimeout(() => setRouteLoading(false), 500)
+    return () => clearTimeout(t)
+  }, [location.pathname])
+
   const handleAuthRequired = useCallback(() => setShowAuth(true), [])
 
   if (loading) {
@@ -161,14 +169,16 @@ export default function App() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar user={user} profile={profile} onAuthClick={() => setShowAuth(true)} />
 
+      {routeLoading && <div key={'np-' + location.pathname} className="nav-progress" />}
+
       <div key={location.pathname} className={'route-anim' + slide}>
         <Routes location={location}>
           <Route path="/" element={<Home user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/anime" element={<Anime />} />
           <Route path="/movies" element={<Movies />} />
           <Route path="/tv" element={<TVShows />} />
-          <Route path="/movie/:id" element={<MovieDetail />} />
-          <Route path="/tv/:id" element={<TVDetail />} />
+          <Route path="/movie/:id" element={<MovieDetail user={user} onAuthRequired={handleAuthRequired} />} />
+          <Route path="/tv/:id" element={<TVDetail user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/watchlist" element={<Watchlist user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/anime/:id" element={<AnimeDetail user={user} onAuthRequired={handleAuthRequired} />} />
           <Route

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from './Icons'
 
@@ -5,6 +6,7 @@ import Icon from './Icons'
 // item: { href, poster, title, sub, score, kind, progress(0..1), fav, onFav }
 export default function MediaCard({ item, onClick }) {
   const navigate = useNavigate()
+  const [loaded, setLoaded] = useState(false)
   const go = () => {
     if (onClick) return onClick(item)
     if (item.href) navigate(item.href)
@@ -14,7 +16,15 @@ export default function MediaCard({ item, onClick }) {
     <div className="card" onClick={go}>
       <div className="card-poster">
         {item.poster ? (
-          <img src={item.poster} alt={item.title} loading="lazy" />
+          <img
+            ref={(el) => { if (el && el.complete && el.naturalWidth > 0) setLoaded(true) }}
+            src={item.poster}
+            alt={item.title}
+            loading="lazy"
+            className={'img-fade' + (loaded ? ' is-loaded' : '')}
+            onLoad={() => setLoaded(true)}
+            onError={() => setLoaded(true)}
+          />
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text3)' }}>
             <Icon.film width="28" height="28" />
