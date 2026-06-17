@@ -220,12 +220,11 @@ select {
   z-index: 130;
   display: flex; align-items: center; justify-content: center; gap: 2px;
   padding: 6px;
-  background: var(--glass);
-  backdrop-filter: blur(26px) saturate(1.7);
-  -webkit-backdrop-filter: blur(26px) saturate(1.7);
+  /* Solid (no backdrop-filter): blur on a fixed element judders during scroll on iOS */
+  background: #15151b;
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 999px;
-  box-shadow: 0 14px 44px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07);
+  box-shadow: 0 14px 44px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07);
   animation: dockIn 0.4s var(--ease);
 }
 @keyframes dockIn { from { opacity: 0; } }
