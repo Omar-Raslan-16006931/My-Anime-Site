@@ -20,32 +20,49 @@ export default function Navbar({ user, profile, onAuthClick }) {
   const [kbOpen, setKbOpen] = useState(false)
   const [q, setQ] = useState('')
   const menuRef = useRef(null)
+  const baseVHRef = useRef(0)
   const navigate = useNavigate()
 
   // The dock is locked to the bottom and never repositioned. The ONLY thing we
-  // do for the keyboard is remove it while the keyboard is open — detected from
-  // the visual viewport height (a stable signal), NOT focus events (which fire
-  // erratically on mobile and caused the earlier oscillation). The 120px
-  // threshold means only a real keyboard triggers it, never the address bar,
-  // and setState bails when the value is unchanged so there's no churn/loop.
+  // do for the keyboard is remove it while the keyboard is open. Detection works
+  // on BOTH iOS (visual-viewport shrinks) and Android (layout shrinks): we track
+  // the tallest visible height seen (no keyboard) and flag the keyboard when the
+  // current visible height drops well below it. ~160px separates a keyboard from
+  // the address bar; setState bails when unchanged so there's no churn/loop.
   useEffect(() => {
     const vv = window.visualViewport
-    if (!vv) return
+    const visibleH = () => (vv ? vv.height : window.innerHeight)
+    baseVHRef.current = visibleH()
     let raf = 0
+    let showTimer = 0
+    const apply = (open) => {
+      clearTimeout(showTimer)
+      // Hide the dock immediately when the keyboard opens, but only re-show it
+      // once viewport events have gone quiet (~300ms) — i.e. after the close
+      // animation has fully settled. iOS shoves fixed elements around during the
+      // close, so showing mid-animation is what made the dock appear to bounce.
+      if (open) setKbOpen(true)
+      else showTimer = setTimeout(() => setKbOpen(false), 300)
+    }
     const update = () => {
       cancelAnimationFrame(raf)
       raf = requestAnimationFrame(() => {
-        const overlap = window.innerHeight - vv.height - vv.offsetTop
-        setKbOpen(overlap > 120)
+        const h = visibleH()
+        if (h > baseVHRef.current) baseVHRef.current = h
+        apply(baseVHRef.current - h > 160)
       })
     }
+    const onOrient = () => { baseVHRef.current = 0; update() }
     update()
-    vv.addEventListener('resize', update)
-    vv.addEventListener('scroll', update)
+    window.addEventListener('resize', update)
+    window.addEventListener('orientationchange', onOrient)
+    if (vv) { vv.addEventListener('resize', update); vv.addEventListener('scroll', update) }
     return () => {
       cancelAnimationFrame(raf)
-      vv.removeEventListener('resize', update)
-      vv.removeEventListener('scroll', update)
+      clearTimeout(showTimer)
+      window.removeEventListener('resize', update)
+      window.removeEventListener('orientationchange', onOrient)
+      if (vv) { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update) }
     }
   }, [])
 
