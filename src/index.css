@@ -213,7 +213,7 @@ select {
 
 /* ---------- Floating dock (primary nav, all breakpoints) ---------- */
 .dock {
-  position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 16px + var(--kb, 0px));
+  position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 16px);
   margin: 0 auto;
   width: max-content;
   max-width: calc(100vw - 20px);
@@ -229,6 +229,8 @@ select {
   animation: dockIn 0.4s var(--ease);
 }
 @keyframes dockIn { from { opacity: 0; } }
+/* Locked to the bottom; only removed (never moved) while the keyboard is open */
+.dock.dock-hidden { display: none; }
 
 .dock-item {
   display: inline-flex; align-items: center; justify-content: center;

@@ -17,25 +17,26 @@ const NAV = [
 export default function Navbar({ user, profile, onAuthClick }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [kbOpen, setKbOpen] = useState(false)
   const [q, setQ] = useState('')
   const menuRef = useRef(null)
   const navigate = useNavigate()
 
-  // Keep the floating dock pinned above the on-screen keyboard. Driven purely by
-  // the visual viewport (stable while the keyboard is open) — NOT focus events,
-  // which fire erratically on mobile and made the dock oscillate. We expose the
-  // keyboard overlap as `--kb`; the dock's `bottom` adds it. A threshold keeps
-  // small viewport changes (e.g. the address bar) from nudging the dock.
+  // The dock is locked to the bottom and never repositioned. The ONLY thing we
+  // do for the keyboard is remove it while the keyboard is open — detected from
+  // the visual viewport height (a stable signal), NOT focus events (which fire
+  // erratically on mobile and caused the earlier oscillation). The 120px
+  // threshold means only a real keyboard triggers it, never the address bar,
+  // and setState bails when the value is unchanged so there's no churn/loop.
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const root = document.documentElement
     let raf = 0
     const update = () => {
       cancelAnimationFrame(raf)
       raf = requestAnimationFrame(() => {
         const overlap = window.innerHeight - vv.height - vv.offsetTop
-        root.style.setProperty('--kb', (overlap > 120 ? Math.round(overlap) : 0) + 'px')
+        setKbOpen(overlap > 120)
       })
     }
     update()
@@ -45,7 +46,6 @@ export default function Navbar({ user, profile, onAuthClick }) {
       cancelAnimationFrame(raf)
       vv.removeEventListener('resize', update)
       vv.removeEventListener('scroll', update)
-      root.style.removeProperty('--kb')
     }
   }, [])
 
@@ -131,7 +131,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
         )}
       </header>
 
-      <nav className="dock" aria-label="Primary">
+      <nav className={'dock' + (kbOpen ? ' dock-hidden' : '')} aria-label="Primary">
         {NAV.map((n) => (
           <NavLink
             key={n.to}
