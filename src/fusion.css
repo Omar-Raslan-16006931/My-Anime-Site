@@ -285,6 +285,18 @@
 
 .fu-center { display: grid; place-items: center; min-height: 60vh; }
 
+/* Season switcher as a dropdown (mobile, 4+ seasons) */
+.fu-season-select {
+  -webkit-appearance: none; appearance: none; width: auto; min-width: 148px;
+  font-family: var(--fu-sans); font-size: 14px; font-weight: 600; color: #e9e6ff; cursor: pointer;
+  background-color: var(--fu-glass); border: 1px solid var(--fu-violet-border); border-radius: 11px;
+  padding: 10px 36px 10px 15px; box-shadow: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c7bdff' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.fu-season-select:focus { outline: none; border-color: var(--fu-violet); box-shadow: 0 0 0 3px rgba(157,134,255,0.18); }
+.fu-season-select option { background: #14141c; color: #fff; }
+
 /* ---------- Seen / watched indicator (clear + obvious) ---------- */
 .fu-op-ep.seen, .fu-ep.seen { background: rgba(111,224,168,0.09); border-color: rgba(111,224,168,0.38); }
 .fu-op-ep.seen .fu-op-still img, .fu-ep.seen .fu-still img { opacity: 0.62; }

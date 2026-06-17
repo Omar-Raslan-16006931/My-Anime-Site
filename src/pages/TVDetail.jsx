@@ -42,6 +42,14 @@ export default function TVDetail({ user, onAuthRequired }) {
   const [inWatchlist, setInWatchlist] = useState(false)
   const [lastEp, setLastEp] = useState(null)
   const [lastSeason, setLastSeason] = useState(null)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 720px)')
+    const on = () => setIsMobile(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
 
   useEffect(() => {
     if (!id) return
@@ -180,11 +188,24 @@ export default function TVDetail({ user, onAuthRequired }) {
             <h2 className="fu-h2">Episodes</h2>
           </div>
           {seasons.length > 0 && (
-            <div className="fu-seg">
-              {seasons.map((s) => (
-                <button key={s.id || s.season_number} className={'fu-seg-btn' + (selectedSeason === s.season_number ? ' on' : '')} onClick={() => setSelectedSeason(s.season_number)}>Season {s.season_number}</button>
-              ))}
-            </div>
+            isMobile && seasons.length > 3 ? (
+              <select
+                className="fu-season-select"
+                value={selectedSeason ?? ''}
+                onChange={(e) => setSelectedSeason(Number(e.target.value))}
+                aria-label="Select season"
+              >
+                {seasons.map((s) => (
+                  <option key={s.id || s.season_number} value={s.season_number}>Season {s.season_number}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="fu-seg">
+                {seasons.map((s) => (
+                  <button key={s.id || s.season_number} className={'fu-seg-btn' + (selectedSeason === s.season_number ? ' on' : '')} onClick={() => setSelectedSeason(s.season_number)}>Season {s.season_number}</button>
+                ))}
+              </div>
+            )
           )}
         </div>
 
@@ -228,6 +249,8 @@ export default function TVDetail({ user, onAuthRequired }) {
           season={selectedSeason}
           episode={playing}
           onClose={() => setPlaying(null)}
+          onNext={() => play(playing + 1)}
+          hasNext={!!seasonData?.episodes?.some((e) => e.episode_number === playing + 1)}
         />
       )}
     </div>

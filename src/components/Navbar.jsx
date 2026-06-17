@@ -17,9 +17,21 @@ const NAV = [
 export default function Navbar({ user, profile, onAuthClick }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [typing, setTyping] = useState(false)
   const [q, setQ] = useState('')
   const menuRef = useRef(null)
   const navigate = useNavigate()
+
+  // Hide the floating dock while a text field is focused so the on-screen
+  // keyboard doesn't drag it up the screen on mobile.
+  useEffect(() => {
+    const isField = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+    const onIn = (e) => { if (isField(e.target)) setTyping(true) }
+    const onOut = (e) => { if (isField(e.target)) setTyping(false) }
+    document.addEventListener('focusin', onIn)
+    document.addEventListener('focusout', onOut)
+    return () => { document.removeEventListener('focusin', onIn); document.removeEventListener('focusout', onOut) }
+  }, [])
 
   // Transparent over the hero, frosted once you scroll.
   useEffect(() => {
@@ -103,7 +115,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
         )}
       </header>
 
-      <nav className="dock" aria-label="Primary">
+      <nav className={'dock' + (typing ? ' dock-hidden' : '')} aria-label="Primary">
         {NAV.map((n) => (
           <NavLink
             key={n.to}

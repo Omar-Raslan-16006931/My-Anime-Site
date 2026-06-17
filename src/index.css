@@ -229,6 +229,8 @@ select {
   animation: dockIn 0.4s var(--ease);
 }
 @keyframes dockIn { from { opacity: 0; } }
+/* Hidden while a text field is focused (keyboard open) so it doesn't ride up */
+.dock.dock-hidden { display: none; }
 
 .dock-item {
   display: inline-flex; align-items: center; justify-content: center;

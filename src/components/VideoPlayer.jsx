@@ -17,6 +17,8 @@ export default function VideoPlayer({
   episode = 1,
   season = 1,
   onClose,
+  onNext,
+  hasNext = true,
 }) {
   const type = mediaType === 'anime' ? 'anime' : mediaType
   const displayTitle = movieTitle || title
@@ -235,6 +237,12 @@ export default function VideoPlayer({
             )}
 
             <div className="grow" />
+
+            {onNext && hasNext && type !== 'movie' && (
+              <button className="btn btn-primary btn-sm" onClick={onNext} aria-label="Next episode">
+                Next Ep <Icon.play width="13" height="13" />
+              </button>
+            )}
 
             {(currentStream?.url || embedUrl) && (
               <a className="icon-btn" href={currentStream?.url || embedUrl} target="_blank" rel="noopener noreferrer" aria-label="Open externally">

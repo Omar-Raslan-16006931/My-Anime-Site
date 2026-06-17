@@ -393,6 +393,8 @@ export default function AnimeDetail({ user, onAuthRequired }) {
           episode={playingEp}
           season={1}
           onClose={() => setPlayingEp(null)}
+          onNext={() => play(playingEp + 1)}
+          hasNext={!totalEps || playingEp < totalEps}
         />
       )}
     </div>
