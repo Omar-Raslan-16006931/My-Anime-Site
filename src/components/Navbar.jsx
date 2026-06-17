@@ -17,20 +17,36 @@ const NAV = [
 export default function Navbar({ user, profile, onAuthClick }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const [typing, setTyping] = useState(false)
   const [q, setQ] = useState('')
   const menuRef = useRef(null)
   const navigate = useNavigate()
 
-  // Hide the floating dock while a text field is focused so the on-screen
-  // keyboard doesn't drag it up the screen on mobile.
+  // Keep the floating dock pinned above the on-screen keyboard. Driven purely by
+  // the visual viewport (stable while the keyboard is open) — NOT focus events,
+  // which fire erratically on mobile and made the dock oscillate. We expose the
+  // keyboard overlap as `--kb`; the dock's `bottom` adds it. A threshold keeps
+  // small viewport changes (e.g. the address bar) from nudging the dock.
   useEffect(() => {
-    const isField = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
-    const onIn = (e) => { if (isField(e.target)) setTyping(true) }
-    const onOut = (e) => { if (isField(e.target)) setTyping(false) }
-    document.addEventListener('focusin', onIn)
-    document.addEventListener('focusout', onOut)
-    return () => { document.removeEventListener('focusin', onIn); document.removeEventListener('focusout', onOut) }
+    const vv = window.visualViewport
+    if (!vv) return
+    const root = document.documentElement
+    let raf = 0
+    const update = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        const overlap = window.innerHeight - vv.height - vv.offsetTop
+        root.style.setProperty('--kb', (overlap > 120 ? Math.round(overlap) : 0) + 'px')
+      })
+    }
+    update()
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      cancelAnimationFrame(raf)
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+      root.style.removeProperty('--kb')
+    }
   }, [])
 
   // Transparent over the hero, frosted once you scroll.
@@ -115,7 +131,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
         )}
       </header>
 
-      <nav className={'dock' + (typing ? ' dock-hidden' : '')} aria-label="Primary">
+      <nav className="dock" aria-label="Primary">
         {NAV.map((n) => (
           <NavLink
             key={n.to}
