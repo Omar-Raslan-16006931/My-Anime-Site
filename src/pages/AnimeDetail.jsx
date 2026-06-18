@@ -106,6 +106,16 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   const [playingEp, setPlayingEp] = useState(null)
   const [opSaga, setOpSaga] = useState(0)
   const [opPage, setOpPage] = useState(0)
+  const [synOpen, setSynOpen] = useState(false)
+
+  // Lock background scroll while the synopsis popup is open so swiping inside it
+  // never drags the page behind.
+  useEffect(() => {
+    if (!synOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [synOpen])
 
   // Anime data — keyed on the title only. Deliberately NOT on `user`, so auth
   // token refreshes (e.g. returning to the browser tab) never reload the page
@@ -299,7 +309,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
             <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span className="fu-dot" style={isAiring ? undefined : { background: '#9b99a8', boxShadow: 'none' }} />{isAiring ? 'Ongoing' : (details.status?.split(' ')[0] || 'Finished')}</span>
           </div>
           {details.synopsis && (
-            <p className="fu-syn" style={{ maxWidth: 680, margin: '12px 0 0', fontSize: 13.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{details.synopsis}</p>
+            <p className="fu-syn fu-syn-clickable" onClick={() => setSynOpen(true)} title="Read full description" style={{ maxWidth: 680, margin: '12px 0 0', fontSize: 13.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{details.synopsis}</p>
           )}
           <div className="fu-actions" style={{ marginTop: 18 }}>
             <button className="fu-btn fu-btn-grad" onClick={() => play(lastWatched || 1)}><Icon.play width="16" height="16" /> {resumeLabel}</button>
@@ -331,22 +341,22 @@ export default function AnimeDetail({ user, onAuthRequired }) {
           )}
 
           <div className="fu-range">
-            <div className="fu-range-l">
-              <h2 className="fu-h2">Episode {rangeStart}–{rangeEnd}</h2>
-              <span className="saga">{saga.name}{malId === 21 ? ' Saga' : ''}</span>
-            </div>
-            <div className="fu-range-r">
-              <form className="fu-jump" onSubmit={(e) => { e.preventDefault(); jumpToEp(jump) }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></svg>
-                <input type="number" min="1" inputMode="numeric" placeholder="Jump to episode…" value={jump} onChange={(e) => setJump(e.target.value)} />
-                <button type="submit" className="fu-jump-go">Go</button>
-              </form>
+            <div className="fu-range-bar">
+              <div className="fu-range-l">
+                <h2 className="fu-h2">Episode {rangeStart}–{rangeEnd}</h2>
+                <span className="saga">{saga.name}{malId === 21 ? ' Saga' : ''}</span>
+              </div>
               <div className="fu-pager">
                 <button className="fu-pager-btn" disabled={opPage <= 0} onClick={() => changeOpPage(-1)} aria-label="Previous page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg></button>
                 <span className="fu-pager-label">Page {opPage + 1} / {sagaPageCount}</span>
                 <button className="fu-pager-btn" disabled={opPage >= sagaPageCount - 1} onClick={() => changeOpPage(1)} aria-label="Next page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg></button>
               </div>
             </div>
+            <form className="fu-jump" onSubmit={(e) => { e.preventDefault(); jumpToEp(jump) }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></svg>
+              <input type="number" min="1" inputMode="numeric" placeholder="Jump to episode…" value={jump} onChange={(e) => setJump(e.target.value)} />
+              <button type="submit" className="fu-jump-go">Go</button>
+            </form>
           </div>
 
           <div className="fu-op-grid">
@@ -396,6 +406,21 @@ export default function AnimeDetail({ user, onAuthRequired }) {
           onNext={() => play(playingEp + 1)}
           hasNext={!totalEps || playingEp < totalEps}
         />
+      )}
+
+      {synOpen && (
+        <div className="modal" onClick={() => setSynOpen(false)}>
+          <div className="fu-syn-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="fu-syn-head">
+              <div>
+                <div className="fu-syn-eyebrow">{eyebrow}</div>
+                <h3 className="fu-syn-title">{title}</h3>
+              </div>
+              <button className="fu-syn-close" onClick={() => setSynOpen(false)} aria-label="Close"><Icon.close width="18" height="18" /></button>
+            </div>
+            <p className="fu-syn-body">{details.synopsis}</p>
+          </div>
+        </div>
       )}
     </div>
   )

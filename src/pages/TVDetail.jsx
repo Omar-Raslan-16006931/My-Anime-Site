@@ -42,7 +42,16 @@ export default function TVDetail({ user, onAuthRequired }) {
   const [inWatchlist, setInWatchlist] = useState(false)
   const [lastEp, setLastEp] = useState(null)
   const [lastSeason, setLastSeason] = useState(null)
+  const [synOpen, setSynOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches)
+
+  // Lock background scroll while the synopsis popup is open.
+  useEffect(() => {
+    if (!synOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [synOpen])
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 720px)')
@@ -162,7 +171,7 @@ export default function TVDetail({ user, onAuthRequired }) {
             <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span className="fu-dot" />{ongoing ? 'Returning' : (details.status?.split(' ')[0] || 'Ended')}</span>
           </div>
           <div className="fu-genres">{(details.genres || []).slice(0, 4).map((g) => <span key={g.id} className="fu-pill">{g.name}</span>)}</div>
-          {details.overview && <p className="fu-syn">{details.overview}</p>}
+          {details.overview && <p className="fu-syn fu-syn-clickable" onClick={() => setSynOpen(true)} title="Read full description">{details.overview}</p>}
           <div className="fu-actions">
             <button className="fu-btn fu-btn-grad" onClick={heroPlay}><Icon.play width="16" height="16" /> {resumeLabel}</button>
             {lastEp && lastSeason && (
@@ -252,6 +261,21 @@ export default function TVDetail({ user, onAuthRequired }) {
           onNext={() => play(playing + 1)}
           hasNext={!!seasonData?.episodes?.some((e) => e.episode_number === playing + 1)}
         />
+      )}
+
+      {synOpen && (
+        <div className="modal" onClick={() => setSynOpen(false)}>
+          <div className="fu-syn-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="fu-syn-head">
+              <div>
+                <div className="fu-syn-eyebrow">Series{year ? ` · ${year}` : ''}</div>
+                <h3 className="fu-syn-title">{details.name}</h3>
+              </div>
+              <button className="fu-syn-close" onClick={() => setSynOpen(false)} aria-label="Close"><Icon.close width="18" height="18" /></button>
+            </div>
+            <p className="fu-syn-body">{details.overview}</p>
+          </div>
+        </div>
       )}
     </div>
   )
