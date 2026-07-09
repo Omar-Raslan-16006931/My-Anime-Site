@@ -844,6 +844,7 @@ select {
 .seg-btn { padding: 6px 18px; border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: var(--text2); transition: all 0.2s; }
 .seg-btn.on { background: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(229,9,20,0.4); }
 
+.src-label { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text2); white-space: nowrap; }
 .select-min { width: auto; min-width: 130px; padding: 9px 34px 9px 13px; font-size: 13px; font-weight: 600; border-radius: var(--radius-sm); }
 
 .src-list { display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; }

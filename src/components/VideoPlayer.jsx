@@ -120,7 +120,7 @@ export default function VideoPlayer({
   // user can read the source list and switch manually.
   useEffect(() => {
     if (!loading) return
-    const t = setTimeout(() => setLoading(false), 12000)
+    const t = setTimeout(() => setLoading(false), 8000)
     return () => clearTimeout(t)
   }, [loading, activeId])
 
@@ -220,6 +220,7 @@ export default function VideoPlayer({
               </div>
             )}
 
+            <span className="src-label">Sources</span>
             <select className="select-min" value={activeId || ''} onChange={(e) => setSourceId(e.target.value)}>
               {sources.map(({ source }) => (
                 <option key={source.id} value={source.id}>

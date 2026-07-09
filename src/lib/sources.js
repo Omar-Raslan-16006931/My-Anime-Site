@@ -25,6 +25,9 @@ const tvTriple = (ctx) => {
 
 export const SOURCES = [
   // ── AllManga (direct stream, anime) ────────────────────────────────────────
+  // Kept as a selectable "direct" option and as an automatic fallback, but no
+  // longer the default — its upstream (api.allanime.day) is flaky and often
+  // returns no match, which is what produced the "not found" errors.
   {
     id: 'allmanga',
     label: 'AllManga',
@@ -33,7 +36,7 @@ export const SOURCES = [
     build: (ctx) => (ctx.title ? { kind: 'resolve' } : null),
   },
 
-  // ── StreamBert sources ─────────────────────────────────────────────────────
+  // ── Primary embeds (verified live domains) ─────────────────────────────────
   {
     id: 'videasy',
     label: 'Videasy',
@@ -51,35 +54,9 @@ export const SOURCES = [
     },
   },
   {
-    id: 'vidsrc',
-    label: 'VidSrc',
-    kinds: ['tv', 'movie', 'anime'],
-    build: (ctx) => {
-      if (ctx.type === 'movie') {
-        const id = ctx.tmdbId || ctx.imdbId
-        return id ? { kind: 'embed', url: `https://vidsrc.to/embed/movie/${id}` } : null
-      }
-      const t = tvTriple(ctx)
-      return t ? { kind: 'embed', url: `https://vidsrc.to/embed/tv/${t.id || t.imdb}/${t.s}/${t.e}` } : null
-    },
-  },
-  {
-    id: '2embed',
-    label: '2Embed',
-    kinds: ['tv', 'movie', 'anime'],
-    build: (ctx) => {
-      if (ctx.type === 'movie') {
-        return ctx.tmdbId ? { kind: 'embed', url: `https://www.2embed.cc/embed/${ctx.tmdbId}` } : null
-      }
-      const t = tvTriple(ctx)
-      return t?.id ? { kind: 'embed', url: `https://www.2embed.cc/embedtv/${t.id}&s=${t.s}&e=${t.e}` } : null
-    },
-  },
-
-  // ── Extra embeds for breadth ───────────────────────────────────────────────
-  {
     id: 'vidlink',
     label: 'VidLink',
+    badge: 'HD',
     kinds: ['tv', 'movie', 'anime'],
     build: (ctx) => {
       if (ctx.type === 'anime' && ctx.anilistId) {
@@ -90,6 +67,61 @@ export const SOURCES = [
       }
       const t = tvTriple(ctx)
       return t?.id ? { kind: 'embed', url: `https://vidlink.pro/tv/${t.id}/${t.s}/${t.e}` } : null
+    },
+  },
+  {
+    id: 'vidsrccc',
+    label: 'VidSrc.cc',
+    kinds: ['anime', 'tv', 'movie'],
+    build: (ctx) => {
+      if (ctx.type === 'anime') {
+        return ctx.anilistId
+          ? { kind: 'embed', url: `https://vidsrc.cc/v2/embed/anime/${ctx.anilistId}/${ctx.episode}/${dub(ctx) ? 'dub' : 'sub'}` }
+          : null
+      }
+      if (ctx.type === 'movie' && ctx.tmdbId) return { kind: 'embed', url: `https://vidsrc.cc/v2/embed/movie/${ctx.tmdbId}` }
+      const t = tvTriple(ctx)
+      return t?.id ? { kind: 'embed', url: `https://vidsrc.cc/v2/embed/tv/${t.id}/${t.s}/${t.e}` } : null
+    },
+  },
+  {
+    id: 'vidsrc',
+    label: 'VidSrc',
+    kinds: ['tv', 'movie', 'anime'],
+    // vidsrc.to was seized/dead (cause of the infinite spinner). vidsrc.xyz is
+    // the canonical live host and uses a query-parameter API.
+    build: (ctx) => {
+      if (ctx.type === 'movie') {
+        const id = ctx.tmdbId || ctx.imdbId
+        return id ? { kind: 'embed', url: `https://vidsrc.xyz/embed/movie?tmdb=${id}` } : null
+      }
+      const t = tvTriple(ctx)
+      const id = t?.id || t?.imdb
+      return id ? { kind: 'embed', url: `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${t.s}&episode=${t.e}` } : null
+    },
+  },
+  {
+    id: 'embedsu',
+    label: 'Embed.su',
+    kinds: ['tv', 'movie', 'anime'],
+    build: (ctx) => {
+      if (ctx.type === 'movie') {
+        return ctx.tmdbId ? { kind: 'embed', url: `https://embed.su/embed/movie/${ctx.tmdbId}` } : null
+      }
+      const t = tvTriple(ctx)
+      return t?.id ? { kind: 'embed', url: `https://embed.su/embed/tv/${t.id}/${t.s}/${t.e}` } : null
+    },
+  },
+  {
+    id: 'autoembed',
+    label: 'AutoEmbed',
+    kinds: ['tv', 'movie', 'anime'],
+    build: (ctx) => {
+      if (ctx.type === 'movie') {
+        return ctx.tmdbId ? { kind: 'embed', url: `https://player.autoembed.cc/embed/movie/${ctx.tmdbId}` } : null
+      }
+      const t = tvTriple(ctx)
+      return t?.id ? { kind: 'embed', url: `https://player.autoembed.cc/embed/tv/${t.id}/${t.s}/${t.e}` } : null
     },
   },
   {
@@ -105,50 +137,6 @@ export const SOURCES = [
     },
   },
   {
-    id: 'dropfile',
-    label: 'Dropfile',
-    kinds: ['anime'],
-    build: (ctx) => {
-      const id = ctx.malId ? `mal-${ctx.malId}` : ctx.anilistId ? `anilist-${ctx.anilistId}` : null
-      if (!id) return null
-      return { kind: 'embed', url: `https://dropfile.cc/player/tv/${id}/${ctx.season}/${ctx.episode}?audio=${ctx.audio}` }
-    },
-  },
-]
-
-export const DOWNLOAD_SOURCES = [
-  {
-    id: 'dlhub',
-    label: 'DLHub',
-    buildUrl: (title) => `https://dlhub.cc/search?q=${encodeURIComponent(title)}`,
-  },
-  {
-    id: 'videodownloader',
-    label: 'VideoDownloader',
-    buildUrl: (title) => `https://videodownloader.site/?q=${encodeURIComponent(title)}`,
-  },
-  {
-    id: 'nyaa',
-    label: 'Nyaa',
-    buildUrl: (title) => `https://nyaa.si/?q=${encodeURIComponent(title)}`,
-  },
-  {
-    id: '1337x',
-    label: '1337x',
-    buildUrl: (title) => `https://1337x.to/search/${encodeURIComponent(title)}/1/`,
-  },
-]
-
-// Returns the available sources for a context, each with a resolved target.
-export function availableSources(ctx) {
-  return SOURCES
-    .filter((s) => s.kinds.includes(ctx.type))
-    .map((s) => ({ source: s, target: s.build(ctx) }))
-    .filter((x) => x.target)
-}
-
-export const DEFAULT_SOURCE = {
-  anime: 'allmanga',
-  tv: 'videasy',
-  movie: 'videasy',
-}
+    id: '2embed',
+    label: '2Embed',
+    kinds: ['tv', 'movi
