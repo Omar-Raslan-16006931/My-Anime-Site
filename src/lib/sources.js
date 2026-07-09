@@ -139,4 +139,50 @@ export const SOURCES = [
   {
     id: '2embed',
     label: '2Embed',
-    kinds: ['tv', 'movi
+    kinds: ['tv', 'movie'],
+    build: (ctx) => {
+      if (ctx.type === 'movie') {
+        return ctx.tmdbId ? { kind: 'embed', url: `https://www.2embed.cc/embed/${ctx.tmdbId}` } : null
+      }
+      const t = tvTriple(ctx)
+      return t?.id ? { kind: 'embed', url: `https://www.2embed.cc/embedtv/${t.id}&s=${t.s}&e=${t.e}` } : null
+    },
+  },
+]
+
+export const DOWNLOAD_SOURCES = [
+  {
+    id: 'dlhub',
+    label: 'DLHub',
+    buildUrl: (title) => `https://dlhub.cc/search?q=${encodeURIComponent(title)}`,
+  },
+  {
+    id: 'videodownloader',
+    label: 'VideoDownloader',
+    buildUrl: (title) => `https://videodownloader.site/?q=${encodeURIComponent(title)}`,
+  },
+  {
+    id: 'nyaa',
+    label: 'Nyaa',
+    buildUrl: (title) => `https://nyaa.si/?q=${encodeURIComponent(title)}`,
+  },
+  {
+    id: '1337x',
+    label: '1337x',
+    buildUrl: (title) => `https://1337x.to/search/${encodeURIComponent(title)}/1/`,
+  },
+]
+
+// Returns the available sources for a context, each with a resolved target.
+export function availableSources(ctx) {
+  return SOURCES
+    .filter((s) => s.kinds.includes(ctx.type))
+    .map((s) => ({ source: s, target: s.build(ctx) }))
+    .filter((x) => x.target)
+}
+
+export const DEFAULT_SOURCE = {
+  anime: 'videasy',
+  tv: 'videasy',
+  movie: 'videasy',
+}
