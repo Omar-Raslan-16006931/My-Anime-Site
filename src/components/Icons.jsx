@@ -53,6 +53,16 @@ export const Icon = {
       <path d="M6 6l12 12M18 6L6 18" />
     </svg>
   ),
+  key: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <circle cx="8" cy="8" r="5" /><path d="M11.5 11.5L21 21M17 17l2-2M14 14l2-2" />
+    </svg>
+  ),
+  trash: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+    </svg>
+  ),
   back: (p) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
       <path d="M15 18l-6-6 6-6" />

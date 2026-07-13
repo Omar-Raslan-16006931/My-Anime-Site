@@ -7,6 +7,8 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: false
+    detectSessionInUrl: false,
+    // Opt in to Supabase's native passkey (WebAuthn) API. Experimental/beta.
+    experimental: { passkey: true }
   }
 })

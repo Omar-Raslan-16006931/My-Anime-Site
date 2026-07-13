@@ -1,5 +1,7 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../supabase'
+import Icon from '../components/Icons'
+import { registerPasskey, listPasskeys, deletePasskey, passkeysSupported } from '../lib/passkeys'
 
 export default function Profile({ user, profile, setProfile }) {
   const [username, setUsername] = useState(profile?.username || '')
@@ -8,6 +10,40 @@ export default function Profile({ user, profile, setProfile }) {
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState('')
   const fileRef = useRef(null)
+
+  const [passkeys, setPasskeys] = useState([])
+  const [pkBusy, setPkBusy] = useState(false)
+  const [pkMsg, setPkMsg] = useState('')
+
+  const loadPasskeys = async () => {
+    try { setPasskeys(await listPasskeys()) } catch { /* ignore */ }
+  }
+  useEffect(() => { loadPasskeys() }, [])
+
+  const addPasskey = async () => {
+    setPkMsg(''); setPkBusy(true)
+    try {
+      await registerPasskey()
+      setPkMsg('✅ Passkey added!')
+      await loadPasskeys()
+    } catch (err) {
+      setPkMsg(err?.message || 'Could not add passkey')
+    } finally {
+      setPkBusy(false)
+    }
+  }
+
+  const removePasskey = async (id) => {
+    if (!window.confirm('Remove this passkey?')) return
+    setPkMsg('')
+    try {
+      await deletePasskey(id)
+      await loadPasskeys()
+      setPkMsg('Passkey removed.')
+    } catch (err) {
+      setPkMsg(err?.message || 'Could not remove passkey')
+    }
+  }
 
   const handleSave = async (e) => {
     e.preventDefault()
@@ -99,6 +135,47 @@ export default function Profile({ user, profile, setProfile }) {
 
         <button className="btn btn-primary btn-block" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
       </form>
+
+      {passkeysSupported() && (
+        <section style={{ marginTop: 38, borderTop: '1px solid var(--border)', paddingTop: 26 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Icon.key width="18" height="18" /> Passkeys
+            </h2>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={addPasskey} disabled={pkBusy}>
+              {pkBusy ? 'Adding…' : 'Add a passkey'}
+            </button>
+          </div>
+          <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
+            Sign in with Face ID, a fingerprint, or your device PIN — no password needed.
+          </p>
+
+          {pkMsg && (
+            <p style={{ color: pkMsg.startsWith('✅') ? '#22c55e' : 'var(--text2)', fontSize: 13, marginBottom: 12 }}>{pkMsg}</p>
+          )}
+
+          {passkeys.length === 0 ? (
+            <p className="muted" style={{ fontSize: 13 }}>No passkeys yet.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {passkeys.map((pk) => (
+                <div key={pk.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '11px 14px', background: 'var(--surface2, rgba(255,255,255,0.04))', borderRadius: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{pk.friendly_name || 'Passkey'}</div>
+                    <div className="muted" style={{ fontSize: 12 }}>
+                      Added {new Date(pk.created_at).toLocaleDateString()}
+                      {pk.last_used_at ? ` · last used ${new Date(pk.last_used_at).toLocaleDateString()}` : ''}
+                    </div>
+                  </div>
+                  <button type="button" className="icon-btn" onClick={() => removePasskey(pk.id)} aria-label="Remove passkey" title="Remove">
+                    <Icon.trash width="16" height="16" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   )
 }

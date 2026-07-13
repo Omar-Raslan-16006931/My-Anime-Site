@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
 import Icon from './Icons'
+import { loginWithPasskey, passkeysSupported } from '../lib/passkeys'
 
 export default function AuthModal({ onClose }) {
   const [isLogin, setIsLogin] = useState(true)
@@ -9,6 +10,21 @@ export default function AuthModal({ onClose }) {
   const [username, setUsername] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
+
+  const handlePasskey = async () => {
+    setError(''); setPasskeyLoading(true)
+    try {
+      // Discoverable credentials: the browser offers whichever passkeys match
+      // this site — no email needed.
+      await loginWithPasskey()
+      onClose()
+    } catch (err) {
+      setError(err?.message || 'Passkey sign-in failed')
+    } finally {
+      setPasskeyLoading(false)
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -51,6 +67,26 @@ export default function AuthModal({ onClose }) {
             {loading ? 'Please wait…' : isLogin ? 'Log in' : 'Sign up'}
           </button>
         </form>
+
+        {isLogin && passkeysSupported() && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0 12px', color: 'var(--text3)', fontSize: 12 }}>
+              <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              OR
+              <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+            <button
+              type="button"
+              className="btn btn-ghost btn-block"
+              onClick={handlePasskey}
+              disabled={passkeyLoading}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              <Icon.key width="16" height="16" />
+              {passkeyLoading ? 'Waiting for passkey…' : 'Sign in with a passkey'}
+            </button>
+          </>
+        )}
 
         <p onClick={() => { setIsLogin(!isLogin); setError('') }} style={{ marginTop: 16, textAlign: 'center', color: 'var(--text2)', fontSize: 14, cursor: 'pointer' }}>
           {isLogin ? "Don't have an account? " : 'Already have an account? '}
