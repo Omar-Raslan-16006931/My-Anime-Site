@@ -4,7 +4,6 @@ import { supabase } from '../supabase'
 import VideoPlayer from '../components/VideoPlayer'
 import Icon from '../components/Icons'
 import { recordRecent } from '../lib/progress'
-import DownloadLinks from '../components/DownloadLinks'
 import { loadTvSeen, setTvSeen, tvEpKey } from '../lib/tvProgress'
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
@@ -165,7 +164,12 @@ export default function TVDetail({ user, onAuthRequired }) {
   const year = details.first_air_date ? details.first_air_date.slice(0, 4) : ''
   const ongoing = /return|ongoing|airing/i.test(details.status || '')
   const backdrop = details.backdrop_path ? `${BACKDROP}${details.backdrop_path}` : null
-  const resumeLabel = lastEp && lastSeason ? `Resume · S${lastSeason} E${lastEp}` : 'Play'
+  const resuming = !!(lastEp && lastSeason)
+  const firstEp = seasonData?.episodes?.[0]?.episode_number || 1
+  const playLabel = resuming ? `Continue S${lastSeason} · E${lastEp}` : `Play S${selectedSeason || 1} · E${firstEp}`
+  const rating = details.vote_average ? details.vote_average.toFixed(1) : null
+  const seasonCount = details.number_of_seasons || seasons.length
+  const genre = details.genres?.[0]?.name
   const heroPlay = () => {
     if (lastEp && lastSeason) { setSelectedSeason(lastSeason); play(lastEp, lastSeason) }
     else play(seasonData?.episodes?.[0]?.episode_number || 1)
@@ -179,41 +183,45 @@ export default function TVDetail({ user, onAuthRequired }) {
     <div className="fu">
       <button className="fu-back" onClick={() => navigate(-1)} aria-label="Back"><Icon.back width="18" height="18" /></button>
 
-      <section className="fu-hero">
-        <div className="fu-hero-img">{backdrop && <img src={backdrop} alt={details.name} />}</div>
-        <div className="fu-hero-scrim" />
-        <div className="fu-hero-noise" />
-        <div className="fu-hero-inner">
-          {/* Text sits on a soft dark backing so it stays readable on any banner. */}
-          <div className="fu-hero-copy">
-            <div className="fu-eyebrow">Series{year ? ` · ${year}` : ''}</div>
-            <h1 className="fu-title">{details.name}</h1>
-            <div className="fu-meta">
-              {details.vote_average ? <><span className="strong"><span className="star">★</span>{details.vote_average.toFixed(1)}</span><span className="sep">·</span></> : null}
-              {details.number_of_seasons ? <><span>{details.number_of_seasons} Season{details.number_of_seasons > 1 ? 's' : ''}</span><span className="sep">·</span></> : null}
-              {details.number_of_episodes ? <><span>{details.number_of_episodes} Eps</span><span className="sep">·</span></> : null}
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span className={'fu-dot' + (ongoing ? '' : ' off')} />{ongoing ? 'Returning' : (details.status?.split(' ')[0] || 'Ended')}</span>
-            </div>
-            {(details.genres || []).length > 0 && (
-              <div className="fu-genres">{details.genres.slice(0, 3).map((g) => <span key={g.id} className="fu-pill">{g.name}</span>)}</div>
-            )}
-            {details.overview && <p className="fu-syn fu-syn-clickable" onClick={() => setSynOpen(true)} title="Read full description">{details.overview}</p>}
+      {/* Show header: picture, title, one info line, short description,
+          one clear main action, three small shortcuts. */}
+      <section className="tvh">
+        <div className="tvh-art">{backdrop && <img src={backdrop} alt="" />}</div>
+        <div className="tvh-body">
+          <h1 className="tvh-title">{details.name}</h1>
+          <div className="tvh-meta">
+            {rating && <span className="tvh-rating"><span aria-hidden="true">★</span> {rating}</span>}
+            {year && <span>{year}</span>}
+            {seasonCount > 0 && <span>{seasonCount} Season{seasonCount > 1 ? 's' : ''}</span>}
+            {genre && <span>{genre}</span>}
+            {ongoing && <span>Ongoing</span>}
           </div>
-          <div className="fu-actions">
-            <button className="fu-btn fu-btn-grad" onClick={heroPlay}><Icon.play width="16" height="16" /> {resumeLabel}</button>
-            {lastEp && lastSeason && (
-              <button className="fu-btn fu-btn-glass" onClick={() => { setSelectedSeason(lastSeason); play(lastEp + 1, lastSeason) }}><Icon.play width="15" height="15" /> Next Ep</button>
+          {details.overview && (
+            <p className="tvh-desc" onClick={() => setSynOpen(true)} title="Read full description">{details.overview}</p>
+          )}
+
+          <button className="tvh-play" onClick={heroPlay}>
+            <Icon.play width="16" height="16" /> {playLabel}
+          </button>
+
+          <div className="tvh-shortcuts">
+            {resuming && (
+              <button className="tvh-sc" onClick={() => { setSelectedSeason(lastSeason); play(lastEp + 1, lastSeason) }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 5v14l10-7z" fill="currentColor" stroke="none" /><path d="M19 5v14" /></svg>
+                <span>Next episode</span>
+              </button>
             )}
-            <button className="fu-btn fu-btn-glass" onClick={toggleWatchlist}>
+            <button className={'tvh-sc' + (inWatchlist ? ' on' : '')} onClick={toggleWatchlist} aria-pressed={inWatchlist}>
               {inWatchlist
-                ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg> In Your List</>
-                : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg> My List</>}
+                ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
+              <span>{inWatchlist ? 'In My List' : 'My List'}</span>
             </button>
-            <button className="fu-round" aria-label="Share" onClick={share}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></svg>
+            <button className="tvh-sc" onClick={share}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3" /><path d="m7 8 5-5 5 5" /><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
+              <span>Share</span>
             </button>
           </div>
-          <div className="fu-sources"><DownloadLinks title={details.name} /></div>
         </div>
       </section>
 

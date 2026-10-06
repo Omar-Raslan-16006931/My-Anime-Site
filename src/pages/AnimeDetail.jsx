@@ -52,7 +52,13 @@ const OP_MILESTONES = {
 // Saga/range tabs for any show: canonical for One Piece (mal 21), otherwise
 // 100-episode ranges so long-runners stay navigable. Short shows get one range.
 function buildSagas(malId, total) {
-  if (malId === 21) return OP_SAGAS
+  if (malId === 21) {
+    // The last (ongoing) saga always runs up to the latest aired episode, so new
+    // episodes appear automatically instead of stopping at a hardcoded number.
+    const last = OP_SAGAS[OP_SAGAS.length - 1]
+    const end = total && total >= last.start ? total : last.end
+    return [...OP_SAGAS.slice(0, -1), { ...last, end }]
+  }
   const n = total || 0
   if (n <= 50) return [{ name: 'Episodes', start: 1, end: Math.max(n, 1) }]
   const out = []
