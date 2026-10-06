@@ -140,6 +140,7 @@ export default function VideoPlayer({
   const [countdown, setCountdown] = useState(null)
   const [subsOn, setSubsOn] = useState(() => readSubsPref(mediaType))
   const [subBusy, setSubBusy] = useState(false)
+  const [showDl, setShowDl] = useState(false)
 
   const videoRef = useRef(null)
   const hlsRef = useRef(null)
@@ -581,111 +582,120 @@ export default function VideoPlayer({
           )}
         </div>
 
-        <div className="modal-body">
-          <div className="player-bar">
+        <div className="modal-body pc">
+          {/* 1. The one main action */}
+          {canNext && (
+            <button className="btn btn-primary pc-next" onClick={goNext}>
+              Next episode <Icon.play width="14" height="14" />
+            </button>
+          )}
+
+          {/* 2. Settings — one per row, control on the right */}
+          <div className="pc-list">
             {type === 'anime' && (
-              <div className="seg">
-                {['sub', 'dub'].map((t) => (
-                  <button key={t} className={'seg-btn' + (audio === t ? ' on' : '')} onClick={() => setAudio(t)}>
-                    {t.toUpperCase()}
-                  </button>
-                ))}
+              <div className="pc-row">
+                <span className="pc-k">Audio</span>
+                <div className="seg">
+                  {['sub', 'dub'].map((t) => (
+                    <button key={t} className={'seg-btn' + (audio === t ? ' on' : '')} onClick={() => setAudio(t)}>
+                      {t.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
-            <label className="src-pick">
-              <span className="src-label">Sources</span>
-              <select className="select-min" value={activeId || ''} onChange={(e) => pickSource(e.target.value)} disabled={!sources.length}>
-                {sources.map(({ source }) => (
-                  <option key={source.id} value={source.id}>
-                    {source.label}{source.badge ? ` · ${source.badge}` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="pc-row">
+              <span className="pc-k">Source</span>
+              <div className="pc-v">
+                <select className="select-min" value={activeId || ''} onChange={(e) => pickSource(e.target.value)} disabled={!sources.length} aria-label="Source">
+                  {sources.map(({ source }) => (
+                    <option key={source.id} value={source.id}>{source.label}</option>
+                  ))}
+                </select>
+                {sources.length > 1 && (
+                  <button className="icon-btn pc-icon" onClick={tryAnother} title="Not playing? Try the next source" aria-label="Try another source">
+                    <Icon.refresh width="15" height="15" />
+                  </button>
+                )}
+              </div>
+            </div>
 
             {currentStream && streams.length > 1 && (
-              <select className="select-min" value={streamIdx} onChange={(e) => setStreamIdx(Number(e.target.value))}>
-                {streams.map((s, i) => (
-                  <option key={i} value={i}>{s.sourceName || 'Server'} · {s.quality || 'auto'}</option>
-                ))}
-              </select>
+              <div className="pc-row">
+                <span className="pc-k">Server</span>
+                <select className="select-min" value={streamIdx} onChange={(e) => setStreamIdx(Number(e.target.value))} aria-label="Server">
+                  {streams.map((s, i) => (
+                    <option key={i} value={i}>{s.sourceName || 'Server'} · {s.quality || 'auto'}</option>
+                  ))}
+                </select>
+              </div>
             )}
-
-            {sources.length > 1 && (
-              <button className="btn btn-ghost btn-sm" onClick={tryAnother} title="Switch to the next source">
-                <Icon.refresh width="14" height="14" /> Try another
-              </button>
-            )}
-
-            <div className="grow" />
 
             {canNext && (
-              <button type="button" className={'switch' + (autoNext ? ' on' : '')} onClick={toggleAuto} aria-pressed={autoNext}>
+              <button type="button" className={'pc-row pc-toggle' + (autoNext ? ' on' : '')} onClick={toggleAuto} aria-pressed={autoNext}>
+                <span className="pc-k">Auto-play next episode</span>
                 <span className="switch-track"><span className="switch-thumb" /></span>
-                Auto-next
               </button>
             )}
 
-            {canNext && (
-              <button className="btn btn-primary btn-sm" onClick={goNext} aria-label="Next episode">
-                Next Ep <Icon.play width="13" height="13" />
+            {subTarget && (
+              <button type="button" className={'pc-row pc-toggle' + (subsOn ? ' on' : '')} onClick={toggleSubs} aria-pressed={subsOn}>
+                <span className="pc-k">English subtitles</span>
+                <span className="switch-track"><span className="switch-thumb" /></span>
               </button>
+            )}
+
+            {overlayMode && clockLive && (
+              <div className="pc-row pc-row-tall">
+                <span className="pc-k">
+                  Subtitle timing
+                  <small>Late? tap −&nbsp;&nbsp;·&nbsp;&nbsp;Early? tap +</small>
+                </span>
+                <div className="pc-v" role="group" aria-label="Subtitle timing">
+                  <button type="button" className="icon-btn pc-icon" onClick={() => nudgeSubs(-0.5)} aria-label="Show subtitles sooner">−</button>
+                  <button
+                    type="button"
+                    className="pc-offset"
+                    onClick={() => setSubOffset(0)}
+                    disabled={subOffset === 0}
+                    title={subOffset === 0 ? '' : 'Tap to reset'}
+                    aria-live="polite"
+                  >
+                    {subOffset === 0 ? 'In sync' : `${subOffset > 0 ? '+' : ''}${subOffset.toFixed(1)}s`}
+                  </button>
+                  <button type="button" className="icon-btn pc-icon" onClick={() => nudgeSubs(0.5)} aria-label="Show subtitles later">+</button>
+                </div>
+              </div>
             )}
           </div>
 
-          {subTarget && (
-            <div className="sub-bar">
-              <button
-                type="button"
-                className={'switch sub-switch' + (subsOn ? ' on' : '')}
-                onClick={toggleSubs}
-                aria-pressed={subsOn}
-                aria-label={`English subtitles ${subsOn ? 'on' : 'off'}`}
-              >
-                <span className="sub-switch-label">English subtitles</span>
-                <span className="switch-track"><span className="switch-thumb" /></span>
-                <span className="sub-switch-state">{subsOn ? 'On' : 'Off'}</span>
-              </button>
-
-              {overlayMode && clockLive && (
-                <div className="sub-sync" role="group" aria-label="Subtitle timing">
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => nudgeSubs(-0.5)} title="Subtitles are late: show them sooner">
-                    − Sooner
-                  </button>
-                  <span className="sub-offset" aria-live="polite">{subOffset === 0 ? 'In sync' : `${subOffset > 0 ? '+' : ''}${subOffset.toFixed(1)}s`}</span>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => nudgeSubs(0.5)} title="Subtitles are early: show them later">
-                    Later +
-                  </button>
-                  {subOffset !== 0 && (
-                    <button type="button" className="sub-reset" onClick={() => setSubOffset(0)}>Reset</button>
-                  )}
-                </div>
-              )}
-              {overlayMode && clockLive && (
-                <button type="button" className="btn btn-ghost btn-sm" onClick={goFullscreen}>Fullscreen</button>
-              )}
-
-              <button type="button" className="btn btn-ghost btn-sm" onClick={downloadSubs} disabled={subBusy}>
-                <Icon.download width="14" height="14" /> {subBusy ? 'Finding…' : 'Subtitle file'}
-              </button>
-            </div>
+          {/* 3. Only when something needs explaining */}
+          {overlayMode && cues && cues.length === 0 && (
+            <p className="pc-hint">No English subtitles found for this one.</p>
+          )}
+          {overlayMode && clockMissing && !(cues && cues.length === 0) && (
+            <p className="pc-hint">This player hides its timing, so subtitles can’t follow it. Try another source, or use <strong>Subtitle file</strong> and upload it in the player’s CC menu.</p>
           )}
 
-          <div className="player-note">
-            <Icon.info width="14" height="14" />
-            <span>
-              {overlayMode && cues && cues.length === 0
-                ? <>No English subtitles found for this one.</>
-                : overlayMode && clockMissing
-                  ? <>This player doesn’t share its playback time, so subtitles can’t follow it. Tap <strong>Subtitle file</strong> and upload it in its CC menu, or <strong>Try another</strong> source.</>
-                  : overlayMode && clockLive
-                    ? <>Subtitles <strong>late</strong>? Tap <strong>− Sooner</strong>. Too <strong>early</strong>? Tap <strong>Later +</strong>. Use <strong>Fullscreen</strong> here, not the player’s own, to keep them on screen.</>
-                    : <>Not playing? Tap <strong>Try another</strong>. Whichever one works is remembered.</>}
-            </span>
+          {/* 4. Extras */}
+          <div className="pc-more">
+            {overlayMode && clockLive && (
+              <button type="button" className="pc-link" onClick={goFullscreen} title="Keeps the subtitles on screen (the player's own fullscreen hides them)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+                Fullscreen
+              </button>
+            )}
+            {subTarget && (
+              <button type="button" className="pc-link" onClick={downloadSubs} disabled={subBusy}>
+                <Icon.download width="14" height="14" /> {subBusy ? 'Finding…' : 'Subtitle file'}
+              </button>
+            )}
+            <button type="button" className={'pc-link' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
+              <Icon.download width="14" height="14" /> Download episode
+            </button>
           </div>
-
-          <DownloadLinks title={displayTitle} />
+          {showDl && <DownloadLinks title={displayTitle} />}
         </div>
       </div>
     </div>

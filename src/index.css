@@ -821,17 +821,56 @@ select {
   .src-pick .select-min { width: auto; min-width: 0; max-width: 170px; }
 }
 
-/* Subtitles row */
-.sub-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-/* "English subtitles [switch] On/Off" */
-.sub-switch { gap: 8px; padding: 0 2px; }
-.sub-switch-label { color: var(--text); font-weight: 600; }
-.sub-switch-state { min-width: 22px; font-size: 12.5px; font-weight: 600; color: var(--text3); font-variant-numeric: tabular-nums; }
-.sub-switch.on .sub-switch-state { color: var(--text); }
-.sub-sync { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.sub-offset { min-width: 52px; text-align: center; font-size: 12.5px; color: var(--text2); font-variant-numeric: tabular-nums; }
-.sub-reset { font-size: 12.5px; font-weight: 600; color: var(--text3); padding: 6px 4px; }
-.sub-reset:hover { color: var(--text); }
+/* ---------- Player controls panel ----------
+   1. one main button  2. a grouped settings list (label left, control right)
+   3. a hint only when needed  4. small text links for extras */
+.pc { gap: 10px; }
+.pc-next { width: 100%; height: 40px; font-size: 14.5px; }
+@media (min-width: 701px) { .pc-next { width: auto; align-self: flex-start; padding: 0 22px; } }
+
+.pc-list {
+  display: flex; flex-direction: column; gap: 1px;           /* gap = hairline divider */
+  background: rgba(255,248,240,0.06);
+  border-radius: 14px; overflow: hidden;
+}
+.pc-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; min-height: 48px; padding: 6px 8px 6px 14px;
+  background: var(--bg3); color: var(--text);
+  border: none; font: inherit; text-align: left;
+}
+.pc-row-tall { padding-top: 8px; padding-bottom: 8px; }
+.pc-k { display: flex; flex-direction: column; gap: 2px; font-size: 14px; font-weight: 500; color: var(--text); }
+.pc-k small { font-size: 11.5px; font-weight: 400; color: var(--text3); }
+.pc-v { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.pc-row .select-min { min-width: 0; max-width: 170px; }
+.pc-icon { width: var(--ctl-sm); height: var(--ctl-sm); font-size: 17px; font-weight: 600; line-height: 1; }
+
+/* Whole row is the toggle; the switch sits on the right. */
+.pc-toggle { cursor: pointer; transition: background 0.15s ease; }
+.pc-toggle:active { background: var(--elev); }
+@media (hover: hover) { .pc-toggle:hover { background: var(--elev); } }
+.pc-toggle.on .switch-track { background: var(--text); }
+.pc-toggle.on .switch-thumb { transform: translateX(12px); background: var(--ink); }
+
+.pc-offset {
+  min-width: 64px; height: var(--ctl-sm); border-radius: 999px;
+  font-size: 12.5px; font-weight: 600; color: var(--text2); font-variant-numeric: tabular-nums;
+}
+.pc-offset:not(:disabled) { color: var(--text); }
+@media (hover: hover) { .pc-offset:not(:disabled):hover { background: var(--tone); } }
+
+.pc-hint { margin: 0; padding: 0 4px; font-size: 12.5px; line-height: 1.45; color: var(--text2); }
+
+.pc-more { display: flex; flex-wrap: wrap; gap: 2px 18px; padding: 0 4px; }
+.pc-link {
+  display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0;
+  background: none; border: none; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 500; color: var(--text2);
+  transition: color 0.15s ease;
+}
+.pc-link:hover, .pc-link.on { color: var(--text); }
+.pc-link:disabled { opacity: 0.5; cursor: default; }
 
 /* Our own subtitle layer over embedded players. Never blocks clicks. */
 .sub-overlay {
