@@ -1,0 +1,127 @@
+/* ============================================================
+   Button system — one place that defines how every button feels.
+   Loaded last (after index.css + fusion.css) so it wins.
+
+   • Actions are capsules; text fields and segment tracks stay soft rects.
+   • Flat fills. Depth comes from a faint self-coloured lip, never a glow,
+     gradient or drop shadow.
+   • Feedback: tonal hover (mouse only, so it never "sticks" on phones),
+     a quick press-in on tap, and a clear keyboard focus ring.
+   ============================================================ */
+
+:root {
+  --lip: inset 0 0 0 1px rgba(255,248,240,0.07), inset 0 1px 0 rgba(255,248,240,0.06);
+  --btn-ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ---------- Shared feel ---------- */
+.btn, .icon-btn, .fu-btn, .fu-round, .tvh-play, .tvh-sc, .fu-play, .fu-back, .fu-syn-close,
+.fu-pager-btn, .pager-btn, .fu-jump-go, .seg-btn, .fu-seg-btn, .chip, .fu-saga, .dl-chip, .card-fav {
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 0.18s var(--btn-ease),
+    color 0.18s var(--btn-ease),
+    box-shadow 0.18s var(--btn-ease),
+    transform 0.12s var(--btn-ease),
+    opacity 0.18s var(--btn-ease);
+}
+
+/* Press-in (tap feedback). */
+.btn:active:not(:disabled), .icon-btn:active, .fu-btn:active, .fu-round:active, .tvh-play:active,
+.tvh-sc:active, .fu-play:active, .fu-back:active, .fu-syn-close:active, .fu-pager-btn:active:not(:disabled),
+.pager-btn:active:not(:disabled), .fu-jump-go:active, .chip:active, .fu-saga:active, .dl-chip:active, .card-fav:active {
+  transform: scale(0.96);
+  opacity: 1;
+}
+
+/* Keyboard focus — visible, never on mouse/touch. */
+.btn:focus-visible, .icon-btn:focus-visible, .fu-btn:focus-visible, .fu-round:focus-visible,
+.tvh-play:focus-visible, .tvh-sc:focus-visible, .fu-play:focus-visible, .fu-back:focus-visible,
+.fu-syn-close:focus-visible, .fu-pager-btn:focus-visible, .pager-btn:focus-visible, .fu-jump-go:focus-visible,
+.seg-btn:focus-visible, .fu-seg-btn:focus-visible, .chip:focus-visible, .fu-saga:focus-visible,
+.dl-chip:focus-visible, .card-fav:focus-visible, .switch:focus-visible {
+  outline: 2px solid rgba(243,241,238,0.75);
+  outline-offset: 2px;
+}
+
+.btn:disabled, .fu-btn:disabled, .tvh-play:disabled { opacity: 0.4; cursor: default; }
+
+/* ---------- Shape ---------- */
+.btn, .fu-btn, .tvh-play {
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.btn { padding: 0 18px; gap: 7px; }
+.btn-sm { padding: 0 14px; gap: 6px; }
+.fu-btn { padding: 0 18px; }
+
+.icon-btn, .fu-round, .fu-back, .fu-syn-close, .fu-pager-btn, .pager-btn, .fu-play, .card-fav,
+.chip, .dl-chip {
+  border-radius: 999px;
+}
+.dl-chip { padding: 0 11px; }
+
+/* Phones: keep the compact sizing (same tokens, slightly tighter padding). */
+@media (max-width: 600px) {
+  .btn { padding: 0 14px; }
+  .btn-sm { padding: 0 11px; }
+  .fu-btn { padding: 0 14px; }
+  .dl-chip { padding: 0 9px; }
+}
+
+/* Consistent icon sizing inside buttons */
+.btn svg, .fu-btn svg, .tvh-play svg { width: 16px; height: 16px; }
+.btn-sm svg { width: 14px; height: 14px; }
+
+/* ---------- Primary: warm off-white, flat ---------- */
+.btn-primary, .btn-light, .fu-btn-grad, .tvh-play, .fu-jump-go {
+  background: var(--text);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+/* ---------- Secondary: tonal fill + faint lip ---------- */
+.btn-ghost, .btn-outline, .fu-btn-glass, .icon-btn, .fu-round, .fu-pager-btn, .pager-btn,
+.fu-play, .fu-syn-close, .chip, .dl-chip {
+  background: var(--tone);
+  box-shadow: var(--lip);
+  border: none;
+}
+.btn-ghost, .btn-outline, .fu-btn-glass, .icon-btn, .fu-round, .fu-pager-btn, .pager-btn, .fu-play, .fu-syn-close {
+  color: var(--text);
+}
+.chip.active { background: var(--text); color: var(--ink); box-shadow: none; }
+
+/* Floating over artwork (back button, poster favourite): darker base. */
+.fu-back, .card-fav { background: rgba(13,12,11,0.62); box-shadow: var(--lip); border: none; }
+
+/* ---------- Segmented controls: capsule track, capsule thumb ---------- */
+.seg, .fu-seg { border-radius: 999px; box-shadow: var(--lip); }
+.seg-btn, .fu-seg-btn { border-radius: 999px; padding: 0 14px; }
+.seg-btn.on, .fu-seg-btn.on { box-shadow: none; }
+
+/* Saga / range tabs */
+.fu-saga { border-radius: 14px; box-shadow: var(--lip); }
+.fu-saga.on { box-shadow: none; }
+
+/* Icon-over-label shortcuts (TV / movie header) */
+.tvh-sc { border-radius: 14px; }
+
+/* ---------- Hover: tonal shift, mouse only ---------- */
+@media (hover: hover) {
+  .btn-primary:hover, .btn-light:hover, .fu-btn-grad:hover, .tvh-play:hover, .fu-jump-go:hover { background: #fff; }
+  .btn-ghost:hover, .btn-outline:hover, .fu-btn-glass:hover, .icon-btn:hover, .fu-round:hover,
+  .fu-pager-btn:hover:not(:disabled), .pager-btn:hover:not(:disabled), .fu-syn-close:hover, .chip:hover:not(.active), .dl-chip:hover {
+    background: var(--tone-hi);
+  }
+  .fu-back:hover, .card-fav:hover { background: rgba(13,12,11,0.85); }
+  .fu-saga:hover:not(.on) { background: var(--tone-hi); }
+  .tvh-sc:hover { background: var(--tone); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn:active, .icon-btn:active, .fu-btn:active, .fu-round:active, .tvh-play:active, .tvh-sc:active,
+  .fu-play:active, .fu-back:active, .fu-syn-close:active, .fu-pager-btn:active, .pager-btn:active,
+  .fu-jump-go:active, .chip:active, .fu-saga:active, .dl-chip:active, .card-fav:active { transform: none; }
+}
