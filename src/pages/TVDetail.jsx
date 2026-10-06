@@ -5,6 +5,7 @@ import VideoPlayer from '../components/VideoPlayer'
 import Icon from '../components/Icons'
 import { recordRecent } from '../lib/progress'
 import DownloadLinks from '../components/DownloadLinks'
+import { loadTvSeen, setTvSeen, tvEpKey } from '../lib/tvProgress'
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
 const IMG = 'https://image.tmdb.org/t/p/w500'
@@ -43,6 +44,7 @@ export default function TVDetail({ user, onAuthRequired }) {
   const [lastEp, setLastEp] = useState(null)
   const [lastSeason, setLastSeason] = useState(null)
   const [synOpen, setSynOpen] = useState(false)
+  const [seen, setSeen] = useState(() => new Set()) // "season:episode" keys
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches)
 
   // Lock background scroll while the synopsis popup is open.
@@ -92,6 +94,26 @@ export default function TVDetail({ user, onAuthRequired }) {
     return () => { cancelled = true }
   }, [id, user])
 
+  // Watched episodes (account + this device).
+  const userId = user?.id
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    setSeen(new Set())
+    loadTvSeen(userId, id).then((s) => { if (!cancelled) setSeen(s) })
+    return () => { cancelled = true }
+  }, [id, userId])
+
+  const markSeen = (season, epNum, isSeen = true) => {
+    const k = tvEpKey(season, epNum)
+    setSeen((prev) => {
+      const next = new Set(prev)
+      if (isSeen) next.add(k); else next.delete(k)
+      return next
+    })
+    setTvSeen(userId, id, season, epNum, isSeen)
+  }
+
   useEffect(() => {
     if (selectedSeason == null) return
     let cancelled = false
@@ -107,17 +129,18 @@ export default function TVDetail({ user, onAuthRequired }) {
     return () => { cancelled = true }
   }, [id, selectedSeason])
 
-  const play = (epNum) => {
-    setPlaying(epNum); setLastEp(epNum); setLastSeason(selectedSeason)
+  const play = (epNum, season = selectedSeason) => {
+    setPlaying(epNum); setLastEp(epNum); setLastSeason(season)
+    if (season != null) markSeen(season, epNum, true)
     if (details) {
       recordRecent({
         kind: 'tv', id: details.id, title: details.name,
         poster: details.poster_path ? `${IMG}${details.poster_path}` : null,
         backdrop: details.backdrop_path ? `${BACKDROP}${details.backdrop_path}` : null,
-        season: selectedSeason, episode: epNum, totalEpisodes: details.number_of_episodes,
+        season, episode: epNum, totalEpisodes: details.number_of_episodes,
       })
     }
-    if (user) upsertWatching(user, details, selectedSeason, epNum)
+    if (user) upsertWatching(user, details, season, epNum)
   }
 
   const toggleWatchlist = async () => {
@@ -144,7 +167,7 @@ export default function TVDetail({ user, onAuthRequired }) {
   const backdrop = details.backdrop_path ? `${BACKDROP}${details.backdrop_path}` : null
   const resumeLabel = lastEp && lastSeason ? `Resume · S${lastSeason} E${lastEp}` : 'Play'
   const heroPlay = () => {
-    if (lastEp && lastSeason) { setSelectedSeason(lastSeason); play(lastEp) }
+    if (lastEp && lastSeason) { setSelectedSeason(lastSeason); play(lastEp, lastSeason) }
     else play(seasonData?.episodes?.[0]?.episode_number || 1)
   }
   const share = () => {
@@ -161,20 +184,25 @@ export default function TVDetail({ user, onAuthRequired }) {
         <div className="fu-hero-scrim" />
         <div className="fu-hero-noise" />
         <div className="fu-hero-inner">
-          <div className="fu-eyebrow">Series{year ? ` · ${year}` : ''}</div>
-          <h1 className="fu-title">{details.name}</h1>
-          <div className="fu-meta">
-            {details.vote_average ? <><span className="strong"><span className="star">★</span>{details.vote_average.toFixed(1)}</span><span className="sep">·</span></> : null}
-            {details.number_of_seasons ? <><span>{details.number_of_seasons} Season{details.number_of_seasons > 1 ? 's' : ''}</span><span className="sep">·</span></> : null}
-            {details.number_of_episodes ? <><span>{details.number_of_episodes} Episodes</span><span className="sep">·</span></> : null}
-            <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span className="fu-dot" />{ongoing ? 'Returning' : (details.status?.split(' ')[0] || 'Ended')}</span>
+          {/* Text sits on a soft dark backing so it stays readable on any banner. */}
+          <div className="fu-hero-copy">
+            <div className="fu-eyebrow">Series{year ? ` · ${year}` : ''}</div>
+            <h1 className="fu-title">{details.name}</h1>
+            <div className="fu-meta">
+              {details.vote_average ? <><span className="strong"><span className="star">★</span>{details.vote_average.toFixed(1)}</span><span className="sep">·</span></> : null}
+              {details.number_of_seasons ? <><span>{details.number_of_seasons} Season{details.number_of_seasons > 1 ? 's' : ''}</span><span className="sep">·</span></> : null}
+              {details.number_of_episodes ? <><span>{details.number_of_episodes} Eps</span><span className="sep">·</span></> : null}
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span className={'fu-dot' + (ongoing ? '' : ' off')} />{ongoing ? 'Returning' : (details.status?.split(' ')[0] || 'Ended')}</span>
+            </div>
+            {(details.genres || []).length > 0 && (
+              <div className="fu-genres">{details.genres.slice(0, 3).map((g) => <span key={g.id} className="fu-pill">{g.name}</span>)}</div>
+            )}
+            {details.overview && <p className="fu-syn fu-syn-clickable" onClick={() => setSynOpen(true)} title="Read full description">{details.overview}</p>}
           </div>
-          <div className="fu-genres">{(details.genres || []).slice(0, 4).map((g) => <span key={g.id} className="fu-pill">{g.name}</span>)}</div>
-          {details.overview && <p className="fu-syn fu-syn-clickable" onClick={() => setSynOpen(true)} title="Read full description">{details.overview}</p>}
           <div className="fu-actions">
             <button className="fu-btn fu-btn-grad" onClick={heroPlay}><Icon.play width="16" height="16" /> {resumeLabel}</button>
             {lastEp && lastSeason && (
-              <button className="fu-btn fu-btn-glass" onClick={() => { setSelectedSeason(lastSeason); play(lastEp + 1) }}><Icon.play width="15" height="15" /> Next Ep</button>
+              <button className="fu-btn fu-btn-glass" onClick={() => { setSelectedSeason(lastSeason); play(lastEp + 1, lastSeason) }}><Icon.play width="15" height="15" /> Next Ep</button>
             )}
             <button className="fu-btn fu-btn-glass" onClick={toggleWatchlist}>
               {inWatchlist
@@ -223,18 +251,33 @@ export default function TVDetail({ user, onAuthRequired }) {
           <div className="fu-ep-list">
             {seasonData.episodes.map((ep) => {
               const isLast = lastSeason === selectedSeason && lastEp === ep.episode_number
+              const isSeen = seen.has(tvEpKey(selectedSeason, ep.episode_number))
               const thumb = ep.still_path ? `${IMG}${ep.still_path}` : (details.poster_path ? `${IMG}${details.poster_path}` : null)
               const meta = [ep.air_date, typeof ep.runtime === 'number' ? `${ep.runtime} min` : null].filter(Boolean).join(' · ')
               return (
-                <div key={ep.id} className="fu-ep" onClick={() => play(ep.episode_number)}>
+                <div key={ep.id} className={'fu-ep' + (isSeen ? ' seen' : '')} onClick={() => play(ep.episode_number)}>
                   <div className="fu-still">
                     {thumb ? <img src={thumb} alt={ep.name} loading="lazy" /> : null}
                     <span className="fu-ep-badge">EP {ep.episode_number}</span>
+                    {isSeen && (
+                      <button
+                        type="button"
+                        className="fu-seen-check"
+                        title="Watched (tap to unmark)"
+                        aria-label={`Unmark episode ${ep.episode_number} as watched`}
+                        onClick={(e) => { e.stopPropagation(); markSeen(selectedSeason, ep.episode_number, false) }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                      </button>
+                    )}
                   </div>
                   <div className="fu-ep-body">
                     <div className="fu-ep-titlerow">
                       <h3 className="fu-ep-title">{ep.name || `Episode ${ep.episode_number}`}</h3>
                       {isLast && <span className="fu-tag">Continue</span>}
+                      {isSeen && !isLast && (
+                        <span className="fu-seen-pill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>Watched</span>
+                      )}
                     </div>
                     {meta && <div className="fu-ep-meta">{meta}</div>}
                     {ep.overview && <p className="fu-ep-syn">{ep.overview}</p>}

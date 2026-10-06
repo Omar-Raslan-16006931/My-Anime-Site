@@ -29,18 +29,28 @@ async function fetchJson(url, opts = {}, ms = 10000) {
 }
 
 // ── Jikan: one global queue, spaced ≥400ms apart, with retry/backoff ────────
+// Plus a circuit breaker: Jikan goes down for long stretches, and waiting on it
+// used to freeze every anime page. After 3 straight failures we skip it for 60s.
 let jikanChain = Promise.resolve()
 let lastJikanAt = 0
+let jikanFails = 0
+let jikanDownUntil = 0
 
-export function jikanGet(path, retries = 3) {
+export function jikanGet(path, retries = 3, isCancelled = () => false) {
   const run = async () => {
     for (let i = 0; i <= retries; i++) {
+      // Dropped requests (user left the page) and a tripped breaker cost nothing.
+      if (isCancelled() || Date.now() < jikanDownUntil) return null
       const wait = 400 - (Date.now() - lastJikanAt)
       if (wait > 0) await sleep(wait)
       lastJikanAt = Date.now()
-      const res = await fetchJson(`${JIKAN}${path}`)
-      if (res.ok && res.body) return res.body
-      if (res.status === 404) return null
+      const res = await fetchJson(`${JIKAN}${path}`, {}, 8000)
+      if (res.ok && res.body) { jikanFails = 0; return res.body }
+      if (res.status === 404) { jikanFails = 0; return null }
+      if (res.status === 0 || res.status >= 500) {
+        jikanFails += 1
+        if (jikanFails >= 3) { jikanDownUntil = Date.now() + 60000; jikanFails = 0; return null }
+      }
       if (i < retries) await sleep(900 * (i + 1)) // 429 / 5xx / network → back off
     }
     return null
@@ -196,11 +206,12 @@ export async function animeByMalIds(ids) {
 export async function animeDetails(malId) {
   const id = Number(malId)
   if (!id) return null
-  const [j, a] = await Promise.all([
-    jikanGet(`/anime/${id}/full`, 2),
-    anilist(`query($id: Int) { Media(idMal: $id, type: ANIME) { ${MEDIA_FIELDS} } }`, { id }),
-  ])
+  // Both start at once, but the page never waits long on Jikan: AniList alone
+  // is enough to render, so Jikan gets at most ~2.5s more to add its extras.
+  const jikanP = jikanGet(`/anime/${id}/full`, 1)
+  const a = await anilist(`query($id: Int) { Media(idMal: $id, type: ANIME) { ${MEDIA_FIELDS} } }`, { id })
   const ani = fromAniList(a?.Media)
+  const j = ani ? await Promise.race([jikanP, sleep(2500).then(() => null)]) : await jikanP
   const jd = j?.data && !Array.isArray(j.data) ? j.data : null
   if (!jd && !ani) return null
 
@@ -226,7 +237,8 @@ export async function animeEpisodes(malId, isCancelled = () => false) {
   let page = 1
   let all = []
   while (page < 60) {
-    const j = await jikanGet(`/anime/${malId}/episodes?page=${page}`, 2)
+    if (isCancelled()) return all
+    const j = await jikanGet(`/anime/${malId}/episodes?page=${page}`, 1, isCancelled)
     if (isCancelled()) return all
     if (!j?.data?.length) break
     all = all.concat(j.data)

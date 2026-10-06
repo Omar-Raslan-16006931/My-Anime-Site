@@ -38,7 +38,7 @@
 /* ---------- TV hero: backdrop image feathered into the page ---------- */
 .fu-hero {
   position: relative; overflow: hidden;
-  min-height: clamp(380px, 54vh, 620px);
+  min-height: clamp(320px, 46vh, 540px);
   display: block;
   background: var(--bg);
 }
@@ -62,7 +62,27 @@
 }
 .fu-hero-inner {
   position: relative; z-index: 3; width: 100%; max-width: 760px;
-  padding: calc(var(--topbar-h) + env(safe-area-inset-top) + clamp(64px, 12vh, 120px)) clamp(18px, 5vw, 56px) clamp(24px, 4vw, 40px);
+  padding: calc(var(--topbar-h) + env(safe-area-inset-top) + clamp(56px, 10vh, 100px)) clamp(18px, 5vw, 56px) clamp(18px, 3vw, 30px);
+}
+
+/* Readability backing for the banner text: a soft translucent black panel.
+   Solid tint only (no blur, no glow, no border) so it never bands or smears. */
+.fu-hero-copy {
+  width: fit-content; max-width: min(100%, 580px);
+  background: rgba(10,9,8,0.58);
+  border-radius: 12px;
+  padding: 12px 14px 13px;
+  margin-bottom: 12px;
+}
+.fu-hero-copy > :last-child { margin-bottom: 0; }
+/* Compact type inside the backing */
+.fu-hero-copy .fu-eyebrow { font-size: 12.5px; margin-bottom: 4px; }
+.fu-hero-copy .fu-title { font-size: clamp(24px, 3.8vw, 42px); line-height: 1.06; margin: 0 0 6px; text-shadow: none; }
+.fu-hero-copy .fu-meta { font-size: 13px; margin-bottom: 6px; color: #c9c5bf; }
+.fu-hero-copy .fu-genres { font-size: 12.5px; margin-bottom: 8px; color: #c9c5bf; }
+.fu-hero-copy .fu-syn {
+  font-size: 13.5px; line-height: 1.5; margin: 0; color: #d6d2cc;
+  display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 
 /* ---------- Shared hero type ---------- */
@@ -206,10 +226,11 @@
 .fu-op-ep.seen .fu-op-still img, .fu-ep.seen .fu-still img { opacity: 0.5; }
 .fu-seen-check {
   position: absolute; top: 5px; right: 5px; z-index: 2;
-  width: 20px; height: 20px; border-radius: 50%;
+  width: 20px; height: 20px; border-radius: 50%; padding: 0; border: none;
   display: flex; align-items: center; justify-content: center;
   background: var(--fu-green); color: #0b1a11;
 }
+button.fu-seen-check { cursor: pointer; }
 
 .fu-play {
   flex: 0 0 auto; width: var(--ctl); height: var(--ctl); border-radius: 50%;
@@ -335,15 +356,14 @@
 
 /* ---------- Phones ---------- */
 @media (max-width: 720px) {
-  .fu-hero { min-height: clamp(340px, 50vh, 480px); }
-  .fu-hero-inner { padding-top: calc(var(--topbar-h) + env(safe-area-inset-top) + 64px); }
-  .fu-title { font-size: clamp(28px, 9vw, 40px); margin-bottom: 8px; }
-  .fu-meta { font-size: 13px; margin-bottom: 10px; }
-  .fu-genres { font-size: 12.5px; margin-bottom: 10px; }
-  .fu-syn {
-    font-size: 14px; margin-bottom: 14px;
-    display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-  }
+  .fu-hero { min-height: clamp(280px, 42vh, 420px); }
+  .fu-hero-inner { padding: calc(var(--topbar-h) + env(safe-area-inset-top) + 54px) 12px 14px; }
+  .fu-hero-copy { padding: 10px 12px 11px; border-radius: 10px; margin-bottom: 10px; max-width: 100%; }
+  .fu-hero-copy .fu-eyebrow { font-size: 12px; margin-bottom: 3px; }
+  .fu-hero-copy .fu-title { font-size: clamp(20px, 6.4vw, 28px); margin-bottom: 4px; }
+  .fu-hero-copy .fu-meta { font-size: 12px; gap: 2px 6px; margin-bottom: 4px; }
+  .fu-hero-copy .fu-genres { font-size: 12px; margin-bottom: 6px; }
+  .fu-hero-copy .fu-syn { font-size: 13px; -webkit-line-clamp: 2; line-clamp: 2; }
   .fu-actions { gap: 6px; }
   .fu-btn { padding: 0 12px; font-size: 13px; gap: 6px; }
 
