@@ -43,10 +43,13 @@
 
 html {
   -webkit-text-size-adjust: 100%;
-  scroll-behavior: smooth;
+  /* No global smooth-scroll: it made route changes visibly scroll to the top. */
   scroll-padding-top: calc(var(--topbar-h) + 12px);
   overscroll-behavior-y: none;
 }
+
+/* Kill the 300ms tap delay / double-tap zoom on interactive bits. */
+a, button, .card, select, label { touch-action: manipulation; }
 
 body {
   background: var(--bg);
@@ -126,11 +129,17 @@ select {
   padding-top: env(safe-area-inset-top);
   display: flex; align-items: center; gap: 16px;
   padding-left: clamp(16px, 4vw, 60px); padding-right: clamp(16px, 4vw, 60px);
-  background: rgba(12,12,15,0.94);
-  backdrop-filter: blur(22px) saturate(1.6);
-  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  /* Solid on phones: backdrop blur on a fixed bar judders while scrolling on iOS. */
+  background: rgba(12,12,15,0.985);
   border-bottom: 1px solid var(--border);
   transition: background 0.4s var(--ease), border-color 0.4s var(--ease), box-shadow 0.4s var(--ease);
+}
+@media (min-width: 880px) and (hover: hover) {
+  .topbar {
+    background: rgba(12,12,15,0.94);
+    backdrop-filter: blur(22px) saturate(1.6);
+    -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  }
 }
 .topbar.scrolled {
   background: rgba(10,10,13,0.97);
@@ -378,11 +387,15 @@ select {
   display: flex; align-items: flex-end;
   margin: 0 calc(-1 * clamp(16px, 4vw, 60px));
 }
-.hero-bg { position: absolute; inset: 0; }
+.hero-bg { position: absolute; inset: 0; background: var(--bg2, #111); }
+/* Slides are stacked and crossfaded — no black flash, no layout snap. */
 .hero-bg img {
+  position: absolute; inset: 0;
   width: 100%; height: 100%; object-fit: cover;
-  animation: heroZoom 10s ease-out both;
+  opacity: 0;
+  transition: opacity 0.9s var(--ease);
 }
+.hero-bg img.on { opacity: 1; }
 @keyframes heroZoom { from { transform: scale(1.08); } to { transform: scale(1); } }
 
 .hero-overlay {
@@ -397,8 +410,9 @@ select {
   max-width: 680px;
 }
 .hero-content > * {
-  animation: riseIn 0.65s cubic-bezier(0.16,1,0.3,1) both;
+  animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
 }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .hero-content > *:nth-child(2) { animation-delay: 0.07s; }
 .hero-content > *:nth-child(3) { animation-delay: 0.14s; }
 .hero-content > *:nth-child(4) { animation-delay: 0.21s; }
@@ -453,11 +467,15 @@ select {
 .row-head h2 { font-size: clamp(15px, 1.5vw, 21px); font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
 .row-head a {
   font-size: 12.5px; color: var(--text3); font-weight: 700;
-  opacity: 0; transform: translateX(-6px);
+  padding: 6px 0; /* bigger tap target */
   transition: opacity 0.25s, transform 0.25s, color 0.2s;
 }
-.row:hover .row-head a, .row:focus-within .row-head a { opacity: 1; transform: none; }
-.row-head a:hover { color: var(--text); }
+/* Hover-reveal only where hover exists — on phones "See all" was invisible. */
+@media (hover: hover) {
+  .row-head a { opacity: 0; transform: translateX(-6px); }
+  .row:hover .row-head a, .row:focus-within .row-head a { opacity: 1; transform: none; }
+  .row-head a:hover { color: var(--text); }
+}
 
 .row-body { position: relative; }
 .row-track {
@@ -497,10 +515,14 @@ select {
   position: relative; cursor: pointer; z-index: 1;
   transition: transform 0.35s var(--ease), z-index 0s 0.35s;
 }
-.card:hover, .card:focus-visible {
-  transform: scale(1.045) translateY(-4px);
-  z-index: 6;
-  transition: transform 0.35s var(--ease), z-index 0s;
+/* Touch: a quick press-in only. (Hover-scale on phones "stuck" after a tap.) */
+.card:active { transform: scale(0.97); transition: transform 0.12s var(--ease); }
+@media (hover: hover) {
+  .card:hover, .card:focus-visible {
+    transform: scale(1.045) translateY(-4px);
+    z-index: 6;
+    transition: transform 0.35s var(--ease), z-index 0s;
+  }
 }
 
 .card-poster {
@@ -512,14 +534,16 @@ select {
   transition: box-shadow 0.35s var(--ease), border-color 0.35s var(--ease);
   border: 1px solid var(--border);
 }
-.card:hover .card-poster {
-  box-shadow: 0 18px 44px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.09);
-}
 .card-poster img {
   width: 100%; height: 100%; object-fit: cover;
   transition: transform 0.5s var(--ease), filter 0.35s var(--ease);
 }
-.card:hover .card-poster img { transform: scale(1.05); filter: brightness(1.03); }
+@media (hover: hover) {
+  .card:hover .card-poster {
+    box-shadow: 0 18px 44px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.09);
+  }
+  .card:hover .card-poster img { transform: scale(1.05); filter: brightness(1.03); }
+}
 
 .card-score {
   position: absolute; top: 8px; left: 8px;
@@ -786,7 +810,13 @@ select {
   animation: modalBg 0.22s ease;
 }
 @keyframes modalBg { from { opacity: 0; } }
-@media (max-width: 700px) { .modal { align-items: flex-start; } }
+/* Center via auto margins: centered when it fits, scrollable (never clipped
+   at the top) when it's taller than the screen. */
+.modal { align-items: flex-start; overscroll-behavior: contain; }
+.modal > * { margin: auto; }
+@media (max-width: 700px) {
+  .modal { align-items: flex-start; backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(0,0,0,0.94); }
+}
 
 .modal-card {
   background: rgba(18,18,22,0.96);
@@ -819,16 +849,88 @@ select {
 
 .player-frame {
   position: relative; width: 100%; aspect-ratio: 16/9;
-  background: #000; border-radius: var(--radius);
-  overflow: hidden; border: 1px solid var(--border);
+  background: #000;
+  overflow: hidden;
 }
-.player-frame iframe, .player-frame video { width: 100%; height: 100%; display: block; border: 0; background: #000; }
+.player-frame iframe, .player-frame video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border: 0; background: #000; }
 .player-loading {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
   color: var(--text2); font-size: 14px;
-  background: rgba(0,0,0,0.5);
-  z-index: 1; gap: 10px;
+  background: rgba(0,0,0,0.6);
+  z-index: 2; gap: 10px;
+  pointer-events: none;
+}
+.player-error { flex-direction: column; text-align: center; padding: 20px; pointer-events: auto; color: var(--text); }
+
+/* Player card: video sits flush under the header, controls below it. */
+.player-card { display: flex; flex-direction: column; }
+.player-card .modal-head .ttl { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-card .modal-body { padding-top: 12px; }
+@media (max-width: 700px) {
+  /* Phones: full-screen player sheet, safe-area aware. */
+  .player-modal { padding: 0; align-items: stretch; }
+  .player-card {
+    max-width: none; min-height: 100vh; min-height: 100dvh;
+    border: none; border-radius: 0; box-shadow: none;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: modalBg 0.2s ease;
+    backdrop-filter: none; -webkit-backdrop-filter: none; background: #0b0b0e;
+  }
+  .player-card .modal-head { padding: 10px 12px 10px 16px; }
+  .player-card .modal-body { padding: 12px 14px 20px; }
+}
+
+/* Sources picker */
+.src-pick { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+@media (max-width: 560px) {
+  .player-bar { gap: 8px; }
+  .player-bar .grow { display: none; }
+  .src-pick { flex: 1 1 100%; }
+  .src-pick .select-min { flex: 1; min-width: 0; }
+}
+
+/* Auto-next toggle */
+.switch {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 36px; padding: 0 6px;
+  font-size: 12.5px; font-weight: 700; color: var(--text2);
+  border-radius: 999px;
+}
+.switch-track {
+  position: relative; width: 34px; height: 20px; border-radius: 999px;
+  background: rgba(255,255,255,0.16); transition: background 0.2s var(--ease); flex-shrink: 0;
+}
+.switch-thumb {
+  position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  transition: transform 0.2s var(--ease);
+}
+.switch.on { color: var(--text); }
+.switch.on .switch-track { background: var(--accent); }
+.switch.on .switch-thumb { transform: translateX(14px); }
+
+/* "Up next" countdown overlay */
+.next-overlay {
+  position: absolute; inset: 0; z-index: 3;
+  display: flex; align-items: flex-end; justify-content: flex-end;
+  padding: clamp(10px, 3vw, 22px);
+  background: linear-gradient(0deg, rgba(0,0,0,0.75), rgba(0,0,0,0.1) 60%);
+  animation: modalBg 0.25s ease;
+}
+.next-card {
+  background: rgba(20,20,26,0.96); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px; padding: 14px 16px; min-width: 210px;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.6);
+}
+.next-eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text3); }
+.next-title { font-size: 16px; font-weight: 800; margin-top: 2px; }
+.next-count { font-size: 12.5px; color: var(--text2); margin: 4px 0 10px; }
+.next-actions { display: flex; gap: 8px; }
+@media (max-width: 560px) {
+  .next-overlay { align-items: center; justify-content: center; }
+  .next-card { padding: 12px 14px; min-width: 0; }
 }
 
 .player-note {
@@ -917,17 +1019,36 @@ select {
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 /* ---------- Route transitions ---------- */
-/* Pages ease in as the loader overlay fades out — smooth crossfade. */
-.route-anim { animation: routeIn 0.55s var(--ease); }
-.route-anim.slide-left  { animation: slideL 0.5s var(--ease); }
-.route-anim.slide-right { animation: slideR 0.5s var(--ease); }
-@keyframes routeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-@keyframes slideL { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
-@keyframes slideR { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
+/* Opacity ONLY. A transform here turns the page into a containing block for
+   position:fixed children (player, popups) mid-animation → jumpy modals. */
+.route-anim { animation: routeIn 0.4s var(--ease); }
+@keyframes routeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* Cards ease in as data loads — no hard snapping */
-.card, .pcard { animation: mediaIn 0.45s var(--ease); }
-@keyframes mediaIn { from { opacity: 0; transform: translateY(10px); } }
+/* Cards ease in as data loads — opacity only (cheap on phones). */
+.card, .pcard { animation: mediaIn 0.35s var(--ease); }
+@keyframes mediaIn { from { opacity: 0; } }
+
+/* ---------- Search ---------- */
+.search-form { display: flex; gap: 10px; margin-bottom: 20px; max-width: 620px; }
+.search-field { flex: 1; width: auto; max-width: none; height: 44px; }
+.search-field input[type="search"]::-webkit-search-cancel-button { filter: invert(0.7); cursor: pointer; }
+.search-section { margin-bottom: clamp(24px, 4vw, 40px); }
+.search-h { font-size: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+.search-count {
+  font-size: 11.5px; font-weight: 800; color: var(--text2);
+  background: rgba(255,255,255,0.08); border-radius: 999px; padding: 2px 9px;
+}
+.search-err {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  color: var(--text2); font-size: 14px;
+}
+.list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.list-tabs { margin-bottom: 18px; }
+@media (max-width: 560px) {
+  .search-form .btn { padding-left: 16px; padding-right: 16px; }
+}
 /* Poster images fade in only once decoded (class toggled in MediaCard) */
 .card-poster img.img-fade { opacity: 0; transition: opacity 0.5s var(--ease); }
 .card-poster img.img-fade.is-loaded { opacity: 1; }

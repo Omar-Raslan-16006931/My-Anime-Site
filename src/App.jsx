@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { supabase } from './supabase'
 import Navbar from './components/Navbar'
 import AuthModal from './components/AuthModal'
@@ -14,9 +14,7 @@ import Movies from './pages/Movies'
 import TVShows from './pages/TVShows'
 import MovieDetail from './pages/MovieDetail'
 import TVDetail from './pages/TVDetail'
-
-// Main tab order — used for slide direction and mobile swipe navigation.
-const TABS = ['/', '/anime', '/tv', '/movies', '/watchlist']
+import Search from './pages/Search'
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -29,8 +27,6 @@ export default function App() {
   const initializedRef = useRef(false)
 
   const location = useLocation()
-  const navigate = useNavigate()
-  const prevPathRef = useRef(location.pathname)
 
   const fetchProfile = useCallback(async (id) => {
     if (!id) {
@@ -107,51 +103,13 @@ export default function App() {
     }
   }, [fetchProfile])
 
-  // Swipe left/right between main tabs on mobile. Ignores gestures that start
-  // inside horizontally scrollable UI (carousels, players, inputs).
-  useEffect(() => {
-    let sx = 0, sy = 0, t0 = 0, valid = false
-
-    const onStart = (e) => {
-      valid = false
-      if (window.innerWidth >= 880) return
-      if (e.target.closest('.row-track, .modal, .player-frame, .tabs, .dock, .ep-thumb, input, select, textarea, iframe, video')) return
-      valid = true
-      sx = e.touches[0].clientX
-      sy = e.touches[0].clientY
-      t0 = Date.now()
-    }
-    const onEnd = (e) => {
-      if (!valid) return
-      const dx = e.changedTouches[0].clientX - sx
-      const dy = e.changedTouches[0].clientY - sy
-      if (Date.now() - t0 > 600 || Math.abs(dx) < 72 || Math.abs(dy) > 56) return
-      const idx = TABS.indexOf(location.pathname)
-      if (idx === -1) return
-      const next = idx + (dx < 0 ? 1 : -1)
-      if (next >= 0 && next < TABS.length) navigate(TABS[next])
-    }
-
-    window.addEventListener('touchstart', onStart, { passive: true })
-    window.addEventListener('touchend', onEnd, { passive: true })
-    return () => {
-      window.removeEventListener('touchstart', onStart)
-      window.removeEventListener('touchend', onEnd)
-    }
-  }, [location.pathname, navigate])
-
-  // Slide direction for tab-to-tab transitions; plain fade everywhere else.
-  const prevIdx = TABS.indexOf(prevPathRef.current)
-  const curIdx = TABS.indexOf(location.pathname)
-  const slide = prevIdx !== -1 && curIdx !== -1 && prevIdx !== curIdx
-    ? (curIdx > prevIdx ? ' slide-left' : ' slide-right')
-    : ''
-  useEffect(() => { prevPathRef.current = location.pathname }, [location.pathname])
+  // (Removed: swipe-between-tabs gesture. On phones it fired by accident while
+  // scrolling carousels/pages and caused random page jumps.)
 
   // Forced 0.5s loading state on every route change so pages don't snap in.
   // Also reset scroll to the top so a new page never opens mid-scroll.
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    window.scrollTo(0, 0)
     setRouteLoading(true)
     const t = setTimeout(() => setRouteLoading(false), 500)
     return () => clearTimeout(t)
@@ -175,9 +133,10 @@ export default function App() {
         <div key={'rl-' + location.pathname} className="route-loader"><span className="spinner lg" /></div>
       )}
 
-      <div key={location.pathname} className={'route-anim' + slide}>
+      <div key={location.pathname} className="route-anim">
         <Routes location={location}>
           <Route path="/" element={<Home user={user} onAuthRequired={handleAuthRequired} />} />
+          <Route path="/search" element={<Search />} />
           <Route path="/anime" element={<Anime />} />
           <Route path="/movies" element={<Movies />} />
           <Route path="/tv" element={<TVShows />} />

@@ -2,35 +2,34 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import MediaCard from '../components/MediaCard'
 import Icon from '../components/Icons'
+import { searchAnime, animeList } from '../lib/anime'
 
-async function jikan(url, retries = 2) {
-  for (let i = 0; i <= retries; i++) {
-    const res = await fetch(url)
-    if (res.status === 429) { await new Promise((r) => setTimeout(r, 800 * (i + 1))); continue }
-    if (res.ok) return res.json()
-    return { data: [] }
-  }
-  return { data: [] }
-}
+const TABS = [
+  { id: 'trending', label: 'Trending' },
+  { id: 'airing', label: 'Airing' },
+  { id: 'popular', label: 'All-time' },
+]
 
 export default function Anime() {
   const [params, setParams] = useSearchParams()
   const q = params.get('q') || ''
   const [input, setInput] = useState(q)
+  const [tab, setTab] = useState('trending')
   const [list, setList] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+  const [nonce, setNonce] = useState(0)
 
   useEffect(() => { setInput(q) }, [q])
 
   useEffect(() => {
     let active = true
-    setLoading(true)
-    const url = q
-      ? `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(q)}&limit=24&sfw=true&order_by=popularity`
-      : 'https://api.jikan.moe/v4/top/anime?limit=24'
-    jikan(url).then((d) => { if (active) { setList(d.data || []); setLoading(false) } })
+    setLoading(true); setError(false)
+    const p = q ? searchAnime(q, 36) : animeList(tab, 36)
+    p.then((items) => { if (active) { setList(items || []); setLoading(false) } })
+      .catch(() => { if (active) { setList([]); setError(true); setLoading(false) } })
     return () => { active = false }
-  }, [q])
+  }, [q, tab, nonce])
 
   const submit = useCallback((e) => {
     e.preventDefault()
@@ -39,26 +38,39 @@ export default function Anime() {
 
   return (
     <div className="page">
-      <h1 className="section-title" style={{ marginBottom: 16 }}>Anime</h1>
+      <h1 className="section-title" style={{ marginBottom: 14 }}>Anime</h1>
 
-      <form onSubmit={submit} style={{ display: 'flex', gap: 10, marginBottom: 22, maxWidth: 560 }}>
-        <div className="topbar-search" style={{ flex: 1, width: 'auto' }}>
+      <form onSubmit={submit} className="search-form">
+        <div className="topbar-search search-field">
           <Icon.search width="16" height="16" />
-          <input placeholder="Search anime…" value={input} onChange={(e) => setInput(e.target.value)} />
+          <input type="search" enterKeyHint="search" placeholder="Search anime…" value={input} onChange={(e) => setInput(e.target.value)} />
         </div>
         <button className="btn btn-primary" type="submit">Search</button>
       </form>
 
-      <h2 className="section-title" style={{ fontSize: 18, marginBottom: 14 }}>
-        {q ? `Results for “${q}”` : 'Top Anime'}
-      </h2>
+      {q ? (
+        <div className="list-head">
+          <h2 className="section-title" style={{ fontSize: 18 }}>Results for “{q}”</h2>
+          <button className="btn btn-ghost btn-sm" onClick={() => setParams({})}>Clear</button>
+        </div>
+      ) : (
+        <div className="seg list-tabs">
+          {TABS.map((t) => (
+            <button key={t.id} className={'seg-btn' + (tab === t.id ? ' on' : '')} onClick={() => setTab(t.id)}>{t.label}</button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="grid">
           {Array.from({ length: 12 }).map((_, i) => <div key={i} className="skel skel-poster" />)}
         </div>
+      ) : error ? (
+        <div className="empty"><div className="emoji">⚠️</div><p>Couldn’t reach the anime database.</p>
+          <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => setNonce((n) => n + 1)}>Try again</button>
+        </div>
       ) : list.length === 0 ? (
-        <div className="empty"><div className="emoji">🔍</div><p>No anime found.</p></div>
+        <div className="empty"><div className="emoji">🔍</div><p>No anime found for “{q}”.</p></div>
       ) : (
         <div className="grid">
           {list.map((a) => (

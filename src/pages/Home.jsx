@@ -4,7 +4,8 @@ import Hero from '../components/Hero'
 import Row from '../components/Row'
 import MediaCard from '../components/MediaCard'
 import { getPopularMovies, getPopularTV, getTmdbImage } from '../lib/tmdb'
-import { animeArtFromMal, recentlyAiredEpisodes } from '../lib/anilist'
+import { recentlyAiredEpisodes } from '../lib/anilist'
+import { animeByMalIds, animeList } from '../lib/anime'
 import { supabase } from '../supabase'
 
 const backdrop = (path) => (path ? `https://image.tmdb.org/t/p/original${path}` : null)
@@ -25,16 +26,6 @@ function timeAgo(unix) {
   if (s < 3600) return `${Math.max(1, Math.floor(s / 60))}m ago`
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`
   return `${Math.floor(s / 86400)}d ago`
-}
-
-async function jikan(url, retries = 2) {
-  for (let i = 0; i <= retries; i++) {
-    const res = await fetch(url)
-    if (res.status === 429) { await new Promise((r) => setTimeout(r, 800 * (i + 1))); continue }
-    if (res.ok) return res.json()
-    return { data: [] }
-  }
-  return { data: [] }
 }
 
 export default function Home({ user }) {
@@ -71,43 +62,31 @@ export default function Home({ user }) {
 
   useEffect(() => {
     let active = true
-    ;(async () => {
-      // Build the curated billboard from the hand-picked MAL ids. Fetched
-      // sequentially so we stay under Jikan's rate limit.
-      for (let n = 0; n < HERO_PICKS.length; n++) {
-        const pick = HERO_PICKS[n]
-        const res = await jikan(`https://api.jikan.moe/v4/anime/${pick.mal_id}`)
-        if (!active) return
-        const h = res.data
-        if (!h || Array.isArray(h) || !h.mal_id) continue
-        const item = {
+    // Curated billboard: ONE AniList request for all picks (wide banners
+    // included), set once — no more hero jumping as slides trickle in.
+    animeByMalIds(HERO_PICKS.map((p) => p.mal_id)).then((list) => {
+      if (!active) return
+      const byId = new Map(list.map((h) => [h.mal_id, h]))
+      const items = HERO_PICKS.map((pick) => {
+        const h = byId.get(pick.mal_id)
+        if (!h) return null
+        return {
           kind: pick.kind,
           title: h.title_english || h.title,
-          backdrop: pick.banner || h.images?.jpg?.large_image_url,
+          backdrop: pick.banner || h.banner || h.images?.jpg?.large_image_url,
           score: h.score,
           year: h.year || h.aired?.prop?.from?.year,
           genres: (h.genres || []).map((g) => g.name),
           desc: h.synopsis,
           href: `/anime/${h.mal_id}`,
         }
-        setHeroList((prev) => [...prev, item])
-        setLoading(false)
-        // A custom local banner wins; otherwise upgrade the stretched portrait
-        // poster to AniList's true wide banner.
-        if (!pick.banner) {
-          animeArtFromMal(pick.mal_id).then((art) => {
-            if (!active || !art?.banner) return
-            setHeroList((prev) => prev.map((x) => (x.href === item.href ? { ...x, backdrop: art.banner } : x)))
-          })
-        }
-      }
+      }).filter(Boolean)
+      setHeroList(items)
+      setLoading(false)
+    })
 
-      const top = await jikan('https://api.jikan.moe/v4/top/anime?limit=20&filter=bypopularity')
-      if (active) setTopAnime(top.data || [])
-
-      const air = await jikan('https://api.jikan.moe/v4/seasons/now?limit=20')
-      if (active) setAiring(air.data || [])
-    })()
+    animeList('trending', 20).then((l) => { if (active) setTopAnime(l) })
+    animeList('airing', 20).then((l) => { if (active) setAiring(l) })
 
     Promise.all([getPopularMovies().catch(() => null), getPopularTV().catch(() => null)]).then(([m, t]) => {
       if (!active) return
@@ -168,7 +147,7 @@ export default function Home({ user }) {
         </Row>
       )}
 
-      <Row title="Trending Anime" loading={loading} onMore={() => navigate('/anime')}>
+      <Row title="Trending Anime" loading={!topAnime.length} onMore={() => navigate('/anime')}>
         {topAnime.map((a) => <MediaCard key={a.mal_id} item={animeCard(a)} />)}
       </Row>
 

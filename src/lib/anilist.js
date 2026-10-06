@@ -26,7 +26,7 @@ async function anizip(anilistId) {
     anizipCache.set(anilistId, j)
     return j
   } catch {
-    anizipCache.set(anilistId, null)
+    // Don't cache failures — a transient error shouldn't hide sources for good.
     return null
   }
 }
@@ -131,24 +131,59 @@ export async function recentlyAiredEpisodes(limit = 24) {
   }
 }
 
+// fetch with a hard timeout so a hung lookup can never stall the player.
+async function timedFetch(url, opts = {}, ms = 8000) {
+  const ctl = new AbortController()
+  const t = setTimeout(() => ctl.abort(), ms)
+  try { return await fetch(url, { ...opts, signal: ctl.signal }) } finally { clearTimeout(t) }
+}
+
+// MAL id → AniList id. Only SUCCESSFUL lookups are cached.
+//
+// Bug fixed here: previously a single failed/rate-limited request cached `null`
+// in localStorage forever, which permanently hid every AniList-keyed source
+// (Videasy, MegaPlay-AniList, TMDB mapping) for that show. That's the main
+// reason anime playback "almost never" worked.
 export async function anilistIdFromMal(malId) {
   if (!malId) return null
   const cache = loadCache()
-  if (cache[malId] !== undefined) return cache[malId]
+  if (typeof cache[malId] === 'number') return cache[malId]
 
-  const query = `query($id:Int){Media(idMal:$id,type:ANIME){id}}`
-  try {
-    const r = await fetch(ANILIST, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables: { id: Number(malId) } }),
-    })
-    const j = await r.json()
-    const id = j?.data?.Media?.id ?? null
+  const remember = (id) => {
     cache[malId] = id
     saveCache(cache)
     return id
-  } catch {
-    return null
   }
+
+  // 1) AniList itself (retry once on rate-limit / server error).
+  for (let i = 0; i < 2; i++) {
+    try {
+      const r = await timedFetch(ANILIST, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query: 'query($id:Int){Media(idMal:$id,type:ANIME){id}}', variables: { id: Number(malId) } }),
+      })
+      const j = await r.json().catch(() => null)
+      const id = j?.data?.Media?.id
+      if (id) return remember(id)
+      if (r.status !== 429 && r.status < 500) break // genuine "not found"
+    } catch { /* network / timeout → retry, then fall through */ }
+    await new Promise((res) => setTimeout(res, 900))
+  }
+
+  // 2) ani.zip mapping by MAL id — an independent service, so it still works
+  //    when AniList is rate-limiting. Also warms the TMDB-mapping cache.
+  try {
+    const r = await timedFetch(`https://api.ani.zip/mappings?mal_id=${Number(malId)}`)
+    if (r.ok) {
+      const j = await r.json()
+      const id = Number(j?.mappings?.anilist_id)
+      if (id) {
+        anizipCache.set(id, j)
+        return remember(id)
+      }
+    }
+  } catch { /* ignore */ }
+
+  return null
 }

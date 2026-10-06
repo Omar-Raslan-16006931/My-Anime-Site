@@ -53,6 +53,11 @@ export const Icon = {
       <path d="M6 6l12 12M18 6L6 18" />
     </svg>
   ),
+  refresh: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M21 12a9 9 0 11-2.64-6.36" /><path d="M21 3v6h-6" />
+    </svg>
+  ),
   key: (p) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
       <circle cx="8" cy="8" r="5" /><path d="M11.5 11.5L21 21M17 17l2-2M14 14l2-2" />

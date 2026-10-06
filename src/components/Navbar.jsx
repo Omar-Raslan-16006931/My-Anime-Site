@@ -90,7 +90,11 @@ export default function Navbar({ user, profile, onAuthClick }) {
 
   const submitSearch = (e) => {
     e.preventDefault()
-    if (q.trim()) navigate(`/anime?q=${encodeURIComponent(q.trim())}`)
+    const v = q.trim()
+    if (!v) return
+    // Blur so the phone keyboard closes and results are visible right away.
+    document.activeElement?.blur?.()
+    navigate(`/search?q=${encodeURIComponent(v)}`)
   }
 
   const initial = (profile?.username || user?.email || 'G')[0].toUpperCase()
@@ -121,10 +125,12 @@ export default function Navbar({ user, profile, onAuthClick }) {
         <form className="topbar-search" onSubmit={submitSearch}>
           <Icon.search width="16" height="16" />
           <input
+            type="search"
+            enterKeyHint="search"
             placeholder="Search…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            aria-label="Search anime"
+            aria-label="Search anime, shows and movies"
           />
         </form>
 

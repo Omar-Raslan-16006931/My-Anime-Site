@@ -4,33 +4,9 @@ import { supabase } from '../supabase'
 import VideoPlayer from '../components/VideoPlayer'
 import Icon from '../components/Icons'
 import { recordRecent } from '../lib/progress'
-import { animeArtFromMal } from '../lib/anilist'
+import { animeDetails, animeEpisodes, isAdultAnime } from '../lib/anime'
 import { toast } from '../lib/toast'
 import DownloadLinks from '../components/DownloadLinks'
-
-async function jikan(url, retries = 3) {
-  for (let i = 0; i < retries; i++) {
-    const res = await fetch(url)
-    if (res.status === 429) { await new Promise((r) => setTimeout(r, 1000 * (i + 1))); continue }
-    return res
-  }
-  return fetch(url)
-}
-
-async function getEpCount(malId) {
-  try {
-    const query = `query ($id: Int){ Media(idMal: $id, type: ANIME){ episodes status nextAiringEpisode { episode } } }`
-    const res = await fetch('https://graphql.anilist.co', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables: { id: malId } }),
-    })
-    const media = (await res.json())?.data?.Media
-    if (!media) return null
-    if (media.nextAiringEpisode?.episode) return { n: media.nextAiringEpisode.episode - 1, airing: true }
-    if (media.episodes) return { n: media.episodes, airing: false }
-    return null
-  } catch { return null }
-}
 
 async function upsertWatching(user, d, epNum) {
   if (!user || !d) return
@@ -126,40 +102,25 @@ export default function AnimeDetail({ user, onAuthRequired }) {
     setLoading(true); setLoadError(''); setEpisodes([]); setEpCount(null); setIsAiring(false)
     setOpSaga(0); setOpPage(0); setDetails(null); setBanner(null)
 
-    ;(async () => {
-      try {
-        const r = await jikan(`https://api.jikan.moe/v4/anime/${malId}/full`)
-        const d = await r.json()
-        if (cancelled) return
-        if (!r.ok || !d?.data) throw new Error('fail')
-        setDetails(d.data)
-      } catch { if (!cancelled) setLoadError('Failed to load anime details.') }
-      finally { if (!cancelled) setLoading(false) }
-    })()
+    // Details: Jikan + AniList in parallel, merged (either one alone is enough).
+    animeDetails(malId).then((res) => {
+      if (cancelled) return
+      if (!res?.data) setLoadError('Failed to load anime details.')
+      else {
+        setDetails(res.data)
+        if (res.banner) setBanner(res.banner)
+        if (res.epCount) { setEpCount(res.epCount.n); setIsAiring(res.epCount.airing) }
+      }
+      setLoading(false)
+    })
 
-    // Wide hero banner from AniList (Jikan has no banner art).
-    animeArtFromMal(malId).then((art) => { if (!cancelled && art?.banner) setBanner(art.banner) })
-
-    ;(async () => {
-      setEpLoading(true)
-      let page = 1, all = []
-      try {
-        while (true) {
-          const r = await jikan(`https://api.jikan.moe/v4/anime/${malId}/episodes?page=${page}`)
-          const d = await r.json()
-          if (cancelled) return
-          if (!r.ok || !d.data?.length) break
-          all = [...all, ...d.data]
-          if (!d.pagination?.has_next_page) break
-          page += 1
-          await new Promise((res) => setTimeout(res, 350))
-        }
-        if (!cancelled) setEpisodes(all)
-      } catch { if (!cancelled) setEpisodes([]) }
-      finally { if (!cancelled) setEpLoading(false) }
-    })()
-
-    getEpCount(malId).then((data) => { if (!cancelled && data) { setEpCount(data.n); setIsAiring(data.airing) } })
+    // Episode titles (best-effort — the browser works from numbers without them).
+    setEpLoading(true)
+    animeEpisodes(malId, () => cancelled).then((all) => {
+      if (cancelled) return
+      setEpisodes(all)
+      setEpLoading(false)
+    })
 
     return () => { cancelled = true }
   }, [malId])
@@ -270,6 +231,16 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   }
 
   if (loading) return <div className="page"><div className="center-msg"><span className="spinner" /></div></div>
+  if (details && isAdultAnime(details)) {
+    return (
+      <div className="page">
+        <button className="icon-btn detail-back" onClick={() => navigate(-1)}><Icon.back width="18" height="18" /></button>
+        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on AniWave.</p>
+          <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => navigate('/anime')}>Browse anime</button>
+        </div>
+      </div>
+    )
+  }
   if (loadError || !details) {
     return (
       <div className="page">
