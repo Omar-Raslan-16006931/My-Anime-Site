@@ -129,7 +129,10 @@ select {
 
 .section-title { font-size: clamp(18px, 2.4vw, 24px); font-weight: 700; letter-spacing: -0.02em; }
 .muted { color: var(--text2); }
-.center-msg { text-align: center; padding: 64px 16px; color: var(--text2); }
+.center-msg {
+  display: grid; place-items: center; text-align: center;
+  min-height: 55vh; min-height: 55dvh; padding: 32px 16px; color: var(--text2);
+}
 
 /* ---------- Top bar ---------- */
 .topbar {
@@ -800,10 +803,10 @@ select {
     animation: modalBg 0.2s ease;
     backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--bg);
   }
-  .player-card .modal-head { padding: 8px 10px 8px 14px; flex-shrink: 0; }
-  /* Header stays pinned on top; the video + controls sit centred in the
-     remaining space (auto margins centre the pair vertically). */
-  .player-card .player-frame { margin-top: auto; flex-shrink: 0; }
+  /* Title bar, video and controls move together as one block, centred
+     vertically on the screen (auto margins top + bottom). */
+  .player-card .modal-head { padding: 8px 10px 8px 14px; flex-shrink: 0; margin-top: auto; }
+  .player-card .player-frame { flex-shrink: 0; }
   .player-card .player-frame + .modal-body { margin-bottom: auto; }
   .player-card .modal-body { padding: 12px 14px 20px; }
 }
@@ -920,14 +923,22 @@ select {
 
 /* ---------- Spinner ---------- */
 @keyframes spin { to { transform: rotate(360deg); } }
+/* A soft tapering arc in the text colour (no red ring). inline-block so it keeps
+   its size even inside plain text blocks — as a bare inline span it collapsed
+   into a thin vertical line on the detail pages. */
 .spinner {
-  width: 22px; height: 22px;
-  border: 2.5px solid rgba(255,255,255,0.16);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  display: inline-block; flex-shrink: 0; vertical-align: middle;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(243,241,238,0) 0deg, rgba(243,241,238,0.15) 90deg, var(--text) 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  animation: spin 0.85s linear infinite;
 }
-.spinner.lg { width: 38px; height: 38px; border-width: 3px; }
+.spinner.lg {
+  width: 32px; height: 32px;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+}
 
 /* ---------- Route loader (forced ~0.5s on page switch) ---------- */
 .route-loader {
