@@ -605,20 +605,18 @@ export default function VideoPlayer({
               </div>
             )}
 
-            <div className="pc-row">
+            <div className="pc-row pc-source">
               <span className="pc-k">Source</span>
-              <div className="pc-v">
-                <select className="select-min" value={activeId || ''} onChange={(e) => pickSource(e.target.value)} disabled={!sources.length} aria-label="Source">
-                  {sources.map(({ source }) => (
-                    <option key={source.id} value={source.id}>{source.label}</option>
-                  ))}
-                </select>
-                {sources.length > 1 && (
-                  <button className="icon-btn pc-icon" onClick={tryAnother} title="Not playing? Try the next source" aria-label="Try another source">
-                    <Icon.refresh width="15" height="15" />
-                  </button>
-                )}
-              </div>
+              <select className="select-min" value={activeId || ''} onChange={(e) => pickSource(e.target.value)} disabled={!sources.length} aria-label="Source">
+                {sources.map(({ source }) => (
+                  <option key={source.id} value={source.id}>{source.label}</option>
+                ))}
+              </select>
+              {sources.length > 1 && (
+                <button type="button" className="btn btn-ghost btn-sm pc-try" onClick={tryAnother} title="Not playing? Switch to the next source">
+                  <Icon.refresh width="14" height="14" /> Try another source
+                </button>
+              )}
             </div>
 
             {currentStream && streams.length > 1 && (

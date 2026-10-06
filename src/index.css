@@ -846,6 +846,15 @@ select {
 .pc-row .select-min { min-width: 0; max-width: 170px; }
 .pc-icon { width: var(--ctl-sm); height: var(--ctl-sm); font-size: 17px; font-weight: 600; line-height: 1; }
 
+/* Source row: label · picker (shrinks, truncates) · "Try another source". */
+.pc-source { gap: 8px; }
+.pc-source .pc-k { flex-shrink: 0; }
+.pc-source .select-min { flex: 1 1 auto; min-width: 0; max-width: 220px; margin-left: auto; text-overflow: ellipsis; }
+.pc-try { flex-shrink: 0; white-space: nowrap; }
+@media (max-width: 380px) {
+  .pc-source .pc-k { display: none; } /* the picker already shows the source name */
+}
+
 /* Whole row is the toggle; the switch sits on the right. */
 .pc-toggle { cursor: pointer; transition: background 0.15s ease; }
 .pc-toggle:active { background: var(--elev); }
