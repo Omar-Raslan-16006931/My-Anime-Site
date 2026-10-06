@@ -636,17 +636,30 @@ export default function VideoPlayer({
 
           {subTarget && (
             <div className="sub-bar">
-              <span className="src-label">Subtitles</span>
-              <button type="button" className={'switch' + (subsOn ? ' on' : '')} onClick={toggleSubs} aria-pressed={subsOn}>
+              <button
+                type="button"
+                className={'switch sub-switch' + (subsOn ? ' on' : '')}
+                onClick={toggleSubs}
+                aria-pressed={subsOn}
+                aria-label={`English subtitles ${subsOn ? 'on' : 'off'}`}
+              >
+                <span className="sub-switch-label">English subtitles</span>
                 <span className="switch-track"><span className="switch-thumb" /></span>
-                English
+                <span className="sub-switch-state">{subsOn ? 'On' : 'Off'}</span>
               </button>
 
               {overlayMode && clockLive && (
                 <div className="sub-sync" role="group" aria-label="Subtitle timing">
-                  <button type="button" className="icon-btn sub-nudge" onClick={() => nudgeSubs(-0.5)} aria-label="Subtitles earlier">−</button>
-                  <span className="sub-offset">{subOffset > 0 ? '+' : ''}{subOffset.toFixed(1)}s</span>
-                  <button type="button" className="icon-btn sub-nudge" onClick={() => nudgeSubs(0.5)} aria-label="Subtitles later">+</button>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => nudgeSubs(-0.5)} title="Subtitles are late: show them sooner">
+                    − Sooner
+                  </button>
+                  <span className="sub-offset" aria-live="polite">{subOffset === 0 ? 'In sync' : `${subOffset > 0 ? '+' : ''}${subOffset.toFixed(1)}s`}</span>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => nudgeSubs(0.5)} title="Subtitles are early: show them later">
+                    Later +
+                  </button>
+                  {subOffset !== 0 && (
+                    <button type="button" className="sub-reset" onClick={() => setSubOffset(0)}>Reset</button>
+                  )}
                 </div>
               )}
               {overlayMode && clockLive && (
@@ -667,7 +680,7 @@ export default function VideoPlayer({
                 : overlayMode && clockMissing
                   ? <>This player doesn’t share its playback time, so subtitles can’t follow it. Tap <strong>Subtitle file</strong> and upload it in its CC menu, or <strong>Try another</strong> source.</>
                   : overlayMode && clockLive
-                    ? <>Subtitles are drawn on top. Use <strong>Fullscreen</strong> here (not the player’s own) to keep them, and <strong>− / +</strong> if they’re early or late.</>
+                    ? <>Subtitles <strong>late</strong>? Tap <strong>− Sooner</strong>. Too <strong>early</strong>? Tap <strong>Later +</strong>. Use <strong>Fullscreen</strong> here, not the player’s own, to keep them on screen.</>
                     : <>Not playing? Tap <strong>Try another</strong>. Whichever one works is remembered.</>}
             </span>
           </div>
