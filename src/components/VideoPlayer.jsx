@@ -5,6 +5,19 @@ import { availableSources, getPreferredSource, setPreferredSource } from '../lib
 import { allmangaResolve } from '../lib/allmanga'
 import { anilistIdFromMal, animeTmdbInfo } from '../lib/anilist'
 import DownloadLinks from './DownloadLinks'
+import { toast } from '../lib/toast'
+
+// Subtitle delivery: VidLink takes our file natively (documented `sub_file`
+// option), AllManga plays in our own <video> (<track>), and every other embed
+// gets our overlay layer timed by the player's reported playback clock.
+const subsPrefKey = (type) => `aw:subs:${type}`
+// Anime "SUB" streams usually already have subtitles, so default off there.
+const readSubsPref = (type) => {
+  try {
+    const v = localStorage.getItem(subsPrefKey(type))
+    return v == null ? type !== 'anime' : v === '1'
+  } catch { return type !== 'anime' }
+}
 
 const AUTO_KEY = 'aw:autonext'
 const readAuto = () => { try { return localStorage.getItem(AUTO_KEY) !== '0' } catch { return true } }
@@ -25,7 +38,58 @@ function parsePlayerMessage(raw) {
   const duration = Number(inner.duration ?? d.duration)
   let pct = Number(inner.percent ?? (typeof inner.progress === 'number' ? inner.progress : NaN))
   if (!Number.isFinite(pct) && Number.isFinite(current) && Number.isFinite(duration) && duration > 0) pct = (current / duration) * 100
-  return { ended, pct: Number.isFinite(pct) ? pct : null, duration: Number.isFinite(duration) ? duration : null }
+  // Only trust a playback position that looks like seconds into the video
+  // (some players send epoch timestamps under similar names).
+  const dur = Number.isFinite(duration) && duration > 0 ? duration : null
+  const okTime = Number.isFinite(current) && current >= 0 && current < 6 * 3600 && (dur == null || current <= dur + 5)
+  return {
+    ev,
+    ended,
+    current: okTime ? current : null,
+    pct: Number.isFinite(pct) ? pct : null,
+    duration: dur,
+  }
+}
+
+// ── Subtitle overlay helpers ─────────────────────────────────────────────────
+// Minimal WebVTT → [{ start, end, text }] (sorted). Styling tags are stripped.
+function parseVtt(text) {
+  const toSec = (s) => {
+    const m = String(s).match(/(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{1,3})/)
+    if (!m) return NaN
+    return Number(m[1] || 0) * 3600 + Number(m[2]) * 60 + Number(m[3]) + Number(m[4].padEnd(3, '0')) / 1000
+  }
+  const out = []
+  for (const block of String(text).replace(/\r/g, '').split(/\n{2,}/)) {
+    const lines = block.split('\n')
+    const i = lines.findIndex((l) => l.includes('-->'))
+    if (i < 0) continue
+    const [a, b] = lines[i].split('-->')
+    const start = toSec(a)
+    const end = toSec(b)
+    const body = lines.slice(i + 1).join('\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/\{\\[^}]*\}/g, '')
+      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
+      .trim()
+    if (Number.isFinite(start) && Number.isFinite(end) && end > start && body) out.push({ start, end, text: body })
+  }
+  return out.sort((x, y) => x.start - y.start)
+}
+
+// Text of every cue active at time t (binary search + check a few neighbours
+// for overlapping lines).
+function cueAt(cues, t) {
+  let lo = 0
+  let hi = cues.length - 1
+  let idx = -1
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1
+    if (cues[mid].start <= t) { idx = mid; lo = mid + 1 } else hi = mid - 1
+  }
+  const hits = []
+  for (let k = idx; k >= 0 && k > idx - 4; k--) if (cues[k].end > t) hits.unshift(cues[k].text)
+  return hits.join('\n')
 }
 
 // True if `win` is our iframe or nested anywhere inside it (players often
@@ -74,11 +138,24 @@ export default function VideoPlayer({
   const [streamIdx, setStreamIdx] = useState(0)
   const [autoNext, setAutoNext] = useState(readAuto)
   const [countdown, setCountdown] = useState(null)
+  const [subsOn, setSubsOn] = useState(() => readSubsPref(mediaType))
+  const [subBusy, setSubBusy] = useState(false)
 
   const videoRef = useRef(null)
   const hlsRef = useRef(null)
   const iframeRef = useRef(null)
+  const frameRef = useRef(null)
   const endedRef = useRef(false)
+  // Playback clock reported by the embed (for the subtitle overlay).
+  const clockRef = useRef({ t: null, at: 0, playing: false })
+  const clockLiveRef = useRef(false)
+  const [clockLive, setClockLive] = useState(false)
+  const [cues, setCues] = useState(null)
+  const [cueText, setCueText] = useState('')
+  const [subOffset, setSubOffset] = useState(0)
+  const offsetRef = useRef(0)
+  offsetRef.current = subOffset
+  const [clockMissing, setClockMissing] = useState(false)
   const autoRef = useRef(autoNext)
   autoRef.current = autoNext
   const onNextRef = useRef(onNext)
@@ -134,7 +211,138 @@ export default function VideoPlayer({
   // wait for it instead of flashing a different source first.
   const active = sources.find((s) => s.source.id === sourceId) || (idsReady ? sources[0] : null)
   const activeId = active?.source.id
-  const embedUrl = active?.target.kind === 'embed' ? active.target.url : ''
+  // ── English subtitles (served by our /api/subs, which holds the Wyzie key) ──
+  // What to look subtitles up by: TMDB id (+ season/episode). Anime uses the
+  // ani.zip TMDB mapping the player already resolves.
+  const subTarget = useMemo(() => {
+    if (type === 'movie') return tmdbId || imdbId ? { id: tmdbId || imdbId } : null
+    if (type === 'tv') return tmdbId ? { id: tmdbId, season: safeSeason, episode: safeEpisode } : null
+    return animeTmdb?.id ? { id: animeTmdb.id, season: animeTmdb.season, episode: animeTmdb.episode } : null
+  }, [type, tmdbId, imdbId, safeSeason, safeEpisode, animeTmdb])
+
+  const subPath = useCallback((to, extra = {}) => {
+    if (!subTarget) return null
+    const p = new URLSearchParams({ id: String(subTarget.id), to })
+    if (subTarget.season != null && subTarget.episode != null) {
+      p.set('season', String(subTarget.season))
+      p.set('episode', String(subTarget.episode))
+    }
+    Object.entries(extra).forEach(([k, v]) => p.set(k, String(v)))
+    p.set('file', `en.${to}`) // URL ends in ".vtt"/".srt" for players that check
+    return `/api/subs?${p}`
+  }, [subTarget])
+
+  const baseEmbed = active?.target.kind === 'embed' ? active.target.url : ''
+  // VidLink loads an external VTT via its documented sub_file option.
+  const embedUrl = baseEmbed && activeId === 'vidlink' && subsOn && subTarget
+    ? `${baseEmbed}${baseEmbed.includes('?') ? '&' : '?'}sub_file=${encodeURIComponent(window.location.origin + subPath('vtt'))}&sub_label=English`
+    : baseEmbed
+
+  const toggleSubs = () => {
+    setSubsOn((v) => {
+      const nv = !v
+      try { localStorage.setItem(subsPrefKey(type), nv ? '1' : '0') } catch { /* ignore */ }
+      return nv
+    })
+  }
+
+  // Download the .srt so it can be uploaded into any embed player's CC menu.
+  const downloadSubs = async () => {
+    if (!subTarget || subBusy) return
+    setSubBusy(true)
+    const name = type === 'movie' ? displayTitle : `${displayTitle} S${subTarget.season ?? safeSeason}E${subTarget.episode ?? safeEpisode}`
+    try {
+      const r = await fetch(subPath('srt', { dl: 1, name }))
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}))
+        toast(r.status === 404 ? 'No English subtitles found for this one' : (d.error || 'Subtitles unavailable right now'))
+        return
+      }
+      const blob = await r.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${name.replace(/[^\w .()-]+/g, '').trim() || 'subtitles'}.en.srt`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 4000)
+      toast('Subtitle file downloaded')
+    } catch {
+      toast('Subtitles unavailable right now')
+    } finally {
+      setSubBusy(false)
+    }
+  }
+
+  // ── Subtitle overlay for embeds ───────────────────────────────────────────
+  // VidLink takes the file natively and AllManga uses a <track>; every other
+  // embed gets our own subtitle layer on top, timed by the playback clock the
+  // player posts to the page (VidLink / MegaPlay / Videasy all do).
+  const overlayMode = !!(subsOn && subTarget && active?.target.kind === 'embed' && activeId !== 'vidlink')
+  const vttPath = subTarget ? subPath('vtt') : null
+
+  // New source / episode → forget the old clock.
+  useEffect(() => {
+    clockRef.current = { t: null, at: 0, playing: false }
+    clockLiveRef.current = false
+    setClockLive(false)
+    setClockMissing(false)
+    setCueText('')
+  }, [embedUrl])
+
+  // Fetch + parse the English VTT when the overlay is needed.
+  useEffect(() => {
+    if (!overlayMode || !vttPath) { setCues(null); return }
+    let on = true
+    setCues(null)
+    fetch(vttPath)
+      .then((r) => (r.ok ? r.text() : Promise.reject(r.status)))
+      .then((txt) => { if (on) setCues(parseVtt(txt)) })
+      .catch(() => { if (on) setCues([]) })
+    return () => { on = false }
+  }, [overlayMode, vttPath])
+
+  // Frame loop: estimate the current time between player updates and show the
+  // matching line. Only re-renders when the visible text actually changes.
+  useEffect(() => {
+    if (!overlayMode || !cues?.length) { setCueText(''); return }
+    let raf = 0
+    let last = ''
+    const tick = () => {
+      const c = clockRef.current
+      let text = ''
+      if (c.t != null) {
+        const drift = c.playing ? Math.min((performance.now() - c.at) / 1000, 6) : 0
+        text = cueAt(cues, c.t + drift - offsetRef.current)
+      }
+      if (text !== last) { last = text; setCueText(text) }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [overlayMode, cues])
+
+  // If a player never reports its time, say so instead of showing nothing.
+  useEffect(() => {
+    if (!overlayMode || clockLive || loading) return
+    const t = setTimeout(() => setClockMissing(true), 9000)
+    return () => clearTimeout(t)
+  }, [overlayMode, clockLive, loading, embedUrl])
+
+  const nudgeSubs = (d) => setSubOffset((o) => Math.round((o + d) * 10) / 10)
+
+  // Fullscreen the frame itself so our subtitle layer stays visible (an embed's
+  // own fullscreen button only enlarges the embed, hiding the overlay).
+  const goFullscreen = () => {
+    const el = frameRef.current
+    if (!el) return
+    const req = el.requestFullscreen || el.webkitRequestFullscreen
+    if (req) {
+      try { req.call(el)?.catch?.(() => {}) } catch { /* ignore */ }
+    }
+    else toast('Turn your phone sideways for a bigger picture')
+  }
 
   // Automatic advance (no wrap) — used when a direct stream fails.
   const advanceSource = useCallback(() => {
@@ -226,6 +434,20 @@ export default function VideoPlayer({
       const m = parsePlayerMessage(e.data)
       if (!m) return
       setLoading(false) // it's alive and talking
+
+      // Keep the overlay clock in step with the embedded player.
+      const c = clockRef.current
+      if (m.current != null) {
+        clockRef.current = { t: m.current, at: performance.now(), playing: m.ev !== 'pause' && !m.ended }
+        if (!clockLiveRef.current) { clockLiveRef.current = true; setClockLive(true) }
+      } else if (m.ev === 'pause' || m.ended) {
+        if (c.t != null && c.playing) c.t += (performance.now() - c.at) / 1000
+        c.playing = false
+      } else if (m.ev === 'play' || m.ev === 'playing') {
+        c.at = performance.now()
+        c.playing = true
+      }
+
       if (m.ended || (m.pct != null && m.pct >= 98.5 && (m.duration == null || m.duration > 90))) handleEnded()
     }
     window.addEventListener('message', onMsg)
@@ -309,7 +531,7 @@ export default function VideoPlayer({
           <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon.close width="18" height="18" /></button>
         </div>
 
-        <div className="player-frame">
+        <div className="player-frame" ref={frameRef}>
           {(loading || !active) && !error && (
             <div className="player-loading"><span className="spinner" /> {active ? `Loading ${active.source.label}…` : 'Preparing player…'}</div>
           )}
@@ -320,7 +542,11 @@ export default function VideoPlayer({
               {sources.length > 1 && <button className="btn btn-primary btn-sm" onClick={tryAnother}>Try another source</button>}
             </div>
           ) : active?.target.kind === 'resolve' ? (
-            <video ref={videoRef} controls autoPlay playsInline />
+            <video ref={videoRef} controls autoPlay playsInline>
+              {subsOn && subTarget && (
+                <track key={subPath('vtt')} kind="subtitles" srcLang="en" label="English" src={subPath('vtt')} default />
+              )}
+            </video>
           ) : embedUrl ? (
             <iframe
               ref={iframeRef}
@@ -333,6 +559,10 @@ export default function VideoPlayer({
               onLoad={() => setLoading(false)}
             />
           ) : null}
+
+          {overlayMode && cueText && (
+            <div className="sub-overlay" aria-live="off"><span>{cueText}</span></div>
+          )}
 
           {countdown != null && (
             <div className="next-overlay">
@@ -404,9 +634,42 @@ export default function VideoPlayer({
             )}
           </div>
 
+          {subTarget && (
+            <div className="sub-bar">
+              <span className="src-label">Subtitles</span>
+              <button type="button" className={'switch' + (subsOn ? ' on' : '')} onClick={toggleSubs} aria-pressed={subsOn}>
+                <span className="switch-track"><span className="switch-thumb" /></span>
+                English
+              </button>
+
+              {overlayMode && clockLive && (
+                <div className="sub-sync" role="group" aria-label="Subtitle timing">
+                  <button type="button" className="icon-btn sub-nudge" onClick={() => nudgeSubs(-0.5)} aria-label="Subtitles earlier">−</button>
+                  <span className="sub-offset">{subOffset > 0 ? '+' : ''}{subOffset.toFixed(1)}s</span>
+                  <button type="button" className="icon-btn sub-nudge" onClick={() => nudgeSubs(0.5)} aria-label="Subtitles later">+</button>
+                </div>
+              )}
+              {overlayMode && clockLive && (
+                <button type="button" className="btn btn-ghost btn-sm" onClick={goFullscreen}>Fullscreen</button>
+              )}
+
+              <button type="button" className="btn btn-ghost btn-sm" onClick={downloadSubs} disabled={subBusy}>
+                <Icon.download width="14" height="14" /> {subBusy ? 'Finding…' : 'Subtitle file'}
+              </button>
+            </div>
+          )}
+
           <div className="player-note">
             <Icon.info width="14" height="14" />
-            <span>Not playing? Tap <strong>Try another</strong>. Whichever one works is remembered.</span>
+            <span>
+              {overlayMode && cues && cues.length === 0
+                ? <>No English subtitles found for this one.</>
+                : overlayMode && clockMissing
+                  ? <>This player doesn’t share its playback time, so subtitles can’t follow it. Tap <strong>Subtitle file</strong> and upload it in its CC menu, or <strong>Try another</strong> source.</>
+                  : overlayMode && clockLive
+                    ? <>Subtitles are drawn on top. Use <strong>Fullscreen</strong> here (not the player’s own) to keep them, and <strong>− / +</strong> if they’re early or late.</>
+                    : <>Not playing? Tap <strong>Try another</strong>. Whichever one works is remembered.</>}
+            </span>
           </div>
 
           <DownloadLinks title={displayTitle} />
