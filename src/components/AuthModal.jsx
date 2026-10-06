@@ -49,48 +49,43 @@ export default function AuthModal({ onClose }) {
   return (
     <div className="modal" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 800 }}>{isLogin ? 'Welcome back' : 'Create account'}</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+          <h2 style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em' }}>{isLogin ? 'Welcome back' : 'Create account'}</h2>
           <button className="icon-btn" onClick={onClose}><Icon.close width="18" height="18" /></button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {!isLogin && <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />}
           <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
 
           {error && (
-            <p style={{ color: '#ff5763', fontSize: 13, padding: '9px 12px', background: 'var(--accent-soft)', borderRadius: 8 }}>{error}</p>
+            <p style={{ color: 'var(--accent3)', fontSize: 13 }}>{error}</p>
           )}
 
-          <button className="btn btn-primary btn-block" type="submit" disabled={loading} style={{ marginTop: 6 }}>
+          <button className="btn btn-primary btn-block" type="submit" disabled={loading} style={{ marginTop: 4 }}>
             {loading ? 'Please wait…' : isLogin ? 'Log in' : 'Sign up'}
           </button>
         </form>
 
         {isLogin && passkeysSupported() && (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0 12px', color: 'var(--text3)', fontSize: 12 }}>
-              <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-              OR
-              <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            </div>
-            <button
-              type="button"
-              className="btn btn-ghost btn-block"
-              onClick={handlePasskey}
-              disabled={passkeyLoading}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-            >
-              <Icon.key width="16" height="16" />
-              {passkeyLoading ? 'Waiting for passkey…' : 'Sign in with a passkey'}
-            </button>
-          </>
+          <button
+            type="button"
+            className="btn btn-ghost btn-block"
+            onClick={handlePasskey}
+            disabled={passkeyLoading}
+            style={{ marginTop: 10 }}
+          >
+            <Icon.key width="15" height="15" />
+            {passkeyLoading ? 'Waiting for passkey…' : 'Use a passkey instead'}
+          </button>
         )}
 
-        <p onClick={() => { setIsLogin(!isLogin); setError('') }} style={{ marginTop: 16, textAlign: 'center', color: 'var(--text2)', fontSize: 14, cursor: 'pointer' }}>
+        <p style={{ marginTop: 14, textAlign: 'center', color: 'var(--text3)', fontSize: 13.5 }}>
           {isLogin ? "Don't have an account? " : 'Already have an account? '}
-          <span style={{ color: '#ff5763', fontWeight: 700 }}>{isLogin ? 'Sign up' : 'Log in'}</span>
+          <button type="button" onClick={() => { setIsLogin(!isLogin); setError('') }} style={{ color: 'var(--text)', fontWeight: 650, fontSize: 'inherit', padding: '6px 2px' }}>
+            {isLogin ? 'Sign up' : 'Log in'}
+          </button>
         </p>
       </div>
     </div>

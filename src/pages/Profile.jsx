@@ -108,7 +108,7 @@ export default function Profile({ user, profile, setProfile }) {
           >
             {uploading ? 'Uploading…' : profile?.avatar_url ? 'Change picture' : 'Upload picture'}
           </button>
-          <p className="muted" style={{ fontSize: 12, marginTop: 7 }}>JPG, PNG, GIF or WebP — max 5 MB</p>
+          <p className="muted" style={{ fontSize: 12, marginTop: 7 }}>JPG, PNG, GIF or WebP, up to 5 MB</p>
         </div>
         <input
           ref={fileRef}
@@ -130,7 +130,7 @@ export default function Profile({ user, profile, setProfile }) {
         </div>
 
         {message && (
-          <p style={{ color: ok ? '#22c55e' : '#ff5763', fontSize: 14, padding: '9px 12px', background: ok ? 'rgba(34,197,94,0.1)' : 'var(--accent-soft)', borderRadius: 8 }}>{message}</p>
+          <p style={{ color: ok ? 'var(--fu-green)' : 'var(--accent3)', fontSize: 13.5 }}>{message.replace('✅ ', '')}</p>
         )}
 
         <button className="btn btn-primary btn-block" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
@@ -147,11 +147,11 @@ export default function Profile({ user, profile, setProfile }) {
             </button>
           </div>
           <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
-            Sign in with Face ID, a fingerprint, or your device PIN — no password needed.
+            Sign in with Face ID, a fingerprint or your device PIN. No password needed.
           </p>
 
           {pkMsg && (
-            <p style={{ color: pkMsg.startsWith('✅') ? '#22c55e' : 'var(--text2)', fontSize: 13, marginBottom: 12 }}>{pkMsg}</p>
+            <p style={{ color: pkMsg.startsWith('✅') ? 'var(--fu-green)' : 'var(--text2)', fontSize: 13, marginBottom: 12 }}>{pkMsg.replace('✅ ', '')}</p>
           )}
 
           {passkeys.length === 0 ? (

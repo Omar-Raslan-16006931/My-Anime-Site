@@ -45,8 +45,8 @@ const OP_MILESTONES = {
   377: 'The Death of Portgas D. Ace',
   1000: 'The Straw Hats Come Together',
   1015: 'The Decisive Battle of Onigashima',
-  1071: "Luffy's Peak — Gear Five",
-  1086: 'A New Emperor — Buggy the Star Clown',
+  1071: "Luffy's Peak: Gear Five",
+  1086: 'A New Emperor: Buggy the Star Clown',
 }
 
 // Saga/range tabs for any show: canonical for One Piece (mal 21), otherwise
@@ -268,16 +268,21 @@ export default function AnimeDetail({ user, onAuthRequired }) {
       <button className="fu-back" onClick={() => navigate(-1)} aria-label="Back"><Icon.back width="18" height="18" /></button>
 
       <div className="fu-ophero">
-        <div className="fu-ophero-bg"><div className="g1" /><div className="g2" /><div className="scrim" /></div>
+        {/* The show's own artwork is the backdrop: wide banner when AniList has
+            one, otherwise the poster, blurred into a colour field. */}
+        <div className="fu-ophero-bg">
+          {(banner || poster) && <img src={banner || poster} alt="" className={banner ? '' : 'is-poster'} />}
+          <div className="scrim" />
+        </div>
         <div className="fu-op-poster">{poster ? <img src={poster} alt={title} loading="lazy" /> : null}</div>
         <div className="fu-op-headinfo">
-          <div className="fu-eyebrow" style={{ color: '#7fd4ee' }}>{eyebrow}</div>
+          <div className="fu-eyebrow">{eyebrow}</div>
           <h1 className="fu-optitle">{title}</h1>
           <div className="fu-meta">
             {details.score ? <><span className="strong"><span className="star">★</span>{details.score}</span><span className="sep">·</span></> : null}
             {totalEps ? <><span><strong style={{ color: '#fff' }}>{totalEps.toLocaleString()}</strong> episodes</span><span className="sep">·</span></> : null}
             {sagas.length > 1 ? <><span>{sagas.length} sagas</span><span className="sep">·</span></> : null}
-            <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span className="fu-dot" style={isAiring ? undefined : { background: '#9b99a8', boxShadow: 'none' }} />{isAiring ? 'Ongoing' : (details.status?.split(' ')[0] || 'Finished')}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span className={'fu-dot' + (isAiring ? '' : ' off')} />{isAiring ? 'Ongoing' : (details.status?.split(' ')[0] || 'Finished')}</span>
           </div>
           {details.synopsis && (
             <p className="fu-syn fu-syn-clickable" onClick={() => setSynOpen(true)} title="Read full description" style={{ maxWidth: 680, margin: '12px 0 0', fontSize: 13.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{details.synopsis}</p>
@@ -289,7 +294,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
             )}
             <button className="fu-btn fu-btn-glass" onClick={toggleWatchlist}>
               {inWatchlist
-                ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a99cff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg> In Your List</>
+                ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg> In Your List</>
                 : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg> My List</>}
             </button>
             <button className="fu-round" aria-label="Share" onClick={share}>
@@ -337,7 +342,13 @@ export default function AnimeDetail({ user, onAuthRequired }) {
               const cont = lastWatched === Number(num)
               const mile = isMilestone(num)
               const epTitle = milestoneTitle(num) || ep?.title || `Episode ${num}`
-              const meta = `${saga.name}${malId === 21 ? ' Arc' : ''}   ·   Subbed · Dubbed   ·   ~24 min`
+              // Real info only: arc (One Piece), air date, filler/recap flags.
+              const meta = [
+                malId === 21 ? `${saga.name} Arc` : null,
+                ep?.aired ? fmtDate(ep.aired) : null,
+                ep?.filler ? 'Filler' : null,
+                ep?.recap ? 'Recap' : null,
+              ].filter(Boolean).join(' · ')
               return (
                 <div key={`${malId}-${num}`} className={'fu-op-ep' + (seen ? ' seen' : '')} onClick={() => play(num)}>
                   <div className="fu-op-still">
@@ -353,11 +364,11 @@ export default function AnimeDetail({ user, onAuthRequired }) {
                   <div className="fu-op-body">
                     <div className="fu-op-titlerow">
                       <h3 className="fu-op-title">{epTitle}</h3>
-                      {mile && <span className="fu-mile">★ MILESTONE</span>}
-                      {cont && <span className="fu-tag sm">CONTINUE</span>}
-                      {seen && !cont && <span className="fu-seen-pill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>WATCHED</span>}
+                      {mile && <span className="fu-mile">Milestone</span>}
+                      {cont && <span className="fu-tag sm">Continue</span>}
+                      {seen && !cont && <span className="fu-seen-pill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>Watched</span>}
                     </div>
-                    <div className="fu-ep-meta">{meta}</div>
+                    {meta && <div className="fu-ep-meta">{meta}</div>}
                   </div>
                   <button className="fu-play sm" onClick={(e) => { e.stopPropagation(); play(num) }} aria-label={`Play episode ${num}`}><Icon.play width="15" height="15" /></button>
                 </div>

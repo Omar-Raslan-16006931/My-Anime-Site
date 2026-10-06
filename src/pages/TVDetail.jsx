@@ -158,11 +158,10 @@ export default function TVDetail({ user, onAuthRequired }) {
 
       <section className="fu-hero">
         <div className="fu-hero-img">{backdrop && <img src={backdrop} alt={details.name} />}</div>
-        <div className="fu-hero-glow" />
         <div className="fu-hero-scrim" />
         <div className="fu-hero-noise" />
         <div className="fu-hero-inner">
-          <div className="fu-eyebrow">Series{year ? ` · ${year}` : ''}{details.number_of_seasons ? ` · ${details.number_of_seasons} Season${details.number_of_seasons > 1 ? 's' : ''}` : ''}</div>
+          <div className="fu-eyebrow">Series{year ? ` · ${year}` : ''}</div>
           <h1 className="fu-title">{details.name}</h1>
           <div className="fu-meta">
             {details.vote_average ? <><span className="strong"><span className="star">★</span>{details.vote_average.toFixed(1)}</span><span className="sep">·</span></> : null}
@@ -179,7 +178,7 @@ export default function TVDetail({ user, onAuthRequired }) {
             )}
             <button className="fu-btn fu-btn-glass" onClick={toggleWatchlist}>
               {inWatchlist
-                ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a99cff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg> In Your List</>
+                ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg> In Your List</>
                 : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg> My List</>}
             </button>
             <button className="fu-round" aria-label="Share" onClick={share}>
@@ -225,7 +224,7 @@ export default function TVDetail({ user, onAuthRequired }) {
             {seasonData.episodes.map((ep) => {
               const isLast = lastSeason === selectedSeason && lastEp === ep.episode_number
               const thumb = ep.still_path ? `${IMG}${ep.still_path}` : (details.poster_path ? `${IMG}${details.poster_path}` : null)
-              const meta = [ep.air_date, typeof ep.runtime === 'number' ? `${ep.runtime} min` : null].filter(Boolean).join('   ·   ') || 'Subbed · Dubbed'
+              const meta = [ep.air_date, typeof ep.runtime === 'number' ? `${ep.runtime} min` : null].filter(Boolean).join(' · ')
               return (
                 <div key={ep.id} className="fu-ep" onClick={() => play(ep.episode_number)}>
                   <div className="fu-still">
@@ -235,9 +234,9 @@ export default function TVDetail({ user, onAuthRequired }) {
                   <div className="fu-ep-body">
                     <div className="fu-ep-titlerow">
                       <h3 className="fu-ep-title">{ep.name || `Episode ${ep.episode_number}`}</h3>
-                      {isLast && <span className="fu-tag">CONTINUE</span>}
+                      {isLast && <span className="fu-tag">Continue</span>}
                     </div>
-                    <div className="fu-ep-meta">{meta}</div>
+                    {meta && <div className="fu-ep-meta">{meta}</div>}
                     {ep.overview && <p className="fu-ep-syn">{ep.overview}</p>}
                   </div>
                   <div className="fu-play" onClick={(e) => { e.stopPropagation(); play(ep.episode_number) }}><Icon.play width="18" height="18" /></div>

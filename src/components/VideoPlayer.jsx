@@ -248,7 +248,7 @@ export default function VideoPlayer({
       if (dead) return
       dead = true
       if (streamIdx + 1 < streams.length) { setStreamIdx(streamIdx + 1); return }
-      if (!advanceSource()) setError('Stream failed — try another source.')
+      if (!advanceSource()) setError('Stream failed. Try another source.')
     }
 
     const restore = () => {
@@ -406,7 +406,7 @@ export default function VideoPlayer({
 
           <div className="player-note">
             <Icon.info width="14" height="14" />
-            <span>Not playing? Tap <strong>Try another</strong> — the one that works is remembered for next time.</span>
+            <span>Not playing? Tap <strong>Try another</strong>. Whichever one works is remembered.</span>
           </div>
 
           <DownloadLinks title={displayTitle} />
