@@ -5,6 +5,10 @@ import { supabase } from '../supabase'
 import Icon from '../components/Icons'
 import { recordRecent } from '../lib/progress'
 import { toast } from '../lib/toast'
+import Row from '../components/Row'
+import MediaCard from '../components/MediaCard'
+
+const FACE = 'https://image.tmdb.org/t/p/w185'
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
 const IMG = 'https://image.tmdb.org/t/p/w500'
@@ -35,7 +39,8 @@ export default function MovieDetail({ user, onAuthRequired }) {
     setLoading(true); setPlaying(false)
     ;(async () => {
       try {
-        const res = await fetchRetry(`https://api.themoviedb.org/3/movie/${id}?api_key=${API_KEY}`)
+        // One request: details + cast + recommendations (+ similar as a fallback).
+        const res = await fetchRetry(`https://api.themoviedb.org/3/movie/${id}?api_key=${API_KEY}&append_to_response=credits,recommendations,similar`)
         const data = await res.json()
         if (!cancelled) setMovie(data)
       } catch { if (!cancelled) setMovie(null) }
@@ -109,6 +114,10 @@ export default function MovieDetail({ user, onAuthRequired }) {
   const genres = (movie.genres || []).slice(0, 2).map((g) => g.name)
   const backdrop = movie.backdrop_path ? `${BACKDROP}${movie.backdrop_path}` : null
   const upcoming = movie.status && movie.status !== 'Released'
+  const cast = (movie.credits?.cast || []).filter((c) => c.name).slice(0, 14)
+  const director = (movie.credits?.crew || []).find((c) => c.job === 'Director')?.name
+  const recsRaw = movie.recommendations?.results?.length ? movie.recommendations.results : movie.similar?.results || []
+  const recs = recsRaw.filter((m) => !m.adult && m.poster_path && m.id !== movie.id).slice(0, 18)
 
   return (
     <div className="fu">
@@ -116,7 +125,7 @@ export default function MovieDetail({ user, onAuthRequired }) {
 
       {/* Same header as the TV page: backdrop behind everything, title, one
           info line, short description, one clear action, two shortcuts. */}
-      <section className="tvh">
+      <section className="tvh tvh-full">
         <div className="tvh-art">{backdrop && <img src={backdrop} alt="" />}</div>
         <div className="tvh-body">
           <h1 className="tvh-title">{movie.title}</h1>
@@ -149,6 +158,41 @@ export default function MovieDetail({ user, onAuthRequired }) {
           </div>
         </div>
       </section>
+
+      <div className="mv-more">
+        {cast.length > 0 && (
+          <section className="mv-sec">
+            <div className="mv-sec-head">
+              <h2>Cast</h2>
+              {director && <span className="mv-sec-note">Directed by {director}</span>}
+            </div>
+            <div className="cast-row">
+              {cast.map((c) => (
+                <div key={c.credit_id || c.id} className="cast">
+                  <div className="cast-face">
+                    {c.profile_path
+                      ? <img src={`${FACE}${c.profile_path}`} alt={c.name} loading="lazy" />
+                      : <span>{c.name.split(' ').map((w) => w[0]).slice(0, 2).join('')}</span>}
+                  </div>
+                  <div className="cast-name">{c.name}</div>
+                  {c.character && <div className="cast-role">{c.character}</div>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {recs.length > 0 && (
+          <Row title="More like this">
+            {recs.map((m) => (
+              <MediaCard key={m.id} item={{
+                href: `/movie/${m.id}`, poster: `${IMG}${m.poster_path}`,
+                title: m.title, score: m.vote_average, sub: m.release_date?.slice(0, 4),
+              }} />
+            ))}
+          </Row>
+        )}
+      </div>
 
       {playing && (
         <VideoPlayer mediaType="movie" tmdbId={movie.id} movieTitle={movie.title} onClose={() => setPlaying(false)} />
