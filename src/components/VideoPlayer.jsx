@@ -127,6 +127,7 @@ export default function VideoPlayer({
   onNext,
   onJump, // (episode, season) — the embed switched episodes on its own
   poster, // used for the Downloads list (iPhone app)
+  altTitles = [], // other names (romaji, synonyms) — helps AllManga find the show
   hasNext = true,
 }) {
   const type = mediaType
@@ -159,7 +160,7 @@ export default function VideoPlayer({
     if (!offId || offState !== 'idle') return
     toast('Downloading… see the Downloads tab')
     try {
-      await downloadAnimeEpisode({ malId, title: displayTitle, episode: safeEpisode, audio, poster })
+      await downloadAnimeEpisode({ malId, title: displayTitle, altTitles, episode: safeEpisode, audio, poster })
       toast(`Episode ${safeEpisode} saved for offline`)
     } catch (e) {
       toast(e?.message || 'Download failed')
@@ -409,7 +410,7 @@ export default function VideoPlayer({
 
     setLoading(true)
     if (active.target.kind === 'resolve') {
-      allmangaResolve({ title: displayTitle, episode: safeEpisode, translationType: audio })
+      allmangaResolve({ title: displayTitle, alt: altTitles, episode: safeEpisode, translationType: audio })
         .then((res) => {
           if (cancelled) return
           if (!res?.ok || !res.streams?.length) {

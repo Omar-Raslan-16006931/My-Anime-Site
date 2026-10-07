@@ -42,7 +42,7 @@ export function isDownloading(id) { return !!active[id] }
 
 // Resolve AllManga for this episode and save the first single-file (MP4)
 // stream. Chunked (HLS) streams can't be saved as one file yet.
-export async function downloadAnimeEpisode({ malId, title, episode, audio = 'sub', poster }) {
+export async function downloadAnimeEpisode({ malId, title, altTitles = [], episode, audio = 'sub', poster }) {
   if (!isNative) throw new Error('Downloads work in the AniWave iPhone app.')
   const id = downloadId(malId, episode, audio)
   if (isDownloaded(id)) throw new Error('Already downloaded')
@@ -53,14 +53,23 @@ export async function downloadAnimeEpisode({ malId, title, episode, audio = 'sub
 
   let progressHandle = null
   try {
-    const res = await allmangaResolve({ title, episode, translationType: audio })
-    const streams = res?.ok ? res.streams || [] : []
-    const file = streams.find((s) => s.type === 'mp4' && !String(s.url).includes('.m3u8'))
-    if (!file) {
-      throw new Error(streams.length
-        ? 'This episode only exists as a stream, so it can’t be saved yet.'
-        : 'AllManga doesn’t have this episode.')
+    const res = await allmangaResolve({ title, alt: altTitles, episode, translationType: audio })
+    if (res?.unreachable) {
+      // The app couldn't talk to your AniWave server at all.
+      throw new Error(import.meta.env.VITE_API_BASE
+        ? `Can’t reach the AniWave server (${res.error}). Check your internet, or that ${import.meta.env.VITE_API_BASE} is online.`
+        : 'The app doesn’t know your website address. Add the VITE_API_BASE secret on GitHub and rebuild the app.')
     }
+    if (!res?.ok) {
+      throw new Error(res?.reason === 'no_show'
+        ? `AllManga doesn’t list this show (searched “${title}”${altTitles.length ? ` and ${altTitles.length} other name${altTitles.length > 1 ? 's' : ''}` : ''}).`
+        : res?.reason === 'no_episode'
+          ? `${res.error}.${audio === 'dub' ? ' Try SUB.' : ''}`
+          : (res?.error || 'AllManga didn’t return anything for this episode.'))
+    }
+    const streams = res.streams || []
+    const file = streams.find((s) => s.type === 'mp4' && !String(s.url).includes('.m3u8'))
+    if (!file) throw new Error('AllManga only has this episode as a stream, so it can’t be saved as a file yet.')
 
     const fileName = `${safeName(title)} - E${episode} (${audio.toUpperCase()}).mp4`
     const path = `${DIR}/${fileName}`
@@ -97,7 +106,7 @@ export async function downloadAnimeEpisode({ malId, title, episode, audio = 'sub
     ])
   } catch (e) {
     const http = e?.data?.httpStatus || e?.httpStatus
-    throw new Error(http ? `The video server refused the download (${http}). Try again later.` : (e?.message || 'Download failed'))
+    throw new Error(http ? `The video server refused the download (HTTP ${http}). Try again later.` : (e?.message || 'Download failed'))
   } finally {
     try { await progressHandle?.remove() } catch { /* ignore */ }
     delete active[id]

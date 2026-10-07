@@ -394,6 +394,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
           onNext={() => play(playingEp + 1)}
           onJump={(ep) => play(ep)}
           poster={poster}
+          altTitles={[details.title, ...(details.title_synonyms || [])].filter((t) => t && t !== title)}
           hasNext={!totalEps || playingEp < totalEps}
         />
       )}

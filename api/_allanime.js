@@ -242,15 +242,15 @@ async function streamsForShow(showId, epStr, trans) {
 
 // Rank candidate shows: exact title match first, then those that actually have
 // the requested episode available, then by how close the name is.
-function rankShows(edges, title, episode, trans) {
-  const lower = String(title).toLowerCase().trim()
+function rankShows(edges, titles, episode, trans) {
+  const wanted = (Array.isArray(titles) ? titles : [titles]).map((t) => String(t).toLowerCase().trim()).filter(Boolean)
   return [...edges]
     .map((e) => {
       const names = [e.englishName, e.name].filter(Boolean).map((n) => n.toLowerCase())
       const avail = e.availableEpisodes?.[trans] || 0
       let score = 0
-      if (names.some((n) => n === lower)) score += 100
-      if (names.some((n) => n.includes(lower) || lower.includes(n))) score += 40
+      if (names.some((n) => wanted.includes(n))) score += 100
+      if (names.some((n) => wanted.some((w) => n.includes(w) || w.includes(n)))) score += 40
       if (avail >= episode) score += 20
       score += Math.min(avail, 30) / 30 // prefer fuller catalogues as a tiebreak
       return { e, score }
@@ -261,7 +261,11 @@ function rankShows(edges, title, episode, trans) {
 
 // Resolve playable streams for a title + episode (+ sub/dub).
 // Returns { ok, streams: [{sourceName,url,quality,type}], showId, matched } or { ok:false, error }.
-export async function resolveEpisode({ title, showId, episode = 1, translationType = 'sub' }) {
+export async function resolveEpisode({ title, alt, showId, episode = 1, translationType = 'sub' }) {
+  // Other names for the show ("a|b|c"): AllManga often lists anime under the
+  // romaji title, so an English-only search can miss it entirely.
+  const altTitles = String(alt || '').split('|').map((s) => s.trim()).filter(Boolean).slice(0, 4)
+  const allTitles = [title, ...altTitles].filter(Boolean)
   const trans = translationType === 'dub' ? 'dub' : translationType === 'raw' ? 'raw' : 'sub'
   const epStr = String(episode)
   const epNum = Number(episode) || 1
@@ -272,23 +276,31 @@ export async function resolveEpisode({ title, showId, episode = 1, translationTy
     return { ok: false, error: 'No playable links found' }
   }
 
-  const queries = [...new Set([title, sanitize(title)].filter(Boolean))]
-  let edges = null
+  const queries = [...new Set(allTitles.flatMap((t) => [t, sanitize(t)]).filter(Boolean))].slice(0, 6)
+  // Gather candidates from every name (deduped), not just the first that hits.
+  const byId = new Map()
   for (const q of queries) {
-    edges = await searchShows({ query: q, translationType: trans })
-    if (edges?.length) break
+    const edges = await searchShows({ query: q, translationType: trans })
+    for (const e of edges || []) if (!byId.has(e._id)) byId.set(e._id, e)
+    if (byId.size >= 12) break
   }
-  if (!edges?.length) return { ok: false, error: 'No anime match for: ' + title }
+  if (!byId.size) return { ok: false, reason: 'no_show', error: `AllManga has no show called "${title}"` }
 
   // Try the top-ranked candidate shows until one yields a playable stream.
-  const ranked = rankShows(edges, title, epNum, trans).slice(0, 2)
+  const ranked = rankShows([...byId.values()], allTitles, epNum, trans).slice(0, 3)
   for (const show of ranked) {
     const streams = await streamsForShow(show._id, epStr, trans)
     if (streams.length) {
       return { ok: true, showId: show._id, matched: show.englishName || show.name, streams }
     }
   }
-  return { ok: false, error: 'No playable links found for "' + title + '" episode ' + epStr }
+  const best = ranked[0]
+  return {
+    ok: false,
+    reason: 'no_episode',
+    matched: best?.englishName || best?.name,
+    error: `AllManga found "${best?.englishName || best?.name}" but has no ${trans.toUpperCase()} files for episode ${epStr}`,
+  }
 }
 
 // Single dispatcher used by both the Vercel handler and the dev middleware.
