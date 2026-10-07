@@ -13,10 +13,10 @@ export { isNative }
 
 const KEY = 'aw:downloads'
 const DIR = 'AniWave'
-const ALLMANGA_HEADERS = {
-  Referer: 'https://allmanga.to',
-  'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
-}
+// The server tells us which Referer each file host wants (AllAnime's site is
+// now mkissa.to; mp4upload wants its own). This is the fallback.
+const DEFAULT_REFERER = 'https://mkissa.to'
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0'
 
 // ── Tiny store (finished list in localStorage + in-memory active jobs) ──────
 const listeners = new Set()
@@ -61,7 +61,9 @@ export async function downloadAnimeEpisode({ malId, title, altTitles = [], episo
         : 'The app doesn’t know your website address. Add the VITE_API_BASE secret on GitHub and rebuild the app.')
     }
     if (!res?.ok) {
-      throw new Error(res?.reason === 'no_show'
+      throw new Error(res?.reason === 'upstream'
+        ? `${res.error}. Tell Claude so the resolver can be updated.`
+        : res?.reason === 'no_show'
         ? `AllManga doesn’t list this show (searched “${title}”${altTitles.length ? ` and ${altTitles.length} other name${altTitles.length > 1 ? 's' : ''}` : ''}).`
         : res?.reason === 'no_episode'
           ? `${res.error}.${audio === 'dub' ? ' Try SUB.' : ''}`
@@ -91,7 +93,7 @@ export async function downloadAnimeEpisode({ malId, title, altTitles = [], episo
       url: file.url,
       path: uri,
       progress: true,
-      headers: ALLMANGA_HEADERS,
+      headers: { Referer: file.referer || DEFAULT_REFERER, 'User-Agent': UA },
       connectTimeout: 60000,
       readTimeout: 120000,
     })
