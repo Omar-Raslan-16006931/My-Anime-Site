@@ -6,6 +6,8 @@ import { allmangaResolve } from '../lib/allmanga'
 import { anilistIdFromMal, animeTmdbInfo } from '../lib/anilist'
 import DownloadLinks from './DownloadLinks'
 import { toast } from '../lib/toast'
+import { apiUrl, absoluteUrl, isNative } from '../lib/native'
+import { downloadAnimeEpisode, downloadId, isDownloaded, isDownloading, subscribe as subscribeDownloads } from '../lib/offline'
 
 // Subtitle delivery: VidLink takes our file natively (documented `sub_file`
 // option), AllManga plays in our own <video> (<track>), and every other embed
@@ -42,9 +44,13 @@ function parsePlayerMessage(raw) {
   // (some players send epoch timestamps under similar names).
   const dur = Number.isFinite(duration) && duration > 0 ? duration : null
   const okTime = Number.isFinite(current) && current >= 0 && current < 6 * 3600 && (dur == null || current <= dur + 5)
+  const epNum = Number(inner.episode ?? d.episode)
+  const seNum = Number(inner.season ?? d.season)
   return {
     ev,
     ended,
+    episode: Number.isInteger(epNum) && epNum > 0 ? epNum : null,
+    season: Number.isInteger(seNum) && seNum > 0 ? seNum : null,
     current: okTime ? current : null,
     pct: Number.isFinite(pct) ? pct : null,
     duration: dur,
@@ -119,6 +125,8 @@ export default function VideoPlayer({
   season = 1,
   onClose,
   onNext,
+  onJump, // (episode, season) — the embed switched episodes on its own
+  poster, // used for the Downloads list (iPhone app)
   hasNext = true,
 }) {
   const type = mediaType
@@ -142,6 +150,22 @@ export default function VideoPlayer({
   const [subBusy, setSubBusy] = useState(false)
   const [showDl, setShowDl] = useState(false)
 
+  // ── Save offline (iPhone app, anime via AllManga) ──
+  const offId = type === 'anime' && malId ? downloadId(malId, safeEpisode, audio) : null
+  const [, bumpDl] = useState(0)
+  useEffect(() => (isNative ? subscribeDownloads(() => bumpDl((n) => n + 1)) : undefined), [])
+  const offState = !offId ? null : isDownloaded(offId) ? 'saved' : isDownloading(offId) ? 'saving' : 'idle'
+  const saveOffline = async () => {
+    if (!offId || offState !== 'idle') return
+    toast('Downloading… see the Downloads tab')
+    try {
+      await downloadAnimeEpisode({ malId, title: displayTitle, episode: safeEpisode, audio, poster })
+      toast(`Episode ${safeEpisode} saved for offline`)
+    } catch (e) {
+      toast(e?.message || 'Download failed')
+    }
+  }
+
   const videoRef = useRef(null)
   const hlsRef = useRef(null)
   const iframeRef = useRef(null)
@@ -161,6 +185,9 @@ export default function VideoPlayer({
   autoRef.current = autoNext
   const onNextRef = useRef(onNext)
   onNextRef.current = onNext
+  const onJumpRef = useRef(onJump)
+  onJumpRef.current = onJump
+  const epBaseRef = useRef(null) // first episode the embed reported
   const goNext = useCallback(() => { setCountdown(null); onNextRef.current?.() }, [])
 
   // Lock background scroll (html + body, so iOS doesn't rubber-band behind) + ESC.
@@ -230,13 +257,13 @@ export default function VideoPlayer({
     }
     Object.entries(extra).forEach(([k, v]) => p.set(k, String(v)))
     p.set('file', `en.${to}`) // URL ends in ".vtt"/".srt" for players that check
-    return `/api/subs?${p}`
+    return apiUrl(`/api/subs?${p}`)
   }, [subTarget])
 
   const baseEmbed = active?.target.kind === 'embed' ? active.target.url : ''
   // VidLink loads an external VTT via its documented sub_file option.
   const embedUrl = baseEmbed && activeId === 'vidlink' && subsOn && subTarget
-    ? `${baseEmbed}${baseEmbed.includes('?') ? '&' : '?'}sub_file=${encodeURIComponent(window.location.origin + subPath('vtt'))}&sub_label=English`
+    ? `${baseEmbed}${baseEmbed.includes('?') ? '&' : '?'}sub_file=${encodeURIComponent(absoluteUrl(subPath('vtt')))}&sub_label=English`
     : baseEmbed
 
   const toggleSubs = () => {
@@ -285,6 +312,7 @@ export default function VideoPlayer({
 
   // New source / episode → forget the old clock.
   useEffect(() => {
+    epBaseRef.current = null
     clockRef.current = { t: null, at: 0, playing: false }
     clockLiveRef.current = false
     setClockLive(false)
@@ -436,6 +464,36 @@ export default function VideoPlayer({
       if (!m) return
       setLoading(false) // it's alive and talking
 
+      // The embed's OWN next/previous-episode button: it switches episodes
+      // inside the iframe and the site never knows. Players report the
+      // episode they're on, so we notice the change and hand it to the page
+      // (which marks it watched, saves progress and reloads properly).
+      if (m.episode != null && type !== 'movie') {
+        const base = epBaseRef.current
+        if (!base) {
+          epBaseRef.current = { episode: m.episode, season: m.season }
+        } else if (m.episode !== base.episode || (m.season != null && base.season != null && m.season !== base.season)) {
+          epBaseRef.current = { episode: m.episode, season: m.season }
+          let ep
+          let se = safeSeason
+          if (type === 'tv') {
+            // TV numbering is the same as ours (TMDB) — use it directly.
+            ep = m.episode
+            se = m.season || safeSeason
+          } else {
+            // Anime players may number differently, so move by the same
+            // amount the player moved.
+            ep = safeEpisode + (m.episode - base.episode)
+          }
+          if (ep >= 1 && (ep !== safeEpisode || se !== safeSeason)) {
+            const jump = onJumpRef.current
+            if (jump) jump(ep, se)
+            else if (ep === safeEpisode + 1) onNextRef.current?.()
+            return
+          }
+        }
+      }
+
       // Keep the overlay clock in step with the embedded player.
       const c = clockRef.current
       if (m.current != null) {
@@ -453,7 +511,7 @@ export default function VideoPlayer({
     }
     window.addEventListener('message', onMsg)
     return () => window.removeEventListener('message', onMsg)
-  }, [handleEnded])
+  }, [handleEnded, type, safeEpisode, safeSeason])
 
   const currentStream = streams[streamIdx] || null
 
@@ -678,6 +736,12 @@ export default function VideoPlayer({
 
           {/* 4. Extras */}
           <div className="pc-more">
+            {isNative && offId && (
+              <button type="button" className={'pc-link' + (offState === 'saved' ? ' on' : '')} onClick={saveOffline} disabled={offState !== 'idle'}>
+                <Icon.download width="14" height="14" />
+                {offState === 'saved' ? 'Saved offline' : offState === 'saving' ? 'Downloading…' : 'Save offline'}
+              </button>
+            )}
             {overlayMode && clockLive && (
               <button type="button" className="pc-link" onClick={goFullscreen} title="Keeps the subtitles on screen (the player's own fullscreen hides them)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>

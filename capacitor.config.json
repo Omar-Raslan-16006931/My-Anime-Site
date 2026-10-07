@@ -1,0 +1,13 @@
+{
+  "appId": "com.aniwave.app",
+  "appName": "AniWave",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0d0c0b",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "plugins": {
+    "CapacitorHttp": { "enabled": false }
+  }
+}

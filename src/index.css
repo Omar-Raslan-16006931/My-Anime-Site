@@ -1059,6 +1059,24 @@ select {
 .card, .pcard { animation: mediaIn 0.35s var(--ease); }
 @keyframes mediaIn { from { opacity: 0; } }
 
+/* ---------- Downloads page (iPhone app) ---------- */
+.dlp-sec { margin-bottom: 26px; }
+.dlp-h { font-size: 15px; font-weight: 700; color: var(--text2); margin-bottom: 10px; }
+.dlp-list { display: flex; flex-direction: column; gap: 1px; background: rgba(255,248,240,0.06); border-radius: 14px; overflow: hidden; }
+.dlp-item { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 10px; background: var(--bg3); }
+.dlp-thumb { position: relative; flex-shrink: 0; width: 48px; aspect-ratio: 2/3; border-radius: 6px; overflow: hidden; background: var(--elev); padding: 0; border: none; }
+.dlp-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.dlp-play { cursor: pointer; }
+.dlp-play-ic { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; background: rgba(0,0,0,0.35); }
+.dlp-body { flex: 1; min-width: 0; text-align: left; background: none; border: none; padding: 0; color: inherit; font: inherit; }
+.dlp-open { cursor: pointer; }
+.dlp-title { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dlp-meta { font-size: 12.5px; color: var(--text3); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.dlp-bar { height: 3px; border-radius: 2px; background: var(--tone-hi); margin-top: 8px; overflow: hidden; }
+.dlp-bar span { display: block; height: 100%; background: var(--text); transition: width 0.3s ease; }
+.dlp-del { flex-shrink: 0; width: var(--ctl-sm); height: var(--ctl-sm); color: var(--text2); }
+.dlp-note { font-size: 12.5px; color: var(--text3); margin-top: 10px; padding: 0 4px; }
+
 /* ---------- Search ---------- */
 .search-form { display: flex; gap: 10px; margin-bottom: 20px; max-width: 620px; }
 .search-field { flex: 1; width: auto; max-width: none; height: var(--ctl); }

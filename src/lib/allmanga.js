@@ -1,6 +1,7 @@
 // Client wrapper around the /api/allanime proxy.
+import { apiUrl } from './native'
 
-const API = '/api/allanime'
+const API = apiUrl('/api/allanime')
 
 export async function allmangaSearch(query, translationType = 'sub') {
   const url = `${API}?action=search&query=${encodeURIComponent(query)}&translationType=${translationType}`

@@ -2,16 +2,21 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import Icon from './Icons'
+import { isNative } from '../lib/native'
 
 // Brand wordmark — change this to whatever you'd like the site called.
 const BRAND = 'AniWave'
 
+// In the iPhone app, "Downloads" takes List's spot in the bottom bar (My List
+// stays reachable from the profile menu). The website keeps List.
 const NAV = [
   { to: '/', label: 'Home', icon: Icon.home, end: true },
   { to: '/anime', label: 'Anime', icon: Icon.bolt },
   { to: '/tv', label: 'TV', icon: Icon.tv },
   { to: '/movies', label: 'Movies', icon: Icon.film },
-  { to: '/watchlist', label: 'List', icon: Icon.bookmark },
+  isNative
+    ? { to: '/downloads', label: 'Downloads', icon: Icon.download }
+    : { to: '/watchlist', label: 'List', icon: Icon.bookmark },
 ]
 
 export default function Navbar({ user, profile, onAuthClick }) {

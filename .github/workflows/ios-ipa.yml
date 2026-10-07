@@ -1,0 +1,94 @@
+# Builds an UNSIGNED AniWave.ipa on GitHub's Macs.
+# Sign + install it on your iPhone with Sideloadly or AltStore (free Apple ID).
+#
+# Setup (once): GitHub repo → Settings → Secrets and variables → Actions →
+# "New repository secret" for each of:
+#   VITE_SUPABASE_URL, VITE_SUPABASE_KEY, VITE_TMDB_API_KEY  (same as your .env)
+#   VITE_API_BASE   = your live site, e.g. https://your-site.vercel.app
+#
+# Run: Actions tab → "Build iOS app (.ipa)" → Run workflow. It also runs on
+# every push to main. Download the .ipa from the run's "Artifacts" section.
+
+name: Build iOS app (.ipa)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'db/**'
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build the web app
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY }}
+          VITE_TMDB_API_KEY: ${{ secrets.VITE_TMDB_API_KEY }}
+          VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
+        run: npm run build
+
+      - name: Create / sync the iOS project
+        run: |
+          if [ ! -d ios ]; then npx cap add ios; fi
+          npx cap sync ios
+
+      - name: App settings (Files app access, offline video, network)
+        run: |
+          PLIST=ios/App/App/Info.plist
+          pb() { /usr/libexec/PlistBuddy -c "$1" "$PLIST" 2>/dev/null || true; }
+          # Downloads show up in Files → On My iPhone → AniWave
+          pb "Delete :UIFileSharingEnabled";              pb "Add :UIFileSharingEnabled bool true"
+          pb "Delete :LSSupportsOpeningDocumentsInPlace"; pb "Add :LSSupportsOpeningDocumentsInPlace bool true"
+          # Allow video servers that still use plain http
+          pb "Delete :NSAppTransportSecurity"
+          pb "Add :NSAppTransportSecurity dict"
+          pb "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true"
+          pb "Add :NSAppTransportSecurity:NSAllowsArbitraryLoadsInWebContent bool true"
+          # Keep audio playing when the screen locks
+          pb "Delete :UIBackgroundModes"
+          pb "Add :UIBackgroundModes array"
+          pb "Add :UIBackgroundModes:0 string audio"
+          /usr/libexec/PlistBuddy -c "Print" "$PLIST"
+
+      - name: Build (unsigned)
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package AniWave.ipa
+        run: |
+          rm -rf Payload AniWave.ipa
+          mkdir Payload
+          cp -R build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry AniWave.ipa Payload
+          ls -lh AniWave.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AniWave-ipa
+          path: AniWave.ipa
+          retention-days: 30

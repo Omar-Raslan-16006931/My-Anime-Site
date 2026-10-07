@@ -4,6 +4,8 @@ import { supabase } from '../supabase'
 import VideoPlayer from '../components/VideoPlayer'
 import Icon from '../components/Icons'
 import { recordRecent } from '../lib/progress'
+import DownloadLinks from '../components/DownloadLinks'
+import { isAdultTmdbDetails } from '../lib/tmdb'
 import { loadTvSeen, setTvSeen, tvEpKey } from '../lib/tvProgress'
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
@@ -43,6 +45,7 @@ export default function TVDetail({ user, onAuthRequired }) {
   const [lastEp, setLastEp] = useState(null)
   const [lastSeason, setLastSeason] = useState(null)
   const [synOpen, setSynOpen] = useState(false)
+  const [showDl, setShowDl] = useState(false)
   const [seen, setSeen] = useState(() => new Set()) // "season:episode" keys
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches)
 
@@ -69,7 +72,8 @@ export default function TVDetail({ user, onAuthRequired }) {
 
     ;(async () => {
       try {
-        const res = await fetchRetry(`https://api.themoviedb.org/3/tv/${id}?api_key=${API_KEY}`)
+        // content_ratings + keywords let us block hentai (JP "R18+" / "hentai" keyword).
+        const res = await fetchRetry(`https://api.themoviedb.org/3/tv/${id}?api_key=${API_KEY}&append_to_response=content_ratings,keywords`)
         const json = await res.json()
         if (cancelled) return
         setDetails(json)
@@ -159,6 +163,15 @@ export default function TVDetail({ user, onAuthRequired }) {
 
   if (loading) return <div className="page"><div className="center-msg"><span className="spinner" /></div></div>
   if (!details || details.success === false) return <div className="page"><div className="empty"><div className="emoji">📺</div><p>TV show not found.</p></div></div>
+  if (isAdultTmdbDetails(details)) {
+    return (
+      <div className="page">
+        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on AniWave.</p>
+          <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => navigate('/tv')}>Browse TV shows</button>
+        </div>
+      </div>
+    )
+  }
 
   const seasons = (details.seasons || []).filter((s) => s?.season_number > 0)
   const year = details.first_air_date ? details.first_air_date.slice(0, 4) : ''
@@ -217,11 +230,16 @@ export default function TVDetail({ user, onAuthRequired }) {
                 : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
               <span>{inWatchlist ? 'In My List' : 'My List'}</span>
             </button>
+            <button className={'tvh-sc' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
+              <Icon.download width="20" height="20" />
+              <span>Download</span>
+            </button>
             <button className="tvh-sc" onClick={share}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3" /><path d="m7 8 5-5 5 5" /><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
               <span>Share</span>
             </button>
           </div>
+          {showDl && <div className="tvh-dl"><DownloadLinks title={details.name} /></div>}
         </div>
       </section>
 
@@ -309,6 +327,10 @@ export default function TVDetail({ user, onAuthRequired }) {
           episode={playing}
           onClose={() => setPlaying(null)}
           onNext={() => play(playing + 1)}
+          onJump={(ep, season) => {
+            if (season && season !== selectedSeason) setSelectedSeason(season)
+            play(ep, season || selectedSeason)
+          }}
           hasNext={!!seasonData?.episodes?.some((e) => e.episode_number === playing + 1)}
         />
       )}

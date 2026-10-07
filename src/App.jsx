@@ -15,6 +15,7 @@ import TVShows from './pages/TVShows'
 import MovieDetail from './pages/MovieDetail'
 import TVDetail from './pages/TVDetail'
 import Search from './pages/Search'
+import Downloads from './pages/Downloads'
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -137,6 +138,7 @@ export default function App() {
         <Routes location={location}>
           <Route path="/" element={<Home user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/downloads" element={<Downloads />} />
           <Route path="/anime" element={<Anime />} />
           <Route path="/movies" element={<Movies />} />
           <Route path="/tv" element={<TVShows />} />

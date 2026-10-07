@@ -7,6 +7,8 @@ import { recordRecent } from '../lib/progress'
 import { toast } from '../lib/toast'
 import Row from '../components/Row'
 import MediaCard from '../components/MediaCard'
+import DownloadLinks from '../components/DownloadLinks'
+import { isAdultTmdb, isAdultTmdbDetails } from '../lib/tmdb'
 
 const FACE = 'https://image.tmdb.org/t/p/w185'
 
@@ -33,6 +35,7 @@ export default function MovieDetail({ user, onAuthRequired }) {
   const [playing, setPlaying] = useState(false)
   const [inWatchlist, setInWatchlist] = useState(false)
   const [synOpen, setSynOpen] = useState(false)
+  const [showDl, setShowDl] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -40,7 +43,7 @@ export default function MovieDetail({ user, onAuthRequired }) {
     ;(async () => {
       try {
         // One request: details + cast + recommendations (+ similar as a fallback).
-        const res = await fetchRetry(`https://api.themoviedb.org/3/movie/${id}?api_key=${API_KEY}&append_to_response=credits,recommendations,similar`)
+        const res = await fetchRetry(`https://api.themoviedb.org/3/movie/${id}?api_key=${API_KEY}&append_to_response=credits,recommendations,similar,release_dates,keywords`)
         const data = await res.json()
         if (!cancelled) setMovie(data)
       } catch { if (!cancelled) setMovie(null) }
@@ -107,6 +110,15 @@ export default function MovieDetail({ user, onAuthRequired }) {
 
   if (loading) return <div className="page"><div className="center-msg"><span className="spinner" /></div></div>
   if (!movie || movie.success === false) return <div className="page"><div className="empty"><div className="emoji">🎬</div><p>Movie not found.</p></div></div>
+  if (isAdultTmdbDetails(movie)) {
+    return (
+      <div className="page">
+        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on AniWave.</p>
+          <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => navigate('/movies')}>Browse movies</button>
+        </div>
+      </div>
+    )
+  }
 
   const year = movie.release_date ? movie.release_date.slice(0, 4) : null
   const rating = movie.vote_average ? movie.vote_average.toFixed(1) : null
@@ -117,7 +129,7 @@ export default function MovieDetail({ user, onAuthRequired }) {
   const cast = (movie.credits?.cast || []).filter((c) => c.name).slice(0, 14)
   const director = (movie.credits?.crew || []).find((c) => c.job === 'Director')?.name
   const recsRaw = movie.recommendations?.results?.length ? movie.recommendations.results : movie.similar?.results || []
-  const recs = recsRaw.filter((m) => !m.adult && m.poster_path && m.id !== movie.id).slice(0, 18)
+  const recs = recsRaw.filter((m) => !isAdultTmdb(m) && m.poster_path && m.id !== movie.id).slice(0, 18)
 
   return (
     <div className="fu">
@@ -151,11 +163,16 @@ export default function MovieDetail({ user, onAuthRequired }) {
                 : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
               <span>{inWatchlist ? 'In My List' : 'My List'}</span>
             </button>
+            <button className={'tvh-sc' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
+              <Icon.download width="20" height="20" />
+              <span>Download</span>
+            </button>
             <button className="tvh-sc" onClick={share}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3" /><path d="m7 8 5-5 5 5" /><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
               <span>Share</span>
             </button>
           </div>
+          {showDl && <div className="tvh-dl"><DownloadLinks title={movie.title} /></div>}
         </div>
       </section>
 

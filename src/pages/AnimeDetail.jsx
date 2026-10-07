@@ -392,6 +392,8 @@ export default function AnimeDetail({ user, onAuthRequired }) {
           season={1}
           onClose={() => setPlayingEp(null)}
           onNext={() => play(playingEp + 1)}
+          onJump={(ep) => play(ep)}
+          poster={poster}
           hasNext={!totalEps || playingEp < totalEps}
         />
       )}

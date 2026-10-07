@@ -124,6 +124,9 @@
 .tvh-sc svg { color: var(--text); flex-shrink: 0; }
 .tvh-sc:hover { color: var(--text); background: var(--tone); }
 .tvh-sc.on svg { color: var(--fu-green); }
+/* Download links revealed under the shortcuts */
+.tvh-dl { margin-top: 10px; }
+@media (min-width: 721px) { .tvh-dl { margin-top: 14px; } }
 
 @media (min-width: 721px) {
   .tvh { min-height: clamp(400px, 58vh, 620px); display: flex; align-items: flex-end; }
