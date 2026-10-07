@@ -18,6 +18,7 @@ on:
     paths-ignore:
       - '**.md'
       - 'db/**'
+  # (changing assets/icon-only.png on main also triggers a rebuild)
 
 jobs:
   ios:
@@ -46,6 +47,17 @@ jobs:
         run: |
           if [ ! -d ios ]; then npx cap add ios; fi
           npx cap sync ios
+
+      # App icon + splash: put a 1024x1024 PNG at assets/icon-only.png (and
+      # optionally a 2732x2732 PNG at assets/splash.png). Skipped if missing.
+      - name: Generate app icon and splash
+        run: |
+          if [ -f assets/icon-only.png ] || [ -f assets/splash.png ]; then
+            npx --yes @capacitor/assets generate --ios \
+              --iconBackgroundColor '#0d0c0b' --splashBackgroundColor '#0d0c0b'
+          else
+            echo "No assets/icon-only.png found — using the default icon."
+          fi
 
       - name: App settings (Files app access, offline video, network)
         run: |
