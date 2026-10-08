@@ -190,6 +190,9 @@ export default function VideoPlayer({
   onJumpRef.current = onJump
   const epBaseRef = useRef(null) // first episode the embed reported
   const goNext = useCallback(() => { setCountdown(null); onNextRef.current?.() }, [])
+  // Previous episode goes through the page (onJump) so it's tracked like any other.
+  const canPrev = !!onJump && type !== 'movie' && safeEpisode > 1
+  const goPrev = () => { setCountdown(null); onJumpRef.current?.(safeEpisode - 1, safeSeason) }
 
   // Lock background scroll (html + body, so iOS doesn't rubber-band behind) + ESC.
   useEffect(() => {
@@ -643,10 +646,19 @@ export default function VideoPlayer({
 
         <div className="modal-body pc">
           {/* 1. The one main action */}
-          {canNext && (
-            <button className="btn btn-primary pc-next" onClick={goNext}>
-              Next episode <Icon.play width="14" height="14" />
-            </button>
+          {(canPrev || canNext) && (
+            <div className="pc-nav">
+              {canPrev ? (
+                <button className="btn btn-ghost pc-prev" onClick={goPrev}>
+                  <Icon.play width="14" height="14" style={{ transform: 'scaleX(-1)' }} /> Previous episode
+                </button>
+              ) : <span />}
+              {canNext && (
+                <button className="btn btn-primary pc-next" onClick={goNext}>
+                  Next episode <Icon.play width="14" height="14" />
+                </button>
+              )}
+            </div>
           )}
 
           {/* 2. Settings — one per row, control on the right */}
