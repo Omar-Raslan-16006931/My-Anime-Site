@@ -50,6 +50,9 @@
 }
 
 html {
+  /* Safari tints its status-bar / toolbar area from this colour. Without it,
+     iOS shows a frosted blur of the page scrolling behind the status bar. */
+  background-color: #0d0c0b;
   -webkit-text-size-adjust: 100%;
   /* No global smooth-scroll: it made route changes visibly scroll to the top. */
   scroll-padding-top: calc(var(--topbar-h) + 12px);
