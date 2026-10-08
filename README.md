@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=26&height=200&section=header&text=AniWave&fontSize=56&fontColor=ffffff&fontAlignY=36&desc=Stream%20anime%2C%20TV%20and%20movies%20with%20progress%20sync%20and%20an%20iOS%20app&descSize=16&descAlignY=58&animation=fadeIn" width="100%" alt="AniWave"/>
+<img src=".github/assets/banner.svg" width="100%" alt="AniWave"/>
 
 <img src="https://img.shields.io/github/last-commit/Omar-Raslan-16006931/My-Anime-Site?style=for-the-badge&color=6366f1" alt="Last commit"/>
 <img src="https://img.shields.io/github/languages/top/Omar-Raslan-16006931/My-Anime-Site?style=for-the-badge&color=0ea5e9" alt="Top language"/>
@@ -53,6 +53,6 @@ VITE_TMDB_API_KEY=your_tmdb_api_key
 
 **Made with ❤️ by [Omar Raslan](https://github.com/Omar-Raslan-16006931)**
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=26&height=100&section=footer" width="100%"/>
+<img src=".github/assets/footer.svg" width="100%"/>
 
 </div>
