@@ -59,6 +59,16 @@ html {
 /* Kill the 300ms tap delay / double-tap zoom on interactive bits. */
 a, button, .card, select, label { touch-action: manipulation; }
 
+/* No pinch-zoom anywhere (iOS Safari ignores user-scalable=no, but honours
+   this): scrolling still works, zooming doesn't. */
+html, body { touch-action: pan-x pan-y; }
+
+/* iOS zooms the page when you focus a field with text under 16px — keep
+   every field at 16px on phones so it never zooms. */
+@media (max-width: 880px) {
+  input, select, textarea { font-size: 16px !important; }
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -141,8 +151,9 @@ select {
   padding-top: env(safe-area-inset-top);
   display: flex; align-items: center; gap: 16px;
   padding-left: clamp(16px, 4vw, 60px); padding-right: clamp(16px, 4vw, 60px);
-  /* Solid everywhere: blur on a fixed bar judders on iOS and adds nothing here. */
-  background: rgba(13,12,11,0.97);
+  /* Fully opaque: a see-through top edge makes iOS Safari blur the content
+     scrolling behind the status bar. Solid = no blur, no judder. */
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
   transition: background 0.4s var(--ease), border-color 0.4s var(--ease), box-shadow 0.4s var(--ease);
 }
