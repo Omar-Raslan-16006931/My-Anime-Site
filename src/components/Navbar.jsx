@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../supabase'
 import Icon from './Icons'
 import { isNative } from '../lib/native'
@@ -9,15 +9,22 @@ const BRAND = 'AniWave'
 
 // In the iPhone app, "Downloads" takes List's spot in the bottom bar (My List
 // stays reachable from the profile menu). The website keeps List.
+// `match` = path prefixes that count as this tab (so the tab stays lit on
+// detail pages, e.g. /anime/21 keeps "Anime" selected).
 const NAV = [
-  { to: '/', label: 'Home', icon: Icon.home, end: true },
-  { to: '/anime', label: 'Anime', icon: Icon.bolt },
-  { to: '/tv', label: 'TV', icon: Icon.tv },
-  { to: '/movies', label: 'Movies', icon: Icon.film },
+  { to: '/', label: 'Home', icon: Icon.home, end: true, match: [] },
+  { to: '/anime', label: 'Anime', icon: Icon.bolt, match: ['/anime'] },
+  { to: '/tv', label: 'TV', icon: Icon.tv, match: ['/tv'] },
+  { to: '/movies', label: 'Movies', icon: Icon.film, match: ['/movies', '/movie/'] },
   isNative
-    ? { to: '/downloads', label: 'Downloads', icon: Icon.download }
-    : { to: '/watchlist', label: 'List', icon: Icon.bookmark },
+    ? { to: '/downloads', label: 'Downloads', icon: Icon.download, match: ['/downloads'] }
+    : { to: '/watchlist', label: 'List', icon: Icon.bookmark, match: ['/watchlist'] },
 ]
+
+function activeTab(pathname) {
+  if (pathname === '/') return 0
+  return NAV.findIndex((n) => n.match.some((p) => pathname === p || pathname.startsWith(p.endsWith('/') ? p : p + '/')))
+}
 
 export default function Navbar({ user, profile, onAuthClick }) {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -27,6 +34,8 @@ export default function Navbar({ user, profile, onAuthClick }) {
   const menuRef = useRef(null)
   const baseVHRef = useRef(0)
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const tab = activeTab(pathname)
 
   // The dock is locked to the bottom and never repositioned. The ONLY thing we
   // do for the keyboard is remove it while the keyboard is open. Detection works
@@ -159,15 +168,21 @@ export default function Navbar({ user, profile, onAuthClick }) {
         )}
       </header>
 
-      <nav className={'dock' + (kbOpen ? ' dock-hidden' : '')} aria-label="Primary">
-        {NAV.map((n) => (
+      {/* Phone tab bar: full width, pinned to the bottom. The red glow is one
+          element that slides to the selected tab. */}
+      <nav
+        className={'dock' + (kbOpen ? ' dock-hidden' : '')}
+        aria-label="Primary"
+        style={{ '--n': NAV.length, '--i': Math.max(tab, 0) }}
+      >
+        <span className={'dock-glow' + (tab < 0 ? ' off' : '')} aria-hidden="true" />
+        {NAV.map((n, i) => (
           <NavLink
             key={n.to}
             to={n.to}
             end={n.end}
-            className={({ isActive }) => 'dock-item' + (isActive ? ' active' : '')}
-            aria-label={n.label}
-            title={n.label}
+            className={'dock-item' + (i === tab ? ' active' : '')}
+            aria-current={i === tab ? 'page' : undefined}
           >
             <n.icon />
             <span className="dock-label">{n.label}</span>
