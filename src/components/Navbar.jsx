@@ -5,7 +5,7 @@ import Icon from './Icons'
 import { isNative } from '../lib/native'
 
 // Brand wordmark — change this to whatever you'd like the site called.
-const BRAND = 'AniWave'
+const BRAND = 'Fuck The Jews'
 
 // In the iPhone app, "Downloads" takes List's spot in the bottom bar (My List
 // stays reachable from the profile menu). The website keeps List.
