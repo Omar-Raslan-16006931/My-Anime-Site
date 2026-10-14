@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { udb } from '../lib/udb'
 import VideoPlayer from '../components/VideoPlayer'
@@ -91,8 +91,6 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   const [playingEp, setPlayingEp] = useState(null)
   const [opSaga, setOpSaga] = useState(0)
   const [opPage, setOpPage] = useState(0)
-  const epRow = useRef(null)
-  useEffect(() => { epRow.current?.scrollTo({ left: 0 }) }, [opPage, opSaga])
   const [synOpen, setSynOpen] = useState(false)
   const [showDl, setShowDl] = useState(false)
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches)
@@ -379,10 +377,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
           </form>
         </div>
 
-        <div className="ae-rowwrap">
-          <button type="button" className="ae-arrow l" aria-label="Scroll left" onClick={() => epRow.current?.scrollBy({ left: -epRow.current.clientWidth * 0.85, behavior: 'smooth' })}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg></button>
-          <button type="button" className="ae-arrow r" aria-label="Scroll right" onClick={() => epRow.current?.scrollBy({ left: epRow.current.clientWidth * 0.85, behavior: 'smooth' })}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg></button>
-        <div className="ae-list" ref={epRow}>
+        <div className="ae-list">
           {opRows.map(({ num, ep }) => {
             const seen = !!episodeProgress[Number(num)]?.seen
             const thumb = ep?.images?.jpg?.image_url || poster
@@ -419,10 +414,10 @@ export default function AnimeDetail({ user, onAuthRequired }) {
                     {meta.map((m) => <span key={m}>{m}</span>)}
                   </div>
                 </div>
+                <span className="ae-go" aria-hidden="true"><Icon.play width="15" height="15" /></span>
               </div>
             )
           })}
-        </div>
         </div>
       </section>
 
