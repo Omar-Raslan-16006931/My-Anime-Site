@@ -19,7 +19,20 @@ const NAV = [
   { to: '/tv', label: 'TV', icon: Icon.tv, match: ['/tv'] },
   { key: 'categories', label: 'Categories', icon: Icon.grid, match: ['/category/'] },
 ]
-const CAT_IDX = NAV.findIndex((n) => n.key === 'categories')
+// Phone tab bar: Categories moved into the Search page's filters.
+const DOCK = [
+  { to: '/', label: 'Home', icon: Icon.home, end: true },
+  { to: '/anime', label: 'Anime', icon: Icon.bolt },
+  { to: '/movies', label: 'Movies', icon: Icon.film },
+  { to: '/tv', label: 'TV', icon: Icon.tv },
+  { to: '/search', label: 'Search', icon: Icon.search },
+]
+function dockTab(pathname) {
+  if (pathname === '/') return 0
+  if (pathname.startsWith('/search') || pathname.startsWith('/category/')) return 4
+  const i = activeTab(pathname)
+  return i >= 0 && i < 4 ? i : -1
+}
 
 function activeTab(pathname) {
   if (pathname === '/') return 0
@@ -39,7 +52,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
   const baseVHRef = useRef(0)
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const tab = catOpen ? CAT_IDX : activeTab(pathname)
+  const tab = dockTab(pathname)
 
   // The dock is locked to the bottom and never repositioned. The ONLY thing we
   // do for the keyboard is remove it while the keyboard is open. Detection works
@@ -211,23 +224,12 @@ export default function Navbar({ user, profile, onAuthClick }) {
       {/* Phone tab bar: full width, pinned to the bottom. The red glow is one
           element that slides to the selected tab. */}
       <nav
-        className={'dock' + (kbOpen ? ' dock-hidden' : '') + (dockAway && !catOpen ? ' dock-away' : '') + (dockMoving && !dockAway ? ' dock-moving' : '')}
+        className={'dock' + (kbOpen ? ' dock-hidden' : '') + (dockAway ? ' dock-away' : '') + (dockMoving && !dockAway ? ' dock-moving' : '')}
         aria-label="Primary"
-        style={{ '--n': NAV.length, '--i': Math.max(tab, 0) }}
+        style={{ '--n': DOCK.length, '--i': Math.max(tab, 0) }}
       >
         <span className={'dock-glow' + (tab < 0 ? ' off' : '')} aria-hidden="true" />
-        {NAV.map((n, i) => n.key === 'categories' ? (
-          <button
-            key={n.key}
-            type="button"
-            className={'dock-item' + (i === tab ? ' active' : '')}
-            aria-expanded={catOpen}
-            onClick={() => setCatOpen((v) => !v)}
-          >
-            <n.icon />
-            <span className="dock-label">{n.label}</span>
-          </button>
-        ) : (
+        {DOCK.map((n, i) => (
           <NavLink
             key={n.to}
             to={n.to}

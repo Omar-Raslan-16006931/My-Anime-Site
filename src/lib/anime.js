@@ -295,3 +295,33 @@ export async function animeEpisodes(malId, isCancelled = () => false) {
   }
   return all
 }
+
+// ── Search with category filters ────────────────────────────────────────────
+// Text and/or one or more categories. A title must have ALL selected
+// categories. AniList can only filter by one genre per query, so we pull three
+// pages of the first one and narrow the rest client-side.
+export async function searchAnimeFiltered({ q = '', genres = [], minScore = 0 }) {
+  const want = genres.filter((g) => !isHiddenGenre(g))
+  const query = String(q || '').trim()
+  if (!query && !want.length) return []
+  const pages = want.length > 1 ? 3 : 1
+  const args = [
+    'type: ANIME', 'isAdult: false', `genre_not_in: ${NOT_GENRES}`,
+    query ? 'search: $s' : null,
+    want.length ? 'genre: $g' : null,
+    query ? 'sort: [SEARCH_MATCH, POPULARITY_DESC]' : 'sort: POPULARITY_DESC',
+  ].filter(Boolean).join(', ')
+  const decl = [query ? '$s: String' : null, want.length ? '$g: String' : null].filter(Boolean).join(', ')
+  const body = Array.from({ length: pages }, (_, i) =>
+    `p${i}: Page(page: ${i + 1}, perPage: 50) { media(${args}) { ${MEDIA_FIELDS} } }`).join('\n')
+  const d = await anilist(`query${decl ? `(${decl})` : ''} { ${body} }`, { ...(query ? { s: query } : {}), ...(want.length ? { g: want[0] } : {}) })
+  if (!d) throw new Error('Search is temporarily unavailable')
+  const all = Array.from({ length: pages }, (_, i) => d[`p${i}`]?.media || []).flat()
+  const seen = new Set()
+  return safeList(all.map(fromAniList)).filter((a) => {
+    if (seen.has(a.mal_id)) return false
+    seen.add(a.mal_id)
+    const names = (a.genres || []).map((g) => g.name)
+    return want.every((g) => names.includes(g)) && (!minScore || (a.score || 0) >= minScore)
+  })
+}

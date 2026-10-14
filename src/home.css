@@ -87,14 +87,23 @@
 /* ---------- Anime page: poster used as the header art (no wide banner) ---------- */
 .tvh-art img.is-poster { object-position: center 20%; filter: blur(2px) saturate(1.1); transform: scale(1.04); }
 
-/* Search: an icon on PC that opens into a field when clicked. */
+/* Search: an icon on PC that opens into a field when clicked (top bar only —
+   in-page search fields on Anime / Movies / TV / Search stay normal inputs). */
 @media (min-width: 880px) {
-  .topbar-search { flex: 0 0 38px; padding: 0 0 0 10px; cursor: pointer; background: transparent; transition: flex-basis 0.28s var(--ease), background 0.2s, border-color 0.2s; }
-  .topbar-search svg { color: var(--text); }
-  .topbar-search input { opacity: 0; pointer-events: none; transition: opacity 0.2s; }
-  .topbar-search:hover { background: rgba(255, 255, 255, 0.08); }
-  .topbar-search:focus-within, .topbar-search.has-text { flex-basis: 240px; padding-right: 12px; cursor: text; background: #0d0c0b; border-color: var(--border2); }
-  .topbar-search:focus-within input, .topbar-search.has-text input { opacity: 1; pointer-events: auto; }
+  .topbar .topbar-search { flex: 0 0 38px; padding: 0 0 0 10px; cursor: pointer; background: transparent; transition: flex-basis 0.28s var(--ease), background 0.2s, border-color 0.2s; }
+  .topbar .topbar-search svg { color: var(--text); }
+  .topbar .topbar-search input { opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .topbar .topbar-search:hover { background: rgba(255, 255, 255, 0.08); }
+  .topbar .topbar-search:focus-within, .topbar .topbar-search.has-text { flex-basis: 240px; padding-right: 12px; cursor: text; background: #0d0c0b; border-color: var(--border2); }
+  .topbar .topbar-search:focus-within input, .topbar .topbar-search.has-text input { opacity: 1; pointer-events: auto; }
+}
+
+/* Phone: slimmer top bar (brand + account only — search lives in the tab bar). */
+@media (max-width: 879px) {
+  :root { --topbar-h: 48px; }
+  .topbar .topbar-search { display: none; }
+  .topbar .brand { font-size: 19px; }
+  .topbar .avatar { width: 30px; height: 30px; font-size: 12px; }
 }
 
 /* Nav items that are buttons (Categories). */
@@ -147,7 +156,7 @@ button.dock-item { background: none; border: 0; padding: 0; font-family: inherit
 .cat-menu-item:hover::before { height: 16px; margin-top: -8px; }
 @media (max-width: 879px) {
   .cat-menu {
-    top: auto; bottom: calc(88px + env(safe-area-inset-bottom));
+    top: auto; bottom: calc(78px + env(safe-area-inset-bottom));
     max-height: 62vh; max-height: 62dvh; overflow-y: auto;
     border-bottom: 0; border-top: 1px solid var(--border);
     border-radius: 16px 16px 0 0;
@@ -297,4 +306,36 @@ button.dock-item { background: none; border: 0; padding: 0; font-family: inherit
   .hero-meta { font-size: 12.5px; margin-bottom: 8px; gap: 6px 12px; }
   .hero-desc { font-size: 12.5px; margin-bottom: 14px; }
   .hero-content { padding-bottom: 40px; }
+}
+
+/* ---------- Search page filters ---------- */
+.sf { margin: -6px 0 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.sf-toggle {
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 10px;
+  background: var(--tone); color: var(--text); border: 0; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
+}
+.sf-toggle:hover { background: var(--tone-hi, rgba(255,255,255,0.1)); }
+.sf-caret { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); color: var(--text3); }
+.sf-toggle.open .sf-caret { transform: rotate(180deg); }
+.sf-badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--text); color: var(--ink); font-size: 11px; font-weight: 700; display: inline-grid; place-items: center; }
+.sf-clear { background: none; border: 0; color: var(--text3); font: inherit; font-size: 13px; cursor: pointer; }
+.sf-clear:hover { color: var(--text); }
+.sf-panel { flex: 0 0 100%; display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.38s cubic-bezier(0.16, 1, 0.3, 1); }
+.sf-panel.open { grid-template-rows: 1fr; }
+.sf-inner { overflow: hidden; min-height: 0; opacity: 0; transition: opacity 0.25s ease; }
+.sf-panel.open .sf-inner { opacity: 1; }
+.sf-label { font-size: 12px; font-weight: 600; color: var(--text3); margin: 10px 0 8px; letter-spacing: 0.02em; }
+.sf-label span { font-weight: 400; opacity: 0.7; margin-left: 6px; }
+.sf-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.sf-chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 999px;
+  background: var(--tone); color: var(--text2); border: 1px solid transparent; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.sf-chip:hover { color: var(--text); }
+.sf-chip:active { transform: scale(0.95); }
+.sf-chip.on { background: var(--text); color: var(--ink); }
+.sf-row { display: flex; flex-wrap: wrap; gap: 6px 28px; padding-bottom: 6px; }
+@media (max-width: 560px) {
+  .sf-chip { height: 32px; padding: 0 12px; font-size: 12.5px; }
 }
