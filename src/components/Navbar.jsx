@@ -186,7 +186,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
         <form
           className={'topbar-search' + (q ? ' has-text' : '')}
           onSubmit={submitSearch}
-          onClick={() => searchRef.current?.focus()}
+          onClick={() => { if (window.innerWidth >= 880) navigate('/search'); else searchRef.current?.focus() }}
         >
           <Icon.search width="17" height="17" />
           <input
