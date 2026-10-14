@@ -415,3 +415,6 @@ button.dock-item { background: none; border: 0; padding: 0; font-family: inherit
 /* White dot to the left of each episode thumbnail. */
 .ae-ep::before { content: ''; flex: none; width: 8px; height: 8px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.12); }
 @media (max-width: 720px) { .ae-ep::before { margin-top: 18px; width: 7px; height: 7px; } .ae-ep { gap: 12px; } }
+
+/* Anime episodes now use the TV page's row styles (.fu-ep*); only the range pills / jump bar are anime-specific. */
+.fu-eps .ae-bar { margin-bottom: 14px; }

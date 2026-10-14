@@ -337,8 +337,8 @@ export default function AnimeDetail({ user, onAuthRequired }) {
 
       {/* Episodes header with the season/saga picker — same as the TV page.
           More than 6 seasons (or more than 3 on a phone) → a drop-down. */}
-      <section className="fu-eps ae">
-        <div className="ae-head">
+      <section className="fu-eps">
+        <div className="fu-eps-head">
           <h2 className="fu-h2">{saga.end >= saga.start ? `${saga.end - saga.start + 1} ` : ''}Episodes</h2>
           {sagas.length > 1 && (
             sagas.length > 6 || (isMobile && sagas.length > 3) ? (
@@ -377,43 +377,45 @@ export default function AnimeDetail({ user, onAuthRequired }) {
           </form>
         </div>
 
-        <div className="ae-list">
+        <div className="fu-ep-list">
           {opRows.map(({ num, ep }) => {
             const seen = !!episodeProgress[Number(num)]?.seen
             const thumb = ep?.images?.jpg?.image_url || poster
-            const cont = lastWatched === Number(num)
-            const epTitle = milestoneTitle(num) || ep?.title || null
+            const isLast = lastWatched === Number(num)
+            const epTitle = milestoneTitle(num) || ep?.title || `Episode ${num}`
             const meta = [
               ep?.aired ? fmtDate(ep.aired) : null,
               ep?.filler ? 'Filler' : null,
               ep?.recap ? 'Recap' : null,
-            ].filter(Boolean)
+            ].filter(Boolean).join(' · ')
             return (
-              <div key={`${malId}-${num}`} className={'ae-ep' + (seen ? ' done' : '') + (cont ? ' cur' : '')} onClick={() => play(num)}>
-                <div className="ae-th">
+              <div key={`${malId}-${num}`} className={'fu-ep' + (seen ? ' seen' : '')} onClick={() => play(num)}>
+                <div className="fu-still">
                   {thumb ? <img src={thumb} alt={`EP ${num}`} loading="lazy" /> : null}
-                  <div className="ae-pl"><span><Icon.play width="16" height="16" /></span></div>
-                  <button
-                    type="button"
-                    className={'ae-check' + (seen ? ' on' : '')}
-                    aria-pressed={seen}
-                    aria-label={seen ? `Mark episode ${num} as not watched` : `Mark episode ${num} as watched`}
-                    title={seen ? 'Watched · tap to undo' : 'Mark as watched'}
-                    onClick={(e) => { e.stopPropagation(); toggleSeen(num, seen) }}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                  </button>
-                  {(cont || seen) && <div className="ae-pb"><i style={{ width: seen && !cont ? '100%' : '55%' }} /></div>}
+                  <span className="fu-ep-badge">EP {num}</span>
+                  {seen && (
+                    <button
+                      type="button"
+                      className="fu-seen-check"
+                      title="Watched (tap to unmark)"
+                      aria-label={`Unmark episode ${num} as watched`}
+                      onClick={(e) => { e.stopPropagation(); toggleSeen(num, true) }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                    </button>
+                  )}
                 </div>
-                <div className="ae-body">
-                  <h3 className="ae-title">{epTitle ? <><span className="ae-n">{num}</span>{epTitle}</> : `Episode ${num}`}</h3>
-                  <div className="ae-meta">
-                    {cont && <span className="ae-cont">Continue</span>}
-                    {seen && !cont && <span className="ae-ok">Watched</span>}
-                    {meta.map((m) => <span key={m}>{m}</span>)}
+                <div className="fu-ep-body">
+                  <div className="fu-ep-titlerow">
+                    <h3 className="fu-ep-title">{epTitle}</h3>
+                    {isLast && <span className="fu-tag">Continue</span>}
+                    {seen && !isLast && (
+                      <span className="fu-seen-pill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>Watched</span>
+                    )}
                   </div>
+                  {meta && <div className="fu-ep-meta">{meta}</div>}
                 </div>
-                <span className="ae-go" aria-hidden="true"><Icon.play width="15" height="15" /></span>
+                <div className="fu-play" onClick={(e) => { e.stopPropagation(); play(num) }}><Icon.play width="18" height="18" /></div>
               </div>
             )
           })}
