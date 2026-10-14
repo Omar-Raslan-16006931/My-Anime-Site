@@ -91,6 +91,15 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   const [opSaga, setOpSaga] = useState(0)
   const [opPage, setOpPage] = useState(0)
   const [synOpen, setSynOpen] = useState(false)
+  const [showDl, setShowDl] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 720px)')
+    const on = () => setIsMobile(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
 
   // Lock background scroll while the synopsis popup is open so swiping inside it
   // never drags the page behind.
@@ -264,7 +273,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   const title = details.title_english || details.title
   const genreNames = normalizeGenres(details.genres)
   const eyebrow = `Anime${details.year ? ` · ${details.year}${isAiring ? '–' : ''}` : ''}`
-  const resumeLabel = lastWatched ? `Resume EP ${lastWatched}` : 'Play'
+  const resumeLabel = lastWatched ? `Continue · EP ${lastWatched}` : 'Play · EP 1'
   const share = () => {
     if (navigator.share) navigator.share({ title, url: window.location.href }).catch(() => {})
     else navigator.clipboard?.writeText(window.location.href)
@@ -275,55 +284,86 @@ export default function AnimeDetail({ user, onAuthRequired }) {
     <div className="fu">
       <button className="fu-back" onClick={() => navigate(-1)} aria-label="Back"><Icon.back width="18" height="18" /></button>
 
-      <div className="fu-ophero">
-        {/* The show's own artwork is the backdrop: wide banner when AniList has
-            one, otherwise the poster, blurred into a colour field. */}
-        <div className="fu-ophero-bg">
+      {/* Same header as the TV page: artwork behind everything, title, one
+          info line, categories, short description, one main action, shortcuts. */}
+      <section className="tvh">
+        <div className="tvh-art">
           {(banner || poster) && <img src={banner || poster} alt="" className={banner ? '' : 'is-poster'} />}
-          <div className="scrim" />
         </div>
-        <div className="fu-op-poster">{poster ? <img src={poster} alt={title} loading="lazy" /> : null}</div>
-        <div className="fu-op-headinfo">
-          <div className="fu-eyebrow">{eyebrow}</div>
-          <h1 className="fu-optitle">{title}</h1>
-          <div className="fu-meta">
-            {details.score ? <><span className="strong"><span className="star">★</span>{details.score}</span><span className="sep">·</span></> : null}
-            {totalEps ? <><span><strong style={{ color: '#fff' }}>{totalEps.toLocaleString()}</strong> episodes</span><span className="sep">·</span></> : null}
-            {sagas.length > 1 ? <><span>{sagas.length} sagas</span><span className="sep">·</span></> : null}
-            <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span className={'fu-dot' + (isAiring ? '' : ' off')} />{isAiring ? 'Ongoing' : (details.status?.split(' ')[0] || 'Finished')}</span>
+        <div className="tvh-body">
+          <h1 className="tvh-title">{title}</h1>
+          <div className="tvh-meta">
+            {details.score ? <span className="tvh-rating"><span aria-hidden="true">★</span> {Number(details.score).toFixed(1)}</span> : null}
+            {details.year ? <span>{details.year}</span> : null}
+            {totalEps ? <span>{totalEps.toLocaleString()} Episode{totalEps > 1 ? 's' : ''}</span> : null}
+            {sagas.length > 1 ? <span>{sagas.length} {malId === 21 ? 'Sagas' : 'Parts'}</span> : null}
+            <span>{isAiring ? 'Ongoing' : (details.status?.split(' ')[0] || 'Finished')}</span>
           </div>
           <GenreChips genres={genreNames} className="on-art" />
           {details.synopsis && (
-            <p className="fu-syn fu-syn-clickable" onClick={() => setSynOpen(true)} title="Read full description" style={{ maxWidth: 680, margin: '12px 0 0', fontSize: 13.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{details.synopsis}</p>
+            <p className="tvh-desc" onClick={() => setSynOpen(true)} title="Read full description">{details.synopsis}</p>
           )}
-          <div className="fu-actions" style={{ marginTop: 18 }}>
-            <button className="fu-btn fu-btn-grad" onClick={() => play(lastWatched || 1)}><Icon.play width="16" height="16" /> {resumeLabel}</button>
+
+          <button className="tvh-play" onClick={() => play(lastWatched || 1)}>
+            <Icon.play width="16" height="16" /> {resumeLabel}
+          </button>
+
+          <div className="tvh-shortcuts">
             {lastWatched && (!totalEps || lastWatched < totalEps) && (
-              <button className="fu-btn fu-btn-glass" onClick={() => play(lastWatched + 1)}><Icon.play width="15" height="15" /> Next Ep</button>
+              <button className="tvh-sc" onClick={() => play(lastWatched + 1)}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 5v14l10-7z" fill="currentColor" stroke="none" /><path d="M19 5v14" /></svg>
+                <span>Next episode</span>
+              </button>
             )}
-            <button className="fu-btn fu-btn-glass" onClick={toggleWatchlist}>
+            <button className={'tvh-sc' + (inWatchlist ? ' on' : '')} onClick={toggleWatchlist} aria-pressed={inWatchlist}>
               {inWatchlist
-                ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg> In Your List</>
-                : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg> My List</>}
+                ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
+              <span>{inWatchlist ? 'In My List' : 'My List'}</span>
             </button>
-            <button className="fu-round" aria-label="Share" onClick={share}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></svg>
+            <button className={'tvh-sc' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
+              <Icon.download width="20" height="20" />
+              <span>Download</span>
+            </button>
+            <button className="tvh-sc" onClick={share}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3" /><path d="m7 8 5-5 5 5" /><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
+              <span>Share</span>
             </button>
           </div>
-          <div className="fu-sources"><DownloadLinks title={title} /></div>
+          {showDl && <div className="tvh-dl"><DownloadLinks title={title} /></div>}
         </div>
-      </div>
+      </section>
 
-      {sagas.length > 1 && (
-            <div className="fu-sagas">
-              {sagas.map((s, i) => (
-                <button key={i} className={'fu-saga' + (i === curSaga ? ' on' : '')} onClick={() => selectSaga(i)}>
-                  <span className="nm">{s.name}</span>
-                  <span className="rg">EP {s.start}–{s.end}</span>
-                </button>
-              ))}
-            </div>
+      {/* Episodes header with the season/saga picker — same as the TV page.
+          More than 6 seasons (or more than 3 on a phone) → a drop-down. */}
+      <section className="fu-eps" style={{ paddingBottom: 0 }}>
+        <div className="fu-eps-head" style={{ marginBottom: 0 }}>
+          <div>
+            <div className="fu-eps-eyebrow">{saga.name}{malId === 21 ? ' Saga' : ''} · EP {saga.start}–{saga.end}</div>
+            <h2 className="fu-h2">Episodes</h2>
+          </div>
+          {sagas.length > 1 && (
+            sagas.length > 6 || (isMobile && sagas.length > 3) ? (
+              <select
+                className="fu-season-select"
+                value={curSaga}
+                onChange={(e) => selectSaga(Number(e.target.value))}
+                aria-label={malId === 21 ? 'Select saga' : 'Select part'}
+              >
+                {sagas.map((s, i) => (
+                  <option key={i} value={i}>{s.name}{malId === 21 ? ' Saga' : ''} · EP {s.start}–{s.end}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="fu-seg">
+                {sagas.map((s, i) => (
+                  <button key={i} className={'fu-seg-btn' + (i === curSaga ? ' on' : '')} onClick={() => selectSaga(i)}>{s.name}</button>
+                ))}
+              </div>
+            )
           )}
+        </div>
+      </section>
 
           <div className="fu-range">
             <div className="fu-range-bar">

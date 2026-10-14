@@ -250,7 +250,7 @@ export default function TVDetail({ user, onAuthRequired }) {
             <h2 className="fu-h2">Episodes</h2>
           </div>
           {seasons.length > 0 && (
-            isMobile && seasons.length > 3 ? (
+            seasons.length > 6 || (isMobile && seasons.length > 3) ? (
               <select
                 className="fu-season-select"
                 value={selectedSeason ?? ''}

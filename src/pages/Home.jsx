@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import Hero from '../components/Hero'
 import Row from '../components/Row'
@@ -6,13 +6,15 @@ import MediaCard from '../components/MediaCard'
 import WideCard from '../components/WideCard'
 import { getPopularMovies, getPopularTV, getTmdbImage } from '../lib/tmdb'
 import { recentlyAiredEpisodes } from '../lib/anilist'
-import { animeByMalIds, animeList } from '../lib/anime'
+import { animeByMalIds, animeList, animeCategoryArt } from '../lib/anime'
 import { udb } from '../lib/udb'
+import { toast } from '../lib/toast'
 import { PRIORITY_CATEGORIES, normalizeGenres, categoryPath } from '../lib/categories'
 
 const backdrop = (path) => (path ? `https://image.tmdb.org/t/p/original${path}` : null)
+const IMG = 'https://image.tmdb.org/t/p/w500'
 
-// Fallback billboard if the random picks can't load.
+// Fallback billboard if the popular picks can't load.
 const HERO_FALLBACK = [57658, 37991, 16498, 21, 5114]
 
 // "just now" / "3h ago" / "2d ago" from a unix-seconds timestamp.
@@ -28,8 +30,9 @@ const shuffle = (arr) => arr.map((x) => [Math.random(), x]).sort((a, b) => a[0] 
 const animeTitle = (a) => a.title_english || a.title
 const animeMeta = (a) => [a.score ? `★ ${Number(a.score).toFixed(1)}` : null, a.type, a.episodes ? `${a.episodes} eps` : null].filter(Boolean).join(' · ')
 
+// Billboard slides carry what "My List" needs to save them.
 const animeHero = (a) => ({
-  kind: 'FEATURED TODAY',
+  kind: 'FEATURED ANIME',
   title: animeTitle(a),
   backdrop: a.banner || a.images?.jpg?.large_image_url,
   score: a.score,
@@ -37,9 +40,20 @@ const animeHero = (a) => ({
   genres: normalizeGenres(a.genres),
   desc: a.synopsis,
   href: `/anime/${a.mal_id}`,
+  save: { key: `anime:${a.mal_id}`, mal_id: a.mal_id, title: animeTitle(a), poster: a.images?.jpg?.large_image_url || null, score: a.score },
+})
+const movieHero = (m) => ({
+  kind: 'FEATURED MOVIE', title: m.title, backdrop: backdrop(m.backdrop_path), score: m.vote_average,
+  year: m.release_date?.slice(0, 4), desc: m.overview, href: `/movie/${m.id}`,
+  save: { key: `movie:${m.id}`, media_type: 'movie', tmdb_id: m.id, title: m.title, poster: m.poster_path ? `${IMG}${m.poster_path}` : null, score: m.vote_average },
+})
+const tvHero = (s) => ({
+  kind: 'FEATURED SERIES', title: s.name, backdrop: backdrop(s.backdrop_path), score: s.vote_average,
+  year: s.first_air_date?.slice(0, 4), desc: s.overview, href: `/tv/${s.id}`,
+  save: { key: `tv:${s.id}`, media_type: 'tv', tmdb_id: s.id, title: s.name, poster: s.poster_path ? `${IMG}${s.poster_path}` : null, score: s.vote_average },
 })
 
-export default function Home({ user }) {
+export default function Home({ user, onAuthRequired }) {
   const navigate = useNavigate()
   const [heroList, setHeroList] = useState([])
   const [recentEps, setRecentEps] = useState([])
@@ -50,6 +64,8 @@ export default function Home({ user }) {
   const [movies, setMovies] = useState([])
   const [tv, setTv] = useState([])
   const [watching, setWatching] = useState([])
+  const [catArt, setCatArt] = useState({})
+  const [listKeys, setListKeys] = useState(() => new Set())
   const [loading, setLoading] = useState(true)
 
   // Currently Watching — sourced from the database (not local storage).
@@ -73,46 +89,77 @@ export default function Home({ user }) {
     return () => { active = false }
   }, [user])
 
+  // What's already in My List (so the billboard button shows the right state).
+  useEffect(() => {
+    if (!user) { setListKeys(new Set()); return }
+    let active = true
+    udb.from('watchlist').select('mal_id, tmdb_id, media_type').eq('user_id', user.id).then(({ data }) => {
+      if (!active) return
+      setListKeys(new Set((data || []).map((r) => (r.tmdb_id ? `${r.media_type}:${r.tmdb_id}` : `anime:${r.mal_id}`))))
+    })
+    return () => { active = false }
+  }, [user])
+
   useEffect(() => {
     let active = true
 
-    // Billboard: a random mix of trending anime (with wide banners) plus one
-    // popular movie and one popular show. New picks on every visit.
+    // Billboard: popular titles — three popular anime (with wide banners),
+    // one popular movie and one popular show, re-picked on every visit.
     Promise.all([
-      animeList('trending', 30),
+      animeList('popular', 30),
       getPopularMovies().catch(() => null),
       getPopularTV().catch(() => null),
-    ]).then(async ([tr, m, t]) => {
+    ]).then(async ([pop, m, t]) => {
       if (!active) return
-      setTrending(tr)
       setMovies(m?.results || [])
       setTv(t?.results || [])
 
-      const animePicks = shuffle(tr.filter((a) => a.banner && a.synopsis)).slice(0, 3).map(animeHero)
-      const mv = shuffle((m?.results || []).filter((x) => x.backdrop_path && x.overview))[0]
-      const sh = shuffle((t?.results || []).filter((x) => x.backdrop_path && x.overview))[0]
-      const extra = [
-        mv && { kind: 'FEATURED MOVIE', title: mv.title, backdrop: backdrop(mv.backdrop_path), score: mv.vote_average, year: mv.release_date?.slice(0, 4), desc: mv.overview, href: `/movie/${mv.id}` },
-        sh && { kind: 'FEATURED SERIES', title: sh.name, backdrop: backdrop(sh.backdrop_path), score: sh.vote_average, year: sh.first_air_date?.slice(0, 4), desc: sh.overview, href: `/tv/${sh.id}` },
-      ].filter(Boolean)
-      let picks = shuffle([...animePicks, ...extra])
+      const animePicks = shuffle(pop.filter((a) => a.banner && a.synopsis)).slice(0, 3).map(animeHero)
+      const mv = shuffle((m?.results || []).slice(0, 10).filter((x) => x.backdrop_path && x.overview))[0]
+      const sh = shuffle((t?.results || []).slice(0, 10).filter((x) => x.backdrop_path && x.overview))[0]
+      let picks = shuffle([...animePicks, mv && movieHero(mv), sh && tvHero(sh)].filter(Boolean))
 
-      if (!picks.length) {
-        const list = await animeByMalIds(HERO_FALLBACK)
-        picks = list.map(animeHero)
-      }
+      if (!picks.length) picks = (await animeByMalIds(HERO_FALLBACK)).map(animeHero)
       if (!active) return
       setHeroList(picks)
       setLoading(false)
     })
 
+    animeList('trending', 30).then((l) => { if (active) setTrending(l) })
     animeList('airing', 30).then((l) => { if (active) setAiring(l) })
     animeList('movies', 20).then((l) => { if (active) setAnimeMovies(l) })
     animeList('top', 20).then((l) => { if (active) setTopRated(l) })
     recentlyAiredEpisodes(24).then((eps) => { if (active) setRecentEps(eps) })
+    animeCategoryArt(PRIORITY_CATEGORIES).then((art) => { if (active) setCatArt(art) })
 
     return () => { active = false }
   }, [])
+
+  const isInList = useCallback((h) => !!h?.save && listKeys.has(h.save.key), [listKeys])
+
+  const toggleList = async (h) => {
+    if (!user) return onAuthRequired?.()
+    const s = h?.save
+    if (!s) return
+    const has = listKeys.has(s.key)
+    let error
+    if (has) {
+      const q = udb.from('watchlist').delete().eq('user_id', user.id)
+      ;({ error } = await (s.tmdb_id ? q.eq('media_type', s.media_type).eq('tmdb_id', s.tmdb_id) : q.eq('mal_id', s.mal_id)))
+    } else {
+      const row = s.tmdb_id
+        ? { user_id: user.id, media_type: s.media_type, tmdb_id: s.tmdb_id, title: s.title, poster: s.poster, score: s.score }
+        : { user_id: user.id, mal_id: s.mal_id, title: s.title, poster: s.poster, score: s.score }
+      ;({ error } = await udb.from('watchlist').insert(row))
+    }
+    if (error) { toast('Couldn’t update My List'); return }
+    setListKeys((prev) => {
+      const next = new Set(prev)
+      if (has) next.delete(s.key); else next.add(s.key)
+      return next
+    })
+    toast(has ? 'Removed from My List' : 'Added to My List')
+  }
 
   // Wide banner art we already have, keyed by MAL id (for Continue watching).
   const bannerByMal = useMemo(() => {
@@ -120,12 +167,6 @@ export default function Home({ user }) {
     for (const a of [...trending, ...airing, ...topRated, ...animeMovies]) if (a.banner) m.set(a.mal_id, a.banner)
     return m
   }, [trending, airing, topRated, animeMovies])
-
-  // Art for the category tiles: banners (PC) + posters (phone), no repeats.
-  const catArt = useMemo(() => {
-    const seen = new Set()
-    return [...trending, ...airing, ...topRated].filter((a) => a.banner && !seen.has(a.mal_id) && seen.add(a.mal_id))
-  }, [trending, airing, topRated])
 
   const watchKey = (i) => `${i.source_table}-${i.id}`
   const watchHref = (i) => (i.media_type === 'tv' && i.tmdb_id ? `/tv/${i.tmdb_id}` : i.media_type === 'movie' && i.tmdb_id ? `/movie/${i.tmdb_id}` : i.mal_id ? `/anime/${i.mal_id}` : '/')
@@ -166,7 +207,7 @@ export default function Home({ user }) {
       {loading ? (
         <div className="skel" style={{ height: 'clamp(420px,56vw,82vh)', margin: '0 calc(-1 * clamp(16px,4vw,60px))', borderRadius: 0 }} />
       ) : (
-        <Hero items={heroList} onPlay={(h) => navigate(h.href)} />
+        <Hero items={heroList} onPlay={(h) => navigate(h.href)} isInList={isInList} onToggleList={toggleList} />
       )}
 
       {watching.length > 0 && (
@@ -176,12 +217,12 @@ export default function Home({ user }) {
       )}
 
       <Row title="Browse by Category" wide>
-        {PRIORITY_CATEGORIES.map((g, i) => {
-          const a = catArt.length ? catArt[(i * 2) % catArt.length] : null
+        {PRIORITY_CATEGORIES.map((g) => {
+          const a = catArt[g]
           return (
-            <Link key={g} to={categoryPath(g)} className="cat-tile">
+            <Link key={g} to={categoryPath(g)} className="cat-tile" title={a?.title ? `${g} · ${a.title}` : g}>
               {a?.banner && <img className="cat-tile-banner" src={a.banner} alt="" loading="lazy" />}
-              {a && <img className="cat-tile-poster" src={a.images?.jpg?.large_image_url} alt="" loading="lazy" />}
+              {a?.poster && <img className={'cat-tile-poster' + (a.banner ? '' : ' only')} src={a.poster} alt="" loading="lazy" />}
               <span>{g}</span>
             </Link>
           )
@@ -204,16 +245,16 @@ export default function Home({ user }) {
         {recentEps.map((e) => <MediaCard key={e.malId} item={epCard(e)} />)}
       </Row>
 
-      <Row title="Anime Movies" loading={!animeMovies.length}>
-        {animeMovies.map((a) => <MediaCard key={a.mal_id} item={animeCard(a)} />)}
-      </Row>
-
       <Row title="Popular Movies" loading={!movies.length} onMore={() => navigate('/movies')}>
         {movies.map((m) => <MediaCard key={m.id} item={movieCard(m)} />)}
       </Row>
 
       <Row title="Popular TV Shows" loading={!tv.length} onMore={() => navigate('/tv')}>
         {tv.map((s) => <MediaCard key={s.id} item={tvCard(s)} />)}
+      </Row>
+
+      <Row title="Anime Movies" loading={!animeMovies.length}>
+        {animeMovies.map((a) => <MediaCard key={a.mal_id} item={animeCard(a)} />)}
       </Row>
 
       <Row title="Highest Rated Anime" loading={!topRated.length}>

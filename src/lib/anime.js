@@ -197,6 +197,28 @@ export async function animeList(kind = 'trending', limit = 20) {
   return safeList(j?.data)
 }
 
+// ── Cover art for category tiles: the top title of each category ────────────
+// One request for all categories. Each gets the most popular title in that
+// category (= the first one on its category page); if that title was already
+// used for an earlier tile, the next one down is used so tiles don't repeat.
+// → { [genre]: { banner, poster, title } }
+export async function animeCategoryArt(genres) {
+  const parts = genres.map((g, i) =>
+    `g${i}: Page(perPage: 6) { media(type: ANIME, isAdult: false, genre: ${JSON.stringify(g)}, genre_not_in: ${NOT_GENRES}, sort: POPULARITY_DESC) { id bannerImage coverImage { extraLarge } title { english romaji } } }`
+  ).join('\n')
+  const d = await anilist(`query { ${parts} }`)
+  const out = {}
+  const used = new Set()
+  genres.forEach((g, i) => {
+    const media = d?.[`g${i}`]?.media || []
+    const pick = media.find((m) => !used.has(m.id) && m.bannerImage) || media.find((m) => !used.has(m.id)) || media[0]
+    if (!pick) return
+    used.add(pick.id)
+    out[g] = { banner: pick.bannerImage || null, poster: pick.coverImage?.extraLarge || null, title: pick.title?.english || pick.title?.romaji }
+  })
+  return out
+}
+
 // ── One category (genre), most popular first, paged → { list, hasNext } ─────
 export async function animeByGenre(genre, page = 1, perPage = 30) {
   if (isHiddenGenre(genre)) return { list: [], hasNext: false }

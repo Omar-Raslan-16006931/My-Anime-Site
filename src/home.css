@@ -7,11 +7,31 @@
    see-through over the banner and turns solid once you scroll. */
 .topbar, .topbar.scrolled { background: #0d0c0b; transition: background 0.3s ease, border-color 0.3s ease; }
 @media (min-width: 880px) {
-  .topbar.over-hero {
-    background: linear-gradient(180deg, rgba(13, 12, 11, 0.85) 0%, rgba(13, 12, 11, 0) 100%);
-    border-bottom-color: transparent;
+  /* No background or border on the bar itself (that edge was the thin line);
+     a taller soft shade behind it keeps the links readable, with no hard edge. */
+  .topbar.over-hero { background: transparent; border-bottom-color: transparent; box-shadow: none; }
+  .topbar::before {
+    content: ''; position: absolute; left: 0; right: 0; top: 0; z-index: -1; pointer-events: none;
+    height: 150%;
+    background: linear-gradient(180deg, rgba(13, 12, 11, 0.78) 0%, rgba(13, 12, 11, 0.45) 50%, rgba(13, 12, 11, 0) 100%);
+    opacity: 0; transition: opacity 0.3s ease;
   }
+  .topbar.over-hero::before { opacity: 1; }
 }
+
+/* ---------- Billboard: bigger Play, My List, roomier title ---------- */
+.hero-title { line-height: 1.12; }
+.hero-actions { align-items: center; gap: 10px; }
+.hero-actions .btn.hero-play { height: 50px; padding: 0 30px; font-size: 17px; font-weight: 700; gap: 10px; border-radius: 8px; }
+.hero-list.on { color: #fff; }
+.hero-list.on svg { color: #46c46b; }
+@media (max-width: 560px) {
+  .hero-actions { gap: 8px; }
+  .hero-actions .btn.hero-play { height: 44px; padding: 0 22px; font-size: 15.5px; }
+}
+
+/* ---------- Anime page: poster used as the header art (no wide banner) ---------- */
+.tvh-art img.is-poster { object-position: center 20%; filter: blur(2px) saturate(1.1); transform: scale(1.04); }
 
 /* Search: an icon on PC that opens into a field when clicked. */
 @media (min-width: 880px) {
@@ -140,6 +160,7 @@ button.dock-item { background: none; border: 0; padding: 0; font-family: inherit
 }
 .cat-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s var(--ease); }
 .cat-tile-poster { display: none; }
+.cat-tile-poster.only { display: block; object-position: center 25%; }
 .cat-tile::after { content: ''; position: absolute; inset: 0; background: rgba(13, 12, 11, 0.55); transition: background 0.2s; }
 .cat-tile span { position: relative; z-index: 1; font-size: clamp(16px, 1.6vw, 21px); font-weight: 800; letter-spacing: -0.02em; text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7); }
 @media (hover: hover) {
@@ -160,9 +181,15 @@ button.dock-item { background: none; border: 0; padding: 0; font-family: inherit
   mask-image: radial-gradient(ellipse at 0 100%, #000 25%, transparent 72%);
 }
 
-/* ---------- Genre chips (show pages + category page) ---------- */
+/* ---------- Show pages: categories as one clean line of text ---------- */
+.genre-line { display: flex; flex-wrap: wrap; align-items: center; margin: 6px 0 10px; font-size: 13.5px; font-weight: 500; line-height: 1.6; }
+.genre-link { color: #ddd6ca; transition: color 0.15s; }
+.genre-link:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.genre-dot { margin: 0 8px; color: var(--text3); }
+@media (min-width: 721px) { .genre-line { font-size: 14px; margin: 4px 0 12px; } }
+
+/* ---------- Category page pills ---------- */
 .genre-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-.genre-chips.on-art { margin: 12px 0 0; }
 .genre-chip {
   padding: 5px 13px; border-radius: 999px;
   font-size: 12.5px; font-weight: 600; letter-spacing: -0.005em;

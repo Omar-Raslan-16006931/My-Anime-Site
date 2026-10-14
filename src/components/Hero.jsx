@@ -6,7 +6,8 @@ import Icon from './Icons'
 // auto-rotates through with a smooth crossfade. All slide images stay mounted
 // (stacked), so switching never flashes black or re-downloads an image.
 // item: { title, backdrop, score, year, genres[], desc, href, kind }
-export default function Hero({ item, items, onPlay, interval = 8000 }) {
+// Optional My List support: isInList(item) → bool, onToggleList(item).
+export default function Hero({ item, items, onPlay, isInList, onToggleList, interval = 8000 }) {
   const navigate = useNavigate()
   const list = items && items.length ? items : item ? [item] : []
   const [idx, setIdx] = useState(0)
@@ -40,6 +41,7 @@ export default function Hero({ item, items, onPlay, interval = 8000 }) {
 
   if (!count) return null
   const cur = list[Math.min(idx, count - 1)]
+  const inList = isInList ? isInList(cur) : false
 
   return (
     <div className="hero" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
@@ -67,9 +69,15 @@ export default function Hero({ item, items, onPlay, interval = 8000 }) {
         </div>
         {cur.desc && <p className="hero-desc">{cur.desc}</p>}
         <div className="hero-actions">
-          <button className="btn btn-light" onClick={() => (onPlay ? onPlay(cur) : navigate(cur.href))}>
-            <Icon.play width="18" height="18" /> Play
+          <button className="btn btn-light hero-play" onClick={() => (onPlay ? onPlay(cur) : navigate(cur.href))}>
+            <Icon.play width="22" height="22" /> Play
           </button>
+          {onToggleList && (
+            <button className={'btn btn-ghost hero-list' + (inList ? ' on' : '')} onClick={() => onToggleList(cur)} aria-pressed={inList}>
+              {inList ? <Icon.check width="18" height="18" /> : <Icon.plus width="18" height="18" />}
+              {inList ? 'In My List' : 'My List'}
+            </button>
+          )}
           <button className="btn btn-ghost" onClick={() => navigate(cur.href)}>
             <Icon.info width="18" height="18" /> More Info
           </button>
