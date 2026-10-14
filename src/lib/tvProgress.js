@@ -3,7 +3,7 @@
 // Stored in Supabase (public.tv_episode_progress, see db/tv_episode_progress.sql)
 // AND mirrored in localStorage. If the table hasn't been created yet, everything
 // keeps working from localStorage on this device — nothing breaks.
-import { supabase } from '../supabase'
+import { udb } from './udb'
 
 const LS_KEY = 'aw:tvseen'
 const TABLE = 'tv_episode_progress'
@@ -30,7 +30,7 @@ export async function loadTvSeen(userId, tmdbId) {
   const id = String(tmdbId)
   const seen = new Set(lsLoad()[id] || [])
   if (userId && !tableMissing) {
-    const { data, error } = await supabase
+    const { data, error } = await udb
       .from(TABLE)
       .select('season_number, episode_number')
       .eq('user_id', userId).eq('tmdb_id', Number(tmdbId)).eq('seen', true)
@@ -54,13 +54,13 @@ export async function setTvSeen(userId, tmdbId, season, episode, isSeen = true) 
   const base = { user_id: userId, tmdb_id: Number(tmdbId), season_number: Number(season), episode_number: Number(episode) }
   if (isSeen) {
     const now = new Date().toISOString()
-    const { error } = await supabase.from(TABLE).upsert(
+    const { error } = await udb.from(TABLE).upsert(
       { ...base, seen: true, seen_at: now, updated_at: now },
       { onConflict: 'user_id,tmdb_id,season_number,episode_number' }
     )
     noteMissing(error)
   } else {
-    const { error } = await supabase.from(TABLE).delete()
+    const { error } = await udb.from(TABLE).delete()
       .eq('user_id', userId).eq('tmdb_id', base.tmdb_id)
       .eq('season_number', base.season_number).eq('episode_number', base.episode_number)
     noteMissing(error)

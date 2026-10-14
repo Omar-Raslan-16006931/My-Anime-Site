@@ -1102,6 +1102,16 @@ select {
 .card, .pcard { animation: mediaIn 0.35s var(--ease); }
 @keyframes mediaIn { from { opacity: 0; } }
 
+/* ---------- Private history locked banner ---------- */
+.vault-banner {
+  position: fixed; z-index: 119; left: 0; right: 0;
+  top: calc(var(--topbar-h) + env(safe-area-inset-top));
+  padding: 8px 16px; text-align: center;
+  background: var(--bg3); color: var(--text2); font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.vault-banner strong { color: var(--text); margin-left: 4px; }
+
 /* ---------- Downloads page (iPhone app) ---------- */
 .dlp-sec { margin-bottom: 26px; }
 .dlp-h { font-size: 15px; font-weight: 700; color: var(--text2); margin-bottom: 10px; }

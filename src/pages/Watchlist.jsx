@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { udb } from '../lib/udb'
 import Icon from '../components/Icons'
 import { toast } from '../lib/toast'
 
@@ -13,7 +13,7 @@ export default function Watchlist({ user, onAuthRequired }) {
   useEffect(() => {
     if (!user) { onAuthRequired?.(); setLoading(false); return }
     setLoading(true)
-    supabase.from('watchlist').select('*').eq('user_id', user.id).order('added_at', { ascending: false })
+    udb.from('watchlist').select('*').eq('user_id', user.id).order('added_at', { ascending: false })
       .then(({ data }) => { setWatchlist(data || []); setLoading(false) })
   }, [user, onAuthRequired])
 
@@ -24,7 +24,7 @@ export default function Watchlist({ user, onAuthRequired }) {
     const item = confirm
     if (!item) return
     setConfirm(null)
-    let q = supabase.from('watchlist').delete().eq('user_id', user.id)
+    let q = udb.from('watchlist').delete().eq('user_id', user.id)
     if (item.id) q = q.eq('id', item.id)
     else if (item.mal_id) q = q.eq('mal_id', item.mal_id)
     else if (item.tmdb_id && item.media_type) q = q.eq('tmdb_id', item.tmdb_id).eq('media_type', item.media_type)

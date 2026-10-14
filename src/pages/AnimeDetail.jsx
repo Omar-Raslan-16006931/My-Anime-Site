@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { udb } from '../lib/udb'
 import VideoPlayer from '../components/VideoPlayer'
 import Icon from '../components/Icons'
 import { recordRecent } from '../lib/progress'
@@ -10,7 +10,7 @@ import DownloadLinks from '../components/DownloadLinks'
 
 async function upsertWatching(user, d, epNum) {
   if (!user || !d) return
-  await supabase.from('currently_watching').upsert({
+  await udb.from('currently_watching').upsert({
     user_id: user.id, mal_id: d.mal_id, title: d.title_english || d.title,
     poster: d.images?.jpg?.large_image_url || d.images?.jpg?.image_url || null,
     score: d.score, last_episode: epNum, total_episodes: d.episodes || null,
@@ -139,9 +139,9 @@ export default function AnimeDetail({ user, onAuthRequired }) {
     setInWatchlist(false); setEpisodeProgress({}); setLastWatched(null); setLastWatchedAt(null)
     if (!userId) return
 
-    supabase.from('watchlist').select('mal_id').eq('user_id', userId).eq('mal_id', malId).limit(1).maybeSingle()
+    udb.from('watchlist').select('mal_id').eq('user_id', userId).eq('mal_id', malId).limit(1).maybeSingle()
       .then(({ data }) => !cancelled && setInWatchlist(!!data)).catch(() => {})
-    supabase.from('anime_episode_progress').select('episode_number, seen, seen_at')
+    udb.from('anime_episode_progress').select('episode_number, seen, seen_at')
       .eq('user_id', userId).eq('mal_id', malId).eq('seen', true)
       .then(({ data }) => {
         if (cancelled) return
@@ -149,7 +149,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
         ;(data || []).forEach((row) => { map[Number(row.episode_number)] = { seen: true, seen_at: row.seen_at } })
         setEpisodeProgress(map)
       }).catch(() => {})
-    supabase.from('currently_watching').select('last_episode, updated_at').eq('user_id', userId).eq('mal_id', malId).limit(1).maybeSingle()
+    udb.from('currently_watching').select('last_episode, updated_at').eq('user_id', userId).eq('mal_id', malId).limit(1).maybeSingle()
       .then(({ data }) => { if (!cancelled) { setLastWatched(data?.last_episode ?? null); setLastWatchedAt(data?.updated_at ?? null) } }).catch(() => {})
 
     return () => { cancelled = true }
@@ -178,7 +178,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   const markSeen = async (epNum) => {
     if (!user) return onAuthRequired?.()
     const now = new Date().toISOString()
-    const { error } = await supabase.from('anime_episode_progress').upsert(
+    const { error } = await udb.from('anime_episode_progress').upsert(
       { user_id: user.id, mal_id: malId, episode_number: Number(epNum), seen: true, seen_at: now, updated_at: now },
       { onConflict: 'user_id,mal_id,episode_number' }
     )
@@ -188,7 +188,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   const toggleSeen = async (epNum, isSeen) => {
     if (!user) return onAuthRequired?.()
     if (!isSeen) return markSeen(epNum)
-    const { error } = await supabase.from('anime_episode_progress').delete()
+    const { error } = await udb.from('anime_episode_progress').delete()
       .eq('user_id', user.id).eq('mal_id', malId).eq('episode_number', Number(epNum))
     if (!error) setEpisodeProgress((p) => { const n = { ...p }; delete n[Number(epNum)]; return n })
   }
@@ -215,10 +215,10 @@ export default function AnimeDetail({ user, onAuthRequired }) {
     if (!user) return onAuthRequired?.()
     if (!details) return
     if (inWatchlist) {
-      const { error } = await supabase.from('watchlist').delete().eq('user_id', user.id).eq('mal_id', malId)
+      const { error } = await udb.from('watchlist').delete().eq('user_id', user.id).eq('mal_id', malId)
       if (!error) { setInWatchlist(false); toast('Removed from My List') }
     } else {
-      const { error } = await supabase.from('watchlist').insert({
+      const { error } = await udb.from('watchlist').insert({
         user_id: user.id, mal_id: malId, title: details.title_english || details.title,
         poster: details.images?.jpg?.large_image_url || details.images?.jpg?.image_url || null, score: details.score,
       })

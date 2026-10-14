@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../supabase'
 import Icon from '../components/Icons'
+import PrivateHistory from '../components/PrivateHistory'
 import { registerPasskey, listPasskeys, deletePasskey, passkeysSupported } from '../lib/passkeys'
 
 export default function Profile({ user, profile, setProfile }) {
@@ -135,6 +136,8 @@ export default function Profile({ user, profile, setProfile }) {
 
         <button className="btn btn-primary btn-block" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
       </form>
+
+      <PrivateHistory user={user} />
 
       {passkeysSupported() && (
         <section style={{ marginTop: 38, borderTop: '1px solid var(--border)', paddingTop: 26 }}>

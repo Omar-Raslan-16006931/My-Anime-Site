@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import VideoPlayer from '../components/VideoPlayer'
-import { supabase } from '../supabase'
+import { udb } from '../lib/udb'
 import Icon from '../components/Icons'
 import { recordRecent } from '../lib/progress'
 import { toast } from '../lib/toast'
@@ -58,7 +58,7 @@ export default function MovieDetail({ user, onAuthRequired }) {
     setInWatchlist(false)
     if (!userId || !id) return
     let cancelled = false
-    supabase.from('watchlist').select('tmdb_id').eq('user_id', userId).eq('media_type', 'movie').eq('tmdb_id', Number(id)).maybeSingle()
+    udb.from('watchlist').select('tmdb_id').eq('user_id', userId).eq('media_type', 'movie').eq('tmdb_id', Number(id)).maybeSingle()
       .then(({ data }) => { if (!cancelled) setInWatchlist(!!data) }).catch(() => {})
     return () => { cancelled = true }
   }, [id, userId])
@@ -79,7 +79,7 @@ export default function MovieDetail({ user, onAuthRequired }) {
       backdrop: movie.backdrop_path ? `${BACKDROP}${movie.backdrop_path}` : null,
     })
     if (user) {
-      supabase.from('currently_watching_tmdb').upsert({
+      udb.from('currently_watching_tmdb').upsert({
         user_id: user.id, media_type: 'movie', tmdb_id: movie.id, title: movie.title,
         poster: movie.poster_path ? `${IMG}${movie.poster_path}` : null, score: movie.vote_average || null,
         season_number: null, last_episode: 1, total_episodes: null, updated_at: new Date().toISOString(),
@@ -92,10 +92,10 @@ export default function MovieDetail({ user, onAuthRequired }) {
     if (!user) return onAuthRequired?.()
     if (!movie) return
     if (inWatchlist) {
-      const { error } = await supabase.from('watchlist').delete().eq('user_id', user.id).eq('media_type', 'movie').eq('tmdb_id', movie.id)
+      const { error } = await udb.from('watchlist').delete().eq('user_id', user.id).eq('media_type', 'movie').eq('tmdb_id', movie.id)
       if (!error) { setInWatchlist(false); toast('Removed from My List') }
     } else {
-      const { error } = await supabase.from('watchlist').insert({
+      const { error } = await udb.from('watchlist').insert({
         user_id: user.id, media_type: 'movie', tmdb_id: movie.id, title: movie.title,
         poster: movie.poster_path ? `${IMG}${movie.poster_path}` : null, score: movie.vote_average,
       })

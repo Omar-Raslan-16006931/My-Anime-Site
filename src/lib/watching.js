@@ -1,8 +1,8 @@
-import { supabase } from '../supabase'
+import { udb } from './udb'
 
 export async function addToWatching(user, anime, episode = 1) {
   if (!user) return
-  await supabase.from('currently_watching').upsert({
+  await udb.from('currently_watching').upsert({
     user_id: user.id,
     mal_id: anime.mal_id,
     title: anime.title_english || anime.title,
@@ -15,14 +15,14 @@ export async function addToWatching(user, anime, episode = 1) {
 }
 
 export async function removeFromWatching(userId, malId) {
-  await supabase.from('currently_watching')
+  await udb.from('currently_watching')
     .delete()
     .eq('user_id', userId)
     .eq('mal_id', malId)
 }
 
 export async function getWatchingList(userId) {
-  const { data } = await supabase
+  const { data } = await udb
     .from('currently_watching')
     .select('*')
     .eq('user_id', userId)

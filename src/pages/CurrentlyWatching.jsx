@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { udb } from '../lib/udb'
 import Icon from '../components/Icons'
 import { toast } from '../lib/toast'
 
@@ -16,8 +16,8 @@ export default function CurrentlyWatching({ user, onAuthRequired }) {
     setLoading(true)
     ;(async () => {
       const [a, t] = await Promise.all([
-        supabase.from('currently_watching').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
-        supabase.from('currently_watching_tmdb').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
+        udb.from('currently_watching').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
+        udb.from('currently_watching_tmdb').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
       ])
       if (!active) return
       const merged = [
@@ -37,7 +37,7 @@ export default function CurrentlyWatching({ user, onAuthRequired }) {
     if (!confirm) return
     const item = confirm
     setConfirm(null)
-    await supabase.from(item.source_table || 'currently_watching').delete().eq('id', item.id).eq('user_id', user.id)
+    await udb.from(item.source_table || 'currently_watching').delete().eq('id', item.id).eq('user_id', user.id)
     setItems((prev) => prev.filter((x) => keyOf(x) !== keyOf(item)))
     toast(`Removed “${item.title}”`)
   }

@@ -6,7 +6,7 @@ import MediaCard from '../components/MediaCard'
 import { getPopularMovies, getPopularTV, getTmdbImage } from '../lib/tmdb'
 import { recentlyAiredEpisodes } from '../lib/anilist'
 import { animeByMalIds, animeList } from '../lib/anime'
-import { supabase } from '../supabase'
+import { udb } from '../lib/udb'
 
 const backdrop = (path) => (path ? `https://image.tmdb.org/t/p/original${path}` : null)
 
@@ -45,8 +45,8 @@ export default function Home({ user }) {
     let active = true
     ;(async () => {
       const [a, t] = await Promise.all([
-        supabase.from('currently_watching').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
-        supabase.from('currently_watching_tmdb').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
+        udb.from('currently_watching').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
+        udb.from('currently_watching_tmdb').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
       ])
       if (!active) return
       const merged = [

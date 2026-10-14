@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { udb } from '../lib/udb'
 import VideoPlayer from '../components/VideoPlayer'
 import Icon from '../components/Icons'
 import { recordRecent } from '../lib/progress'
@@ -14,7 +14,7 @@ const BACKDROP = 'https://image.tmdb.org/t/p/original'
 
 async function upsertWatching(user, d, seasonNumber, episodeNumber) {
   if (!user || !d) return
-  await supabase.from('currently_watching_tmdb').upsert({
+  await udb.from('currently_watching_tmdb').upsert({
     user_id: user.id, media_type: 'tv', tmdb_id: d.id, title: d.name,
     poster: d.poster_path ? `${IMG}${d.poster_path}` : null, score: d.vote_average || null,
     season_number: seasonNumber, last_episode: episodeNumber, total_episodes: d.number_of_episodes || null,
@@ -81,9 +81,9 @@ export default function TVDetail({ user, onAuthRequired }) {
         if (valid.length) setSelectedSeason(valid[0].season_number)
 
         if (user && json?.id) {
-          supabase.from('watchlist').select('tmdb_id').eq('user_id', user.id).eq('media_type', 'tv').eq('tmdb_id', json.id).maybeSingle()
+          udb.from('watchlist').select('tmdb_id').eq('user_id', user.id).eq('media_type', 'tv').eq('tmdb_id', json.id).maybeSingle()
             .then(({ data }) => !cancelled && setInWatchlist(!!data)).catch(() => {})
-          supabase.from('currently_watching_tmdb').select('season_number,last_episode').eq('user_id', user.id).eq('media_type', 'tv').eq('tmdb_id', json.id).maybeSingle()
+          udb.from('currently_watching_tmdb').select('season_number,last_episode').eq('user_id', user.id).eq('media_type', 'tv').eq('tmdb_id', json.id).maybeSingle()
             .then(({ data }) => {
               if (cancelled || !data) return
               setLastSeason(data.season_number ?? null); setLastEp(data.last_episode ?? null)
@@ -149,10 +149,10 @@ export default function TVDetail({ user, onAuthRequired }) {
   const toggleWatchlist = async () => {
     if (!user) return onAuthRequired?.()
     if (inWatchlist) {
-      const { error } = await supabase.from('watchlist').delete().eq('user_id', user.id).eq('media_type', 'tv').eq('tmdb_id', details.id)
+      const { error } = await udb.from('watchlist').delete().eq('user_id', user.id).eq('media_type', 'tv').eq('tmdb_id', details.id)
       if (!error) setInWatchlist(false)
     } else {
-      const { error } = await supabase.from('watchlist').insert({
+      const { error } = await udb.from('watchlist').insert({
         user_id: user.id, media_type: 'tv', tmdb_id: details.id, title: details.name,
         poster: details.poster_path ? `${IMG}${details.poster_path}` : null, score: details.vote_average,
         season_number: selectedSeason, last_episode: lastEp,

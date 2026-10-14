@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom'
 import { supabase } from './supabase'
 import Navbar from './components/Navbar'
 import AuthModal from './components/AuthModal'
@@ -16,6 +16,21 @@ import MovieDetail from './pages/MovieDetail'
 import TVDetail from './pages/TVDetail'
 import Search from './pages/Search'
 import Downloads from './pages/Downloads'
+import { initVault, subscribeVault, vaultLocked } from './lib/vault'
+import { useSyncExternalStore } from 'react'
+
+// Shown when this account uses Private history but this device hasn't been
+// unlocked yet (history + list look empty until then).
+function VaultBanner() {
+  const locked = useSyncExternalStore(subscribeVault, vaultLocked, vaultLocked)
+  const location = useLocation()
+  if (!locked || location.pathname === '/profile') return null
+  return (
+    <Link to="/profile" className="vault-banner">
+      Your private history is locked on this device. <strong>Unlock</strong>
+    </Link>
+  )
+}
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -118,6 +133,10 @@ export default function App() {
 
   const handleAuthRequired = useCallback(() => setShowAuth(true), [])
 
+  // Load this account's Private history setting (and auto-unlock if this
+  // device already has the key).
+  useEffect(() => { initVault(user?.id) }, [user?.id])
+
   if (loading) {
     return (
       <div className="app-boot">
@@ -129,6 +148,7 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar user={user} profile={profile} onAuthClick={() => setShowAuth(true)} />
+      <VaultBanner />
 
       {routeLoading && (
         <div key={'rl-' + location.pathname} className="route-loader"><span className="spinner lg" /></div>

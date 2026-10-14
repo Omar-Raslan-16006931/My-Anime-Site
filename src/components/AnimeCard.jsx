@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { udb } from '../lib/udb'
 
 export default function AnimeCard({ anime, user, onAuthRequired, compact = false }) {
   const [inWatchlist, setInWatchlist] = useState(false)
@@ -9,7 +9,7 @@ export default function AnimeCard({ anime, user, onAuthRequired, compact = false
   useEffect(() => {
     if (!user) return
 
-    supabase
+    udb
       .from('watchlist')
       .select('mal_id')
       .eq('user_id', user.id)
@@ -27,7 +27,7 @@ export default function AnimeCard({ anime, user, onAuthRequired, compact = false
 
     try {
       if (inWatchlist) {
-        const { error } = await supabase
+        const { error } = await udb
           .from('watchlist')
           .delete()
           .eq('user_id', user.id)
@@ -40,7 +40,7 @@ export default function AnimeCard({ anime, user, onAuthRequired, compact = false
 
         setInWatchlist(false)
       } else {
-        const { error } = await supabase.from('watchlist').insert({
+        const { error } = await udb.from('watchlist').insert({
           user_id: user.id,
           mal_id: anime.mal_id,
           title: anime.title_english || anime.title,
