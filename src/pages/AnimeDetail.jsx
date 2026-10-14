@@ -340,8 +340,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
       <section className="fu-eps" style={{ paddingBottom: 0 }}>
         <div className="fu-eps-head" style={{ marginBottom: 0 }}>
           <div>
-            <div className="fu-eps-eyebrow">{saga.name}{malId === 21 ? ' Saga' : ''} · EP {saga.start}–{saga.end}</div>
-            <h2 className="fu-h2">Episodes</h2>
+            <h2 className="fu-h2">{saga.end >= saga.start ? `${saga.end - saga.start + 1} ` : ''}Episodes</h2>
           </div>
           {sagas.length > 1 && (
             sagas.length > 6 || (isMobile && sagas.length > 3) ? (

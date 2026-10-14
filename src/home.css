@@ -22,12 +22,13 @@
 /* ---------- Billboard: bigger Play, My List, roomier title ---------- */
 .hero-title { line-height: 1.12; }
 .hero-actions { align-items: center; gap: 10px; }
-.hero-actions .btn.hero-play { height: 48px; min-width: 190px; padding: 0 44px; font-size: 16.5px; font-weight: 700; gap: 10px; border-radius: 8px; justify-content: center; }
+/* Same Play button as the anime / TV pages, just auto-width. */
+.hero-actions .tvh-play.hero-play { width: auto; min-width: 140px; height: 42px; padding: 0 28px; }
 .hero-list.on { color: #fff; }
 .hero-list.on svg { color: #46c46b; }
 @media (max-width: 560px) {
   .hero-actions { gap: 8px; }
-  .hero-actions .btn.hero-play { height: 44px; min-width: 150px; padding: 0 30px; font-size: 15.5px; }
+  .hero-actions .tvh-play.hero-play { min-width: 120px; padding: 0 22px; }
 }
 
 /* ---------- Smaller billboard + crisper art ---------- */

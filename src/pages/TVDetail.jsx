@@ -247,8 +247,7 @@ export default function TVDetail({ user, onAuthRequired }) {
       <section className="fu-eps">
         <div className="fu-eps-head">
           <div>
-            <div className="fu-eps-eyebrow">{(seasonData?.name || (selectedSeason ? `Season ${selectedSeason}` : 'Episodes'))}{seasonData?.episodes?.length ? ` · ${seasonData.episodes.length} Episodes` : ''}</div>
-            <h2 className="fu-h2">Episodes</h2>
+            <h2 className="fu-h2">{seasonData?.episodes?.length ? `${seasonData.episodes.length} ` : ''}Episodes</h2>
           </div>
           {seasons.length > 0 && (
             seasons.length > 6 || (isMobile && seasons.length > 3) ? (

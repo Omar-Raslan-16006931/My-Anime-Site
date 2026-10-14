@@ -69,8 +69,8 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
         </div>
         {cur.desc && <p className="hero-desc">{cur.desc}</p>}
         <div className="hero-actions">
-          <button className="btn btn-light hero-play" onClick={() => (onPlay ? onPlay(cur) : navigate(cur.href))}>
-            <Icon.play width="22" height="22" /> Play
+          <button className="tvh-play hero-play" onClick={() => (onPlay ? onPlay(cur) : navigate(cur.href))}>
+            <Icon.play width="16" height="16" /> Play
           </button>
           {onToggleList && (
             <button className={'btn btn-ghost hero-list' + (inList ? ' on' : '')} onClick={() => onToggleList(cur)} aria-pressed={inList}>

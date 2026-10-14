@@ -14,6 +14,9 @@ import { PRIORITY_CATEGORIES, normalizeGenres, categoryPath } from '../lib/categ
 const backdrop = (path) => (path ? `https://image.tmdb.org/t/p/original${path}` : null)
 const IMG = 'https://image.tmdb.org/t/p/w500'
 
+// Nothing rated below this is featured on the billboard.
+const MIN_FEATURED = 7.5
+
 // Fallback billboard if the popular picks can't load.
 const HERO_FALLBACK = [57658, 37991, 16498, 21, 5114]
 
@@ -129,17 +132,17 @@ export default function Home({ user, onAuthRequired }) {
         return null
       }
       const animePicks = await Promise.all(
-        shuffle(pop.filter((a) => a.banner && a.synopsis)).slice(0, 3).map(async (a) => {
+        shuffle(pop.filter((a) => a.banner && a.synopsis && a.score >= MIN_FEATURED)).slice(0, 3).map(async (a) => {
           const hd = await hdBackdrop(a)
           const h = animeHero(a)
           return hd ? { ...h, backdrop: hd } : h
         })
       )
-      const mv = shuffle((m?.results || []).slice(0, 10).filter((x) => x.backdrop_path && x.overview))[0]
-      const sh = shuffle((t?.results || []).slice(0, 10).filter((x) => x.backdrop_path && x.overview))[0]
+      const mv = shuffle((m?.results || []).slice(0, 20).filter((x) => x.backdrop_path && x.overview && x.vote_average >= MIN_FEATURED))[0]
+      const sh = shuffle((t?.results || []).slice(0, 20).filter((x) => x.backdrop_path && x.overview && x.vote_average >= MIN_FEATURED))[0]
       let picks = shuffle([...animePicks, mv && movieHero(mv), sh && tvHero(sh)].filter(Boolean))
 
-      if (!picks.length) picks = (await animeByMalIds(HERO_FALLBACK)).map(animeHero)
+      if (!picks.length) picks = (await animeByMalIds(HERO_FALLBACK)).filter((a) => a.score >= MIN_FEATURED).map(animeHero)
       if (!active) return
       setHeroList(picks)
       setLoading(false)
