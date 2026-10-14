@@ -337,11 +337,9 @@ export default function AnimeDetail({ user, onAuthRequired }) {
 
       {/* Episodes header with the season/saga picker — same as the TV page.
           More than 6 seasons (or more than 3 on a phone) → a drop-down. */}
-      <section className="fu-eps" style={{ paddingBottom: 0 }}>
-        <div className="fu-eps-head" style={{ marginBottom: 0 }}>
-          <div>
-            <h2 className="fu-h2">{saga.end >= saga.start ? `${saga.end - saga.start + 1} ` : ''}Episodes</h2>
-          </div>
+      <section className="fu-eps ae">
+        <div className="ae-head">
+          <h2 className="fu-h2">{saga.end >= saga.start ? `${saga.end - saga.start + 1} ` : ''}Episodes</h2>
           {sagas.length > 1 && (
             sagas.length > 6 || (isMobile && sagas.length > 3) ? (
               <Select
@@ -359,67 +357,71 @@ export default function AnimeDetail({ user, onAuthRequired }) {
             )
           )}
         </div>
-      </section>
 
-          <div className="fu-range">
-            <div className="fu-range-bar">
-              <div className="fu-range-l">
-                <h2 className="fu-h2">Episode {rangeStart}–{rangeEnd}</h2>
-                <span className="saga">{saga.name}{malId === 21 ? ' Saga' : ''}</span>
-              </div>
-              <div className="fu-pager">
-                <button className="fu-pager-btn" disabled={opPage <= 0} onClick={() => changeOpPage(-1)} aria-label="Previous page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg></button>
-                <span className="fu-pager-label">Page {opPage + 1} / {sagaPageCount}</span>
-                <button className="fu-pager-btn" disabled={opPage >= sagaPageCount - 1} onClick={() => changeOpPage(1)} aria-label="Next page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg></button>
-              </div>
-            </div>
-            <form className="fu-jump" onSubmit={(e) => { e.preventDefault(); jumpToEp(jump) }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></svg>
-              <input type="number" min="1" inputMode="numeric" placeholder="Jump to episode…" value={jump} onChange={(e) => setJump(e.target.value)} />
-              <button type="submit" className="fu-jump-go">Go</button>
-            </form>
-          </div>
-
-          <div className="fu-op-grid">
-            {opRows.map(({ num, ep }) => {
-              const seen = episodeProgress[Number(num)]?.seen
-              const thumb = ep?.images?.jpg?.image_url || poster
-              const cont = lastWatched === Number(num)
-              const mile = isMilestone(num)
-              const epTitle = milestoneTitle(num) || ep?.title || `Episode ${num}`
-              // Real info only: arc (One Piece), air date, filler/recap flags.
-              const meta = [
-                malId === 21 ? `${saga.name} Arc` : null,
-                ep?.aired ? fmtDate(ep.aired) : null,
-                ep?.filler ? 'Filler' : null,
-                ep?.recap ? 'Recap' : null,
-              ].filter(Boolean).join(' · ')
+        <div className="ae-bar">
+          <div className="ae-ranges">
+            {Array.from({ length: sagaPageCount }, (_, i) => {
+              const st = saga.start + i * OP_PER
+              const en = Math.min(st + OP_PER - 1, saga.end)
               return (
-                <div key={`${malId}-${num}`} className={'fu-op-ep' + (seen ? ' seen' : '')} onClick={() => play(num)}>
-                  <div className="fu-op-still">
-                    {thumb ? <img src={thumb} alt={`EP ${num}`} loading="lazy" /> : null}
-                    <span className="fu-op-badge">EP {num}</span>
-                    {seen && (
-                      <span className="fu-seen-check" title="Watched">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                      </span>
-                    )}
-                    {cont && <div className="fu-op-prog"><span style={{ width: '55%' }} /></div>}
-                  </div>
-                  <div className="fu-op-body">
-                    <div className="fu-op-titlerow">
-                      <h3 className="fu-op-title">{epTitle}</h3>
-                      {mile && <span className="fu-mile">Milestone</span>}
-                      {cont && <span className="fu-tag sm">Continue</span>}
-                      {seen && !cont && <span className="fu-seen-pill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>Watched</span>}
-                    </div>
-                    {meta && <div className="fu-ep-meta">{meta}</div>}
-                  </div>
-                  <button className="fu-play sm" onClick={(e) => { e.stopPropagation(); play(num) }} aria-label={`Play episode ${num}`}><Icon.play width="15" height="15" /></button>
-                </div>
+                <button key={i} type="button" className={'ae-range' + (i === opPage ? ' on' : '')} onClick={() => setOpPage(i)}>{st}–{en}</button>
               )
             })}
           </div>
+          <form className={'ae-jump' + (jump !== '' ? ' open' : '')} onSubmit={(e) => { e.preventDefault(); jumpToEp(jump) }}>
+            <label className="ae-jump-icon" aria-label="Jump to episode">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></svg>
+              <input type="number" min="1" inputMode="numeric" placeholder="Jump to ep" value={jump} onChange={(e) => setJump(e.target.value)} />
+            </label>
+            <button type="submit" className="ae-jump-go">Go</button>
+          </form>
+        </div>
+
+        <div className="ae-list">
+          {opRows.map(({ num, ep }) => {
+            const seen = !!episodeProgress[Number(num)]?.seen
+            const thumb = ep?.images?.jpg?.image_url || poster
+            const cont = lastWatched === Number(num)
+            const epTitle = milestoneTitle(num) || ep?.title || `Episode ${num}`
+            const meta = [
+              ep?.aired ? fmtDate(ep.aired) : null,
+              ep?.filler ? 'Filler' : null,
+              ep?.recap ? 'Recap' : null,
+            ].filter(Boolean)
+            return (
+              <div key={`${malId}-${num}`} className={'ae-ep' + (seen ? ' done' : '') + (cont ? ' cur' : '')} onClick={() => play(num)}>
+                <div className="ae-num">{num}</div>
+                <div className="ae-th">
+                  {thumb ? <img src={thumb} alt={`EP ${num}`} loading="lazy" /> : null}
+                  {cont && <div className="ae-pl"><span><Icon.play width="16" height="16" /></span></div>}
+                  {(cont || seen) && <div className="ae-pb"><i style={{ width: seen && !cont ? '100%' : '55%' }} /></div>}
+                </div>
+                <div className="ae-body">
+                  <h3 className="ae-title"><span className="ae-n">{num}. </span>{epTitle}</h3>
+                  <div className="ae-meta">
+                    {cont && <span className="ae-cont">Continue</span>}
+                    {seen && !cont && <span className="ae-ok">Watched</span>}
+                    {meta.map((m) => <span key={m}>{m}</span>)}
+                  </div>
+                </div>
+                <div className="ae-acts">
+                  <button
+                    type="button"
+                    className={'ae-check' + (seen ? ' on' : '')}
+                    aria-pressed={seen}
+                    aria-label={seen ? `Mark episode ${num} as not watched` : `Mark episode ${num} as watched`}
+                    title={seen ? 'Watched' : 'Mark as watched'}
+                    onClick={(e) => { e.stopPropagation(); toggleSeen(num, seen) }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                  </button>
+                  <button type="button" className="ae-play" onClick={(e) => { e.stopPropagation(); play(num) }} aria-label={`Play episode ${num}`}><Icon.play width="16" height="16" /></button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
 
       {playingEp != null && (
         <VideoPlayer
