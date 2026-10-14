@@ -137,6 +137,9 @@ export default function VideoPlayer({
   const canNext = !!onNext && hasNext && type !== 'movie'
 
   const [audio, setAudio] = useState('sub')
+  const [lightsOff, setLightsOff] = useState(false)
+  const lightsRef = useRef(false)
+  const setLights = (v) => { lightsRef.current = v; setLightsOff(v) }
   const [sourceId, setSourceId] = useState(() => getPreferredSource(type))
   const [anilistId, setAnilistId] = useState(anilistIdProp || null)
   const [idsReady, setIdsReady] = useState(type !== 'anime' || !!anilistIdProp)
@@ -200,7 +203,11 @@ export default function VideoPlayer({
     const prev = [html.style.overflow, document.body.style.overflow]
     html.style.overflow = 'hidden'
     document.body.style.overflow = 'hidden'
-    const onKey = (e) => e.key === 'Escape' && onClose?.()
+    // Esc: lights back on first; a second Esc closes the player.
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return
+      if (lightsRef.current) { lightsRef.current = false; setLightsOff(false) } else onClose?.()
+    }
     window.addEventListener('keydown', onKey)
     return () => {
       html.style.overflow = prev[0]
@@ -584,7 +591,7 @@ export default function VideoPlayer({
   const nextLabel = type === 'tv' ? `S${safeSeason} · E${safeEpisode + 1}` : `Episode ${safeEpisode + 1}`
 
   return (
-    <div className="modal player-modal" onClick={onClose}>
+    <div className={'modal player-modal' + (lightsOff ? ' lights-off' : '')} onClick={() => (lightsOff ? setLights(false) : onClose?.())}>
       <div className="modal-card player-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div style={{ minWidth: 0 }}>
@@ -642,6 +649,17 @@ export default function VideoPlayer({
               </div>
             </div>
           )}
+        </div>
+
+        <div className="player-tools">
+          <button type="button" className="pc-link" onClick={goFullscreen} title="Keeps the subtitles on screen (the player's own fullscreen hides them)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+            Fullscreen
+          </button>
+          <button type="button" className="pc-link" onClick={() => { setLights(true); toast('Lights off · press Esc or click outside to turn them on') }} title="Dim everything except the video">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z" /></svg>
+            Lights off
+          </button>
         </div>
 
         <div className="modal-body pc">
@@ -753,12 +771,6 @@ export default function VideoPlayer({
               <button type="button" className={'pc-link' + (offState === 'saved' ? ' on' : '')} onClick={saveOffline} disabled={offState !== 'idle'}>
                 <Icon.download width="14" height="14" />
                 {offState === 'saved' ? 'Saved offline' : offState === 'saving' ? 'Downloading…' : 'Save offline'}
-              </button>
-            )}
-            {overlayMode && clockLive && (
-              <button type="button" className="pc-link" onClick={goFullscreen} title="Keeps the subtitles on screen (the player's own fullscreen hides them)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
-                Fullscreen
               </button>
             )}
             {subTarget && (
