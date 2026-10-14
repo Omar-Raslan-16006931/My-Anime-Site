@@ -31,6 +31,8 @@ export default function Navbar({ user, profile, onAuthClick }) {
   const [scrolled, setScrolled] = useState(false)
   const [kbOpen, setKbOpen] = useState(false)
   const [catOpen, setCatOpen] = useState(false)
+  const [dockAway, setDockAway] = useState(false)
+  const [dockMoving, setDockMoving] = useState(false)
   const [q, setQ] = useState('')
   const menuRef = useRef(null)
   const searchRef = useRef(null)
@@ -85,6 +87,27 @@ export default function Navbar({ user, profile, onAuthClick }) {
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Floating dock: tucks away while scrolling down, returns on scroll up, and
+  // tightens slightly while the page is in motion.
+  useEffect(() => {
+    let last = window.scrollY
+    let stop = 0
+    const onScroll = () => {
+      const y = window.scrollY
+      const d = y - last
+      if (Math.abs(d) > 8) {
+        setDockAway(d > 0 && y > 140)
+        last = y
+      }
+      if (y < 60) setDockAway(false)
+      setDockMoving(true)
+      clearTimeout(stop)
+      stop = setTimeout(() => setDockMoving(false), 160)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => { window.removeEventListener('scroll', onScroll); clearTimeout(stop) }
   }, [])
 
   // Close the categories panel whenever the page changes.
@@ -188,7 +211,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
       {/* Phone tab bar: full width, pinned to the bottom. The red glow is one
           element that slides to the selected tab. */}
       <nav
-        className={'dock' + (kbOpen ? ' dock-hidden' : '')}
+        className={'dock' + (kbOpen ? ' dock-hidden' : '') + (dockAway && !catOpen ? ' dock-away' : '') + (dockMoving && !dockAway ? ' dock-moving' : '')}
         aria-label="Primary"
         style={{ '--n': NAV.length, '--i': Math.max(tab, 0) }}
       >

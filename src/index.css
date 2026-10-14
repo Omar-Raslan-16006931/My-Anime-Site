@@ -231,56 +231,56 @@ select {
 .avatar:active { opacity: 0.8; }
 .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 
-/* ---------- Phone tab bar (Netflix-style, pinned to the bottom edge) ---------- */
+/* ---------- Phone tab bar: floating liquid-glass pill ---------- */
 .dock {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 130;
+  position: fixed; z-index: 130;
+  left: 50%; bottom: calc(env(safe-area-inset-bottom) + 12px);
+  width: min(calc(100% - 28px), 420px); height: 64px; padding: 6px;
   display: grid; grid-template-columns: repeat(var(--n, 5), 1fr);
-  height: calc(var(--dock-h) + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom);   /* clear the iPhone home bar */
-  /* Solid — no backdrop blur: blur on a fixed bar judders while scrolling on iOS */
-  background: rgba(9,8,8,0.985);
-  border-top: 1px solid rgba(255,248,240,0.07);
-  /* Own compositing layer = no jitter while the page scrolls */
-  transform: translateZ(0);
-  -webkit-backface-visibility: hidden; backface-visibility: hidden;
+  border-radius: 999px;
+  /* liquid glass: translucent fill, strong blur + saturation, bright rim light */
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.04) 45%, rgba(255,255,255,0.08) 100%),
+    rgba(28,26,25,0.38);
+  -webkit-backdrop-filter: blur(22px) saturate(190%) brightness(1.05);
+  backdrop-filter: blur(22px) saturate(190%) brightness(1.05);
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.35),
+    inset 0 -1px 0 rgba(255,255,255,0.06),
+    inset 0 0 18px rgba(255,255,255,0.05),
+    0 10px 30px rgba(0,0,0,0.45);
   overflow: hidden;
-  animation: dockIn 0.45s var(--ease);
+  transform: translate3d(-50%, 0, 0);
+  transform-origin: 50% 100%;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease, width 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease;
+  animation: dockIn 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
-@keyframes dockIn { from { transform: translate3d(0, 100%, 0); } to { transform: translate3d(0, 0, 0); } }
+@keyframes dockIn { from { transform: translate3d(-50%, 140%, 0) scale(0.9); opacity: 0; } to { transform: translate3d(-50%, 0, 0); opacity: 1; } }
+/* While the page is moving the pill tightens a little; scrolling down tucks it away, scrolling up brings it back. */
+.dock.dock-moving { width: min(calc(100% - 56px), 380px); }
+.dock.dock-away { transform: translate3d(-50%, calc(100% + 28px), 0) scale(0.92); opacity: 0; pointer-events: none; }
 /* Locked in place; only removed (never moved) while the keyboard is open */
 .dock.dock-hidden { display: none; }
 
-/* The red glow under the selected tab — one element that slides between tabs. */
+/* Sliding glass bubble under the selected tab. */
 .dock-glow {
-  position: absolute; top: 0; left: 0;
-  width: calc(100% / var(--n, 5)); height: var(--dock-h);
-  pointer-events: none;
+  position: absolute; top: 6px; bottom: 6px; left: 6px;
+  width: calc((100% - 12px) / var(--n, 5));
+  border-radius: 999px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.26), rgba(255,255,255,0.1));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -6px 10px rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.25);
   transform: translate3d(calc(var(--i, 0) * 100%), 0, 0);
-  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+  transition: transform 0.55s cubic-bezier(0.34, 1.4, 0.5, 1), opacity 0.3s ease;
 }
 .dock-glow.off { opacity: 0; }
-/* thin red line on top of the selected tab */
-.dock-glow::before {
-  content: ''; position: absolute; top: 0; left: 50%;
-  width: 26px; height: 2px; margin-left: -13px; border-radius: 0 0 2px 2px;
-  background: #e5242a;
-  box-shadow: 0 0 10px 1px rgba(229,36,42,0.75);
-}
-/* soft red glow behind the icon + label */
-.dock-glow::after {
-  content: ''; position: absolute; left: 50%; top: 50%;
-  width: 64px; height: 44px; margin: -22px 0 0 -32px;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(229,36,42,0.34), rgba(229,36,42,0.12) 55%, transparent 100%);
-  animation: dockPulse 0.6s ease;
-}
-@keyframes dockPulse { from { transform: scale(0.6); opacity: 0; } }
+.dock-glow::before, .dock-glow::after { content: none; }
 
 .dock-item {
   position: relative; z-index: 1;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  height: var(--dock-h); min-width: 0;
-  color: #8a8580;
+  height: 100%; min-width: 0;
+  color: rgba(255,255,255,0.62);
   -webkit-tap-highlight-color: transparent;
   transition: color 0.3s ease;
 }
@@ -289,18 +289,18 @@ select {
   transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .dock-label {
-  font-size: 10.5px; font-weight: 500; letter-spacing: 0.01em; line-height: 1;
+  font-size: 10px; font-weight: 550; letter-spacing: 0.01em; line-height: 1;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   transition: color 0.3s ease;
 }
 .dock-item.active { color: #fff; }
-.dock-item.active svg { transform: translateY(-1px) scale(1.08); filter: drop-shadow(0 0 6px rgba(229,36,42,0.55)); }
-.dock-item.active .dock-label { font-weight: 650; }
-.dock-item:active svg { transform: scale(0.86); transition-duration: 0.12s; }
-@media (hover: hover) { .dock-item:hover { color: var(--text); } }
+.dock-item.active svg { transform: translateY(-1px) scale(1.1); }
+.dock-item.active .dock-label { font-weight: 700; }
+.dock-item:active svg { transform: scale(0.84); transition-duration: 0.12s; }
+@media (hover: hover) { .dock-item:hover { color: #fff; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .dock, .dock-glow, .dock-glow::after, .dock-item svg { animation: none; transition: none; }
+  .dock, .dock-glow, .dock-item svg { animation: none; transition: none; }
 }
 /* Desktop uses the top-bar nav — hide the floating dock.
    Placed after the base .dock rule so source order wins. */
