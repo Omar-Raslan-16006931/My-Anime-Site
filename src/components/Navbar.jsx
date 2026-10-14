@@ -19,17 +19,15 @@ const NAV = [
   { to: '/tv', label: 'TV', icon: Icon.tv, match: ['/tv'] },
   { key: 'categories', label: 'Categories', icon: Icon.grid, match: ['/category/'] },
 ]
-// Phone tab bar: Categories moved into the Search page's filters.
+// Phone tab bar. Search is a button in the top bar (next to the account).
 const DOCK = [
   { to: '/', label: 'Home', icon: Icon.home, end: true },
   { to: '/anime', label: 'Anime', icon: Icon.bolt },
   { to: '/movies', label: 'Movies', icon: Icon.film },
   { to: '/tv', label: 'TV', icon: Icon.tv },
-  { to: '/search', label: 'Search', icon: Icon.search },
 ]
 function dockTab(pathname) {
   if (pathname === '/') return 0
-  if (pathname.startsWith('/search') || pathname.startsWith('/category/')) return 4
   const i = activeTab(pathname)
   return i >= 0 && i < 4 ? i : -1
 }
@@ -199,6 +197,10 @@ export default function Navbar({ user, profile, onAuthClick }) {
             aria-label="Search anime, shows and movies"
           />
         </form>
+
+        <Link to="/search" className="topbar-search-btn" aria-label="Search">
+          <Icon.search width="20" height="20" />
+        </Link>
 
         {user ? (
           <div style={{ position: 'relative' }} ref={menuRef}>
