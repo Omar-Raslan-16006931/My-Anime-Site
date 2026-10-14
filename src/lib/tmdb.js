@@ -78,6 +78,18 @@ export async function getPopularTV(page = 1) {
   return cleanResults(await tmdbFetch('/tv/popular', { page }))
 }
 
+export async function discoverMovies(genreId, page = 1) {
+  return cleanResults(await tmdbFetch('/discover/movie', {
+    with_genres: genreId, page, sort_by: 'popularity.desc', include_adult: false, 'vote_count.gte': 50,
+  }))
+}
+
+export async function discoverTV(genreId, page = 1) {
+  return cleanResults(await tmdbFetch('/discover/tv', {
+    with_genres: genreId, page, sort_by: 'popularity.desc', include_adult: false, 'vote_count.gte': 50,
+  }))
+}
+
 export async function searchMovies(query, page = 1) {
   return cleanResults(await tmdbFetch('/search/movie', {
     query,

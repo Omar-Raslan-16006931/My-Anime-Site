@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { udb } from '../lib/udb'
 import VideoPlayer from '../components/VideoPlayer'
 import Icon from '../components/Icons'
+import GenreChips from '../components/GenreChips'
 import { recordRecent } from '../lib/progress'
 import DownloadLinks from '../components/DownloadLinks'
 import { isAdultTmdbDetails } from '../lib/tmdb'
@@ -182,7 +183,6 @@ export default function TVDetail({ user, onAuthRequired }) {
   const playLabel = resuming ? `Continue S${lastSeason} · E${lastEp}` : `Play S${selectedSeason || 1} · E${firstEp}`
   const rating = details.vote_average ? details.vote_average.toFixed(1) : null
   const seasonCount = details.number_of_seasons || seasons.length
-  const genre = details.genres?.[0]?.name
   const heroPlay = () => {
     if (lastEp && lastSeason) { setSelectedSeason(lastSeason); play(lastEp, lastSeason) }
     else play(seasonData?.episodes?.[0]?.episode_number || 1)
@@ -206,9 +206,9 @@ export default function TVDetail({ user, onAuthRequired }) {
             {rating && <span className="tvh-rating"><span aria-hidden="true">★</span> {rating}</span>}
             {year && <span>{year}</span>}
             {seasonCount > 0 && <span>{seasonCount} Season{seasonCount > 1 ? 's' : ''}</span>}
-            {genre && <span>{genre}</span>}
             {ongoing && <span>Ongoing</span>}
           </div>
+          <GenreChips genres={details.genres} className="on-art" />
           {details.overview && (
             <p className="tvh-desc" onClick={() => setSynOpen(true)} title="Read full description">{details.overview}</p>
           )}

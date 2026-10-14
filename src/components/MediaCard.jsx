@@ -34,7 +34,8 @@ export default function MediaCard({ item, onClick }) {
         {item.score ? (
           <span className="card-score"><Icon.star width="10" height="10" />{Number(item.score).toFixed(1)}</span>
         ) : null}
-        {item.kind ? <span className="card-kind">{item.kind}</span> : null}
+        {item.kind && !item.rank ? <span className="card-kind">{item.kind}</span> : null}
+        {item.rank ? <span className="card-rank" aria-hidden="true">{item.rank}</span> : null}
 
         {item.onFav && (
           <button

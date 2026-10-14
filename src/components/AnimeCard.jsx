@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { udb } from '../lib/udb'
+import { isHiddenGenre } from '../lib/categories'
 
 export default function AnimeCard({ anime, user, onAuthRequired, compact = false }) {
   const [inWatchlist, setInWatchlist] = useState(false)
@@ -174,9 +175,9 @@ export default function AnimeCard({ anime, user, onAuthRequired, compact = false
         )}
 
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {anime.genres?.slice(0, compact ? 1 : 2).map(g => (
+          {anime.genres?.filter(g => !isHiddenGenre(g.name)).slice(0, compact ? 1 : 2).map(g => (
             <span
-              key={g.mal_id}
+              key={g.mal_id || g.name}
               style={{
                 fontSize: compact ? 10 : 11,
                 padding: compact ? '2px 6px' : '2px 8px',

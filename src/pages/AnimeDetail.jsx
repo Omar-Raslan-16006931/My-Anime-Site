@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { udb } from '../lib/udb'
 import VideoPlayer from '../components/VideoPlayer'
 import Icon from '../components/Icons'
+import GenreChips from '../components/GenreChips'
+import { normalizeGenres } from '../lib/categories'
 import { recordRecent } from '../lib/progress'
 import { animeDetails, animeEpisodes, isAdultAnime } from '../lib/anime'
 import { toast } from '../lib/toast'
@@ -260,8 +262,8 @@ export default function AnimeDetail({ user, onAuthRequired }) {
 
   const poster = details.images?.jpg?.large_image_url || details.images?.jpg?.image_url
   const title = details.title_english || details.title
-  const genreNames = (details.genres || []).map((g) => g.name)
-  const eyebrow = `Anime${details.year ? ` · ${details.year}${isAiring ? '–' : ''}` : ''}${genreNames.length ? ` · ${genreNames.slice(0, 2).join(' / ')}` : ''}`
+  const genreNames = normalizeGenres(details.genres)
+  const eyebrow = `Anime${details.year ? ` · ${details.year}${isAiring ? '–' : ''}` : ''}`
   const resumeLabel = lastWatched ? `Resume EP ${lastWatched}` : 'Play'
   const share = () => {
     if (navigator.share) navigator.share({ title, url: window.location.href }).catch(() => {})
@@ -290,6 +292,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
             {sagas.length > 1 ? <><span>{sagas.length} sagas</span><span className="sep">·</span></> : null}
             <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span className={'fu-dot' + (isAiring ? '' : ' off')} />{isAiring ? 'Ongoing' : (details.status?.split(' ')[0] || 'Finished')}</span>
           </div>
+          <GenreChips genres={genreNames} className="on-art" />
           {details.synopsis && (
             <p className="fu-syn fu-syn-clickable" onClick={() => setSynOpen(true)} title="Read full description" style={{ maxWidth: 680, margin: '12px 0 0', fontSize: 13.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{details.synopsis}</p>
           )}
