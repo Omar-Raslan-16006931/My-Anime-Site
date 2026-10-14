@@ -378,7 +378,8 @@ button.dock-item { background: none; border: 0; padding: 0; font-family: inherit
 .ae-body { min-width: 0; flex: 1; }
 .ae-title { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.4; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ae-ep.done .ae-title { color: var(--text2); }
-.ae-n { color: var(--text3); font-weight: 500; }
+.ae-n { color: var(--text3); font-weight: 600; margin-right: 10px; font-variant-numeric: tabular-nums; }
+.ae-num { display: none; }
 .ae-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 7px; font-size: 12.5px; color: var(--text3); }
 .ae-cont { color: #e5484d; font-weight: 700; }
 .ae-ok { color: #46c46b; font-weight: 600; }

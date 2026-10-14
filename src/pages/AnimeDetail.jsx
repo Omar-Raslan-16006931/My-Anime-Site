@@ -382,7 +382,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
             const seen = !!episodeProgress[Number(num)]?.seen
             const thumb = ep?.images?.jpg?.image_url || poster
             const cont = lastWatched === Number(num)
-            const epTitle = milestoneTitle(num) || ep?.title || `Episode ${num}`
+            const epTitle = milestoneTitle(num) || ep?.title || null
             const meta = [
               ep?.aired ? fmtDate(ep.aired) : null,
               ep?.filler ? 'Filler' : null,
@@ -390,7 +390,6 @@ export default function AnimeDetail({ user, onAuthRequired }) {
             ].filter(Boolean)
             return (
               <div key={`${malId}-${num}`} className={'ae-ep' + (seen ? ' done' : '') + (cont ? ' cur' : '')} onClick={() => play(num)}>
-                <div className="ae-num">{num}</div>
                 <div className="ae-th">
                   {thumb ? <img src={thumb} alt={`EP ${num}`} loading="lazy" /> : null}
                   <div className="ae-pl"><span><Icon.play width="16" height="16" /></span></div>
@@ -407,7 +406,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
                   {(cont || seen) && <div className="ae-pb"><i style={{ width: seen && !cont ? '100%' : '55%' }} /></div>}
                 </div>
                 <div className="ae-body">
-                  <h3 className="ae-title"><span className="ae-n">{num}. </span>{epTitle}</h3>
+                  <h3 className="ae-title">{epTitle ? <><span className="ae-n">{num}</span>{epTitle}</> : `Episode ${num}`}</h3>
                   <div className="ae-meta">
                     {cont && <span className="ae-cont">Continue</span>}
                     {seen && !cont && <span className="ae-ok">Watched</span>}
