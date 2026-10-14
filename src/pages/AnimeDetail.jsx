@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { udb } from '../lib/udb'
 import VideoPlayer from '../components/VideoPlayer'
 import Icon from '../components/Icons'
+import GenreChips from '../components/GenreChips'
+import Select from '../components/Select'
+import { normalizeGenres } from '../lib/categories'
 import { recordRecent } from '../lib/progress'
 import { animeDetails, animeEpisodes, isAdultAnime } from '../lib/anime'
 import { toast } from '../lib/toast'
@@ -89,6 +92,15 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   const [opSaga, setOpSaga] = useState(0)
   const [opPage, setOpPage] = useState(0)
   const [synOpen, setSynOpen] = useState(false)
+  const [showDl, setShowDl] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 720px)')
+    const on = () => setIsMobile(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
 
   // Lock background scroll while the synopsis popup is open so swiping inside it
   // never drags the page behind.
@@ -260,9 +272,9 @@ export default function AnimeDetail({ user, onAuthRequired }) {
 
   const poster = details.images?.jpg?.large_image_url || details.images?.jpg?.image_url
   const title = details.title_english || details.title
-  const genreNames = (details.genres || []).map((g) => g.name)
-  const eyebrow = `Anime${details.year ? ` · ${details.year}${isAiring ? '–' : ''}` : ''}${genreNames.length ? ` · ${genreNames.slice(0, 2).join(' / ')}` : ''}`
-  const resumeLabel = lastWatched ? `Resume EP ${lastWatched}` : 'Play'
+  const genreNames = normalizeGenres(details.genres)
+  const eyebrow = `Anime${details.year ? ` · ${details.year}${isAiring ? '–' : ''}` : ''}`
+  const resumeLabel = lastWatched ? `Continue · EP ${lastWatched}` : 'Play · EP 1'
   const share = () => {
     if (navigator.share) navigator.share({ title, url: window.location.href }).catch(() => {})
     else navigator.clipboard?.writeText(window.location.href)
@@ -273,114 +285,142 @@ export default function AnimeDetail({ user, onAuthRequired }) {
     <div className="fu">
       <button className="fu-back" onClick={() => navigate(-1)} aria-label="Back"><Icon.back width="18" height="18" /></button>
 
-      <div className="fu-ophero">
-        {/* The show's own artwork is the backdrop: wide banner when AniList has
-            one, otherwise the poster, blurred into a colour field. */}
-        <div className="fu-ophero-bg">
+      {/* Same header as the TV page: artwork behind everything, title, one
+          info line, categories, short description, one main action, shortcuts. */}
+      <section className="tvh">
+        <div className="tvh-art">
           {(banner || poster) && <img src={banner || poster} alt="" className={banner ? '' : 'is-poster'} />}
-          <div className="scrim" />
         </div>
-        <div className="fu-op-poster">{poster ? <img src={poster} alt={title} loading="lazy" /> : null}</div>
-        <div className="fu-op-headinfo">
-          <div className="fu-eyebrow">{eyebrow}</div>
-          <h1 className="fu-optitle">{title}</h1>
-          <div className="fu-meta">
-            {details.score ? <><span className="strong"><span className="star">★</span>{details.score}</span><span className="sep">·</span></> : null}
-            {totalEps ? <><span><strong style={{ color: '#fff' }}>{totalEps.toLocaleString()}</strong> episodes</span><span className="sep">·</span></> : null}
-            {sagas.length > 1 ? <><span>{sagas.length} sagas</span><span className="sep">·</span></> : null}
-            <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span className={'fu-dot' + (isAiring ? '' : ' off')} />{isAiring ? 'Ongoing' : (details.status?.split(' ')[0] || 'Finished')}</span>
+        <div className="tvh-body">
+          <h1 className="tvh-title">{title}</h1>
+          <div className="tvh-meta">
+            {details.score ? <span className="tvh-rating"><span aria-hidden="true">★</span> {Number(details.score).toFixed(1)}</span> : null}
+            {details.year ? <span>{details.year}</span> : null}
+            {totalEps ? <span>{totalEps.toLocaleString()} Episode{totalEps > 1 ? 's' : ''}</span> : null}
+            {sagas.length > 1 ? <span>{sagas.length} {malId === 21 ? 'Sagas' : 'Parts'}</span> : null}
+            <span>{isAiring ? 'Ongoing' : (details.status?.split(' ')[0] || 'Finished')}</span>
           </div>
+          <GenreChips genres={genreNames} className="on-art" />
           {details.synopsis && (
-            <p className="fu-syn fu-syn-clickable" onClick={() => setSynOpen(true)} title="Read full description" style={{ maxWidth: 680, margin: '12px 0 0', fontSize: 13.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{details.synopsis}</p>
+            <p className="tvh-desc" onClick={() => setSynOpen(true)} title="Read full description">{details.synopsis}</p>
           )}
-          <div className="fu-actions" style={{ marginTop: 18 }}>
-            <button className="fu-btn fu-btn-grad" onClick={() => play(lastWatched || 1)}><Icon.play width="16" height="16" /> {resumeLabel}</button>
+
+          <button className="tvh-play" onClick={() => play(lastWatched || 1)}>
+            <Icon.play width="16" height="16" /> {resumeLabel}
+          </button>
+
+          <div className="tvh-shortcuts">
             {lastWatched && (!totalEps || lastWatched < totalEps) && (
-              <button className="fu-btn fu-btn-glass" onClick={() => play(lastWatched + 1)}><Icon.play width="15" height="15" /> Next Ep</button>
+              <button className="tvh-sc" onClick={() => play(lastWatched + 1)}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 5v14l10-7z" fill="currentColor" stroke="none" /><path d="M19 5v14" /></svg>
+                <span>Next episode</span>
+              </button>
             )}
-            <button className="fu-btn fu-btn-glass" onClick={toggleWatchlist}>
+            <button className={'tvh-sc' + (inWatchlist ? ' on' : '')} onClick={toggleWatchlist} aria-pressed={inWatchlist}>
               {inWatchlist
-                ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg> In Your List</>
-                : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg> My List</>}
+                ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
+              <span>{inWatchlist ? 'In My List' : 'My List'}</span>
             </button>
-            <button className="fu-round" aria-label="Share" onClick={share}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></svg>
+            <button className={'tvh-sc' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
+              <Icon.download width="20" height="20" />
+              <span>Download</span>
+            </button>
+            <button className="tvh-sc" onClick={share}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3" /><path d="m7 8 5-5 5 5" /><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
+              <span>Share</span>
             </button>
           </div>
-          <div className="fu-sources"><DownloadLinks title={title} /></div>
+          {showDl && <div className="tvh-dl"><DownloadLinks title={title} /></div>}
         </div>
-      </div>
+      </section>
 
-      {sagas.length > 1 && (
-            <div className="fu-sagas">
-              {sagas.map((s, i) => (
-                <button key={i} className={'fu-saga' + (i === curSaga ? ' on' : '')} onClick={() => selectSaga(i)}>
-                  <span className="nm">{s.name}</span>
-                  <span className="rg">EP {s.start}–{s.end}</span>
-                </button>
-              ))}
-            </div>
+      {/* Episodes header with the season/saga picker — same as the TV page.
+          More than 6 seasons (or more than 3 on a phone) → a drop-down. */}
+      <section className="fu-eps">
+        <div className="fu-eps-head">
+          <h2 className="fu-h2">{saga.end >= saga.start ? `${saga.end - saga.start + 1} ` : ''}Episodes</h2>
+          {sagas.length > 1 && (
+            sagas.length > 6 || (isMobile && sagas.length > 3) ? (
+              <Select
+                value={curSaga}
+                onChange={selectSaga}
+                label={malId === 21 ? 'Select saga' : 'Select part'}
+                options={sagas.map((s, i) => ({ value: i, label: `${s.name}${malId === 21 ? ' Saga' : ''} · EP ${s.start}–${s.end}` }))}
+              />
+            ) : (
+              <div className="fu-seg">
+                {sagas.map((s, i) => (
+                  <button key={i} className={'fu-seg-btn' + (i === curSaga ? ' on' : '')} onClick={() => selectSaga(i)}>{s.name}</button>
+                ))}
+              </div>
+            )
           )}
+        </div>
 
-          <div className="fu-range">
-            <div className="fu-range-bar">
-              <div className="fu-range-l">
-                <h2 className="fu-h2">Episode {rangeStart}–{rangeEnd}</h2>
-                <span className="saga">{saga.name}{malId === 21 ? ' Saga' : ''}</span>
-              </div>
-              <div className="fu-pager">
-                <button className="fu-pager-btn" disabled={opPage <= 0} onClick={() => changeOpPage(-1)} aria-label="Previous page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg></button>
-                <span className="fu-pager-label">Page {opPage + 1} / {sagaPageCount}</span>
-                <button className="fu-pager-btn" disabled={opPage >= sagaPageCount - 1} onClick={() => changeOpPage(1)} aria-label="Next page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg></button>
-              </div>
-            </div>
-            <form className="fu-jump" onSubmit={(e) => { e.preventDefault(); jumpToEp(jump) }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></svg>
-              <input type="number" min="1" inputMode="numeric" placeholder="Jump to episode…" value={jump} onChange={(e) => setJump(e.target.value)} />
-              <button type="submit" className="fu-jump-go">Go</button>
-            </form>
-          </div>
-
-          <div className="fu-op-grid">
-            {opRows.map(({ num, ep }) => {
-              const seen = episodeProgress[Number(num)]?.seen
-              const thumb = ep?.images?.jpg?.image_url || poster
-              const cont = lastWatched === Number(num)
-              const mile = isMilestone(num)
-              const epTitle = milestoneTitle(num) || ep?.title || `Episode ${num}`
-              // Real info only: arc (One Piece), air date, filler/recap flags.
-              const meta = [
-                malId === 21 ? `${saga.name} Arc` : null,
-                ep?.aired ? fmtDate(ep.aired) : null,
-                ep?.filler ? 'Filler' : null,
-                ep?.recap ? 'Recap' : null,
-              ].filter(Boolean).join(' · ')
+        <div className="ae-bar">
+          <div className="ae-ranges">
+            {Array.from({ length: sagaPageCount }, (_, i) => {
+              const st = saga.start + i * OP_PER
+              const en = Math.min(st + OP_PER - 1, saga.end)
               return (
-                <div key={`${malId}-${num}`} className={'fu-op-ep' + (seen ? ' seen' : '')} onClick={() => play(num)}>
-                  <div className="fu-op-still">
-                    {thumb ? <img src={thumb} alt={`EP ${num}`} loading="lazy" /> : null}
-                    <span className="fu-op-badge">EP {num}</span>
-                    {seen && (
-                      <span className="fu-seen-check" title="Watched">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                      </span>
-                    )}
-                    {cont && <div className="fu-op-prog"><span style={{ width: '55%' }} /></div>}
-                  </div>
-                  <div className="fu-op-body">
-                    <div className="fu-op-titlerow">
-                      <h3 className="fu-op-title">{epTitle}</h3>
-                      {mile && <span className="fu-mile">Milestone</span>}
-                      {cont && <span className="fu-tag sm">Continue</span>}
-                      {seen && !cont && <span className="fu-seen-pill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>Watched</span>}
-                    </div>
-                    {meta && <div className="fu-ep-meta">{meta}</div>}
-                  </div>
-                  <button className="fu-play sm" onClick={(e) => { e.stopPropagation(); play(num) }} aria-label={`Play episode ${num}`}><Icon.play width="15" height="15" /></button>
-                </div>
+                <button key={i} type="button" className={'ae-range' + (i === opPage ? ' on' : '')} onClick={() => setOpPage(i)}>{st}–{en}</button>
               )
             })}
           </div>
+          <form className={'ae-jump' + (jump !== '' ? ' open' : '')} onSubmit={(e) => { e.preventDefault(); jumpToEp(jump) }}>
+            <label className="ae-jump-icon" aria-label="Jump to episode">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></svg>
+              <input type="number" min="1" inputMode="numeric" placeholder="Jump to ep" value={jump} onChange={(e) => setJump(e.target.value)} />
+            </label>
+            <button type="submit" className="ae-jump-go">Go</button>
+          </form>
+        </div>
+
+        <div className="fu-ep-list">
+          {opRows.map(({ num, ep }) => {
+            const seen = !!episodeProgress[Number(num)]?.seen
+            const thumb = ep?.images?.jpg?.image_url || poster
+            const isLast = lastWatched === Number(num)
+            const epTitle = milestoneTitle(num) || ep?.title || `Episode ${num}`
+            const meta = [
+              ep?.aired ? fmtDate(ep.aired) : null,
+              ep?.filler ? 'Filler' : null,
+              ep?.recap ? 'Recap' : null,
+            ].filter(Boolean).join(' · ')
+            return (
+              <div key={`${malId}-${num}`} className={'fu-ep' + (seen ? ' seen' : '')} onClick={() => play(num)}>
+                <div className="fu-still">
+                  {thumb ? <img src={thumb} alt={`EP ${num}`} loading="lazy" /> : null}
+                  <span className="fu-ep-badge">EP {num}</span>
+                  {seen && (
+                    <button
+                      type="button"
+                      className="fu-seen-check"
+                      title="Watched (tap to unmark)"
+                      aria-label={`Unmark episode ${num} as watched`}
+                      onClick={(e) => { e.stopPropagation(); toggleSeen(num, true) }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                    </button>
+                  )}
+                </div>
+                <div className="fu-ep-body">
+                  <div className="fu-ep-titlerow">
+                    <h3 className="fu-ep-title">{epTitle}</h3>
+                    {isLast && <span className="fu-tag">Continue</span>}
+                    {seen && !isLast && (
+                      <span className="fu-seen-pill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>Watched</span>
+                    )}
+                  </div>
+                  {meta && <div className="fu-ep-meta">{meta}</div>}
+                </div>
+                <div className="fu-play" onClick={(e) => { e.stopPropagation(); play(num) }}><Icon.play width="18" height="18" /></div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
 
       {playingEp != null && (
         <VideoPlayer

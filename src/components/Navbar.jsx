@@ -2,24 +2,35 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../supabase'
 import Icon from './Icons'
+import CategoryMenu from './CategoryMenu'
 import { isNative } from '../lib/native'
 
-// Brand wordmark — change this to whatever you'd like the site called.
-const BRAND = 'Fuck The Jews'
+// Brand wordmark.
+const BRAND = 'AniWave'
 
-// In the iPhone app, "Downloads" takes List's spot in the bottom bar (My List
-// stays reachable from the profile menu). The website keeps List.
+// Primary navigation. My List (and Downloads in the iPhone app) live in the
+// profile menu; "Categories" opens the categories panel instead of a page.
 // `match` = path prefixes that count as this tab (so the tab stays lit on
 // detail pages, e.g. /anime/21 keeps "Anime" selected).
 const NAV = [
   { to: '/', label: 'Home', icon: Icon.home, end: true, match: [] },
   { to: '/anime', label: 'Anime', icon: Icon.bolt, match: ['/anime'] },
-  { to: '/tv', label: 'TV', icon: Icon.tv, match: ['/tv'] },
   { to: '/movies', label: 'Movies', icon: Icon.film, match: ['/movies', '/movie/'] },
-  isNative
-    ? { to: '/downloads', label: 'Downloads', icon: Icon.download, match: ['/downloads'] }
-    : { to: '/watchlist', label: 'List', icon: Icon.bookmark, match: ['/watchlist'] },
+  { to: '/tv', label: 'TV', icon: Icon.tv, match: ['/tv'] },
+  { key: 'categories', label: 'Categories', icon: Icon.grid, match: ['/category/'] },
 ]
+// Phone tab bar. Search is a button in the top bar (next to the account).
+const DOCK = [
+  { to: '/', label: 'Home', icon: Icon.home, end: true },
+  { to: '/anime', label: 'Anime', icon: Icon.bolt },
+  { to: '/movies', label: 'Movies', icon: Icon.film },
+  { to: '/tv', label: 'TV', icon: Icon.tv },
+]
+function dockTab(pathname) {
+  if (pathname === '/') return 0
+  const i = activeTab(pathname)
+  return i >= 0 && i < 4 ? i : -1
+}
 
 function activeTab(pathname) {
   if (pathname === '/') return 0
@@ -30,12 +41,16 @@ export default function Navbar({ user, profile, onAuthClick }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [kbOpen, setKbOpen] = useState(false)
+  const [catOpen, setCatOpen] = useState(false)
+  const [dockAway, setDockAway] = useState(false)
+  const [dockMoving, setDockMoving] = useState(false)
   const [q, setQ] = useState('')
   const menuRef = useRef(null)
+  const searchRef = useRef(null)
   const baseVHRef = useRef(0)
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const tab = activeTab(pathname)
+  const tab = dockTab(pathname)
 
   // The dock is locked to the bottom and never repositioned. The ONLY thing we
   // do for the keyboard is remove it while the keyboard is open. Detection works
@@ -51,10 +66,6 @@ export default function Navbar({ user, profile, onAuthClick }) {
     let showTimer = 0
     const apply = (open) => {
       clearTimeout(showTimer)
-      // Hide the dock immediately when the keyboard opens, but only re-show it
-      // once viewport events have gone quiet (~300ms) — i.e. after the close
-      // animation has fully settled. iOS shoves fixed elements around during the
-      // close, so showing mid-animation is what made the dock appear to bounce.
       if (open) setKbOpen(true)
       else showTimer = setTimeout(() => setKbOpen(false), 300)
     }
@@ -80,13 +91,38 @@ export default function Navbar({ user, profile, onAuthClick }) {
     }
   }, [])
 
-  // Transparent over the hero, frosted once you scroll.
+  // On the home page (PC) the bar sits see-through over the banner and turns
+  // solid black once you scroll. Phones always get the solid bar.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8)
+    const onScroll = () => setScrolled(window.scrollY > 30)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  // Floating dock: tucks away while scrolling down, returns on scroll up, and
+  // tightens slightly while the page is in motion.
+  useEffect(() => {
+    let last = window.scrollY
+    let stop = 0
+    const onScroll = () => {
+      const y = window.scrollY
+      const d = y - last
+      if (Math.abs(d) > 8) {
+        setDockAway(d > 0 && y > 140)
+        last = y
+      }
+      if (y < 60) setDockAway(false)
+      setDockMoving(true)
+      clearTimeout(stop)
+      stop = setTimeout(() => setDockMoving(false), 160)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => { window.removeEventListener('scroll', onScroll); clearTimeout(stop) }
+  }, [])
+
+  // Close the categories panel whenever the page changes.
+  useEffect(() => { setCatOpen(false) }, [pathname])
 
   useEffect(() => {
     const onClick = (e) => {
@@ -112,17 +148,26 @@ export default function Navbar({ user, profile, onAuthClick }) {
   }
 
   const initial = (profile?.username || user?.email || 'G')[0].toUpperCase()
+  const overHero = pathname === '/' && !scrolled && !catOpen
 
   return (
     <>
-      <header className={'topbar' + (scrolled ? ' scrolled' : '')}>
-        <Link to="/" className="brand">
-          <span className="brand-dot" />
-          {BRAND}
-        </Link>
+      <header className={'topbar' + (scrolled ? ' scrolled' : '') + (overHero ? ' over-hero' : '')}>
+        <Link to="/" className="brand">{BRAND}</Link>
 
         <nav className="nav-links">
-          {NAV.map((n) => (
+          {NAV.map((n) => n.key === 'categories' ? (
+            <button
+              key={n.key}
+              type="button"
+              className={'nav-link' + (catOpen || pathname.startsWith('/category/') ? ' active' : '')}
+              aria-expanded={catOpen}
+              onClick={() => setCatOpen((v) => !v)}
+            >
+              {n.label}
+              <svg className={'nav-caret' + (catOpen ? ' up' : '')} viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+          ) : (
             <NavLink
               key={n.to}
               to={n.to}
@@ -136,17 +181,26 @@ export default function Navbar({ user, profile, onAuthClick }) {
 
         <div className="topbar-spacer" />
 
-        <form className="topbar-search" onSubmit={submitSearch}>
-          <Icon.search width="16" height="16" />
+        <form
+          className={'topbar-search' + (q ? ' has-text' : '')}
+          onSubmit={submitSearch}
+          onClick={() => { if (window.innerWidth >= 880) navigate('/search'); else searchRef.current?.focus() }}
+        >
+          <Icon.search width="17" height="17" />
           <input
+            ref={searchRef}
             type="search"
             enterKeyHint="search"
-            placeholder="Search…"
+            placeholder="Search titles"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             aria-label="Search anime, shows and movies"
           />
         </form>
+
+        <Link to="/search" className="topbar-search-btn" aria-label="Search">
+          <Icon.search width="20" height="20" />
+        </Link>
 
         {user ? (
           <div style={{ position: 'relative' }} ref={menuRef}>
@@ -159,6 +213,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
                 <button className="menu-item" onClick={() => { navigate('/profile'); setMenuOpen(false) }}>Profile</button>
                 <button className="menu-item" onClick={() => { navigate('/currently-watching'); setMenuOpen(false) }}>Currently Watching</button>
                 <button className="menu-item" onClick={() => { navigate('/watchlist'); setMenuOpen(false) }}>My List</button>
+                {isNative && <button className="menu-item" onClick={() => { navigate('/downloads'); setMenuOpen(false) }}>Downloads</button>}
                 <button className="menu-item danger" onClick={handleLogout}>Log out</button>
               </div>
             )}
@@ -171,12 +226,12 @@ export default function Navbar({ user, profile, onAuthClick }) {
       {/* Phone tab bar: full width, pinned to the bottom. The red glow is one
           element that slides to the selected tab. */}
       <nav
-        className={'dock' + (kbOpen ? ' dock-hidden' : '')}
+        className={'dock' + (kbOpen ? ' dock-hidden' : '') + (dockAway ? ' dock-away' : '') + (dockMoving && !dockAway ? ' dock-moving' : '')}
         aria-label="Primary"
-        style={{ '--n': NAV.length, '--i': Math.max(tab, 0) }}
+        style={{ '--n': DOCK.length, '--i': Math.max(tab, 0) }}
       >
         <span className={'dock-glow' + (tab < 0 ? ' off' : '')} aria-hidden="true" />
-        {NAV.map((n, i) => (
+        {DOCK.map((n, i) => (
           <NavLink
             key={n.to}
             to={n.to}
@@ -189,6 +244,8 @@ export default function Navbar({ user, profile, onAuthClick }) {
           </NavLink>
         ))}
       </nav>
+
+      <CategoryMenu open={catOpen} onClose={() => setCatOpen(false)} />
     </>
   )
 }

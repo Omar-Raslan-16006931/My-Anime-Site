@@ -78,6 +78,23 @@ export async function getPopularTV(page = 1) {
   return cleanResults(await tmdbFetch('/tv/popular', { page }))
 }
 
+// Genuinely weekly: TMDB's "trending this week" across movies and TV (ranked).
+export async function getTrendingWeek(page = 1) {
+  return cleanResults(await tmdbFetch('/trending/all/week', { page }))
+}
+
+export async function discoverMovies(genreId, page = 1) {
+  return cleanResults(await tmdbFetch('/discover/movie', {
+    with_genres: genreId, page, sort_by: 'popularity.desc', include_adult: false, 'vote_count.gte': 50,
+  }))
+}
+
+export async function discoverTV(genreId, page = 1) {
+  return cleanResults(await tmdbFetch('/discover/tv', {
+    with_genres: genreId, page, sort_by: 'popularity.desc', include_adult: false, 'vote_count.gte': 50,
+  }))
+}
+
 export async function searchMovies(query, page = 1) {
   return cleanResults(await tmdbFetch('/search/movie', {
     query,

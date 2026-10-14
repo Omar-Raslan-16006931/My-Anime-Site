@@ -7,7 +7,10 @@
 //
 // Adult content (hentai / erotica) is filtered out of EVERYTHING here.
 
+import { HIDDEN_GENRES, isHiddenGenre } from './categories'
+
 const ANILIST = 'https://graphql.anilist.co'
+const NOT_GENRES = JSON.stringify(HIDDEN_GENRES) // AniList genre_not_in literal
 const JIKAN = 'https://api.jikan.moe/v4'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -88,7 +91,12 @@ export function isAdultAnime(a) {
   return genres.some((g) => ADULT_GENRES.has(g))
 }
 
-export const safeList = (arr) => (Array.isArray(arr) ? arr.filter((a) => a && a.mal_id && !isAdultAnime(a)) : [])
+// Titles tagged with a site-hidden genre (see lib/categories.js) never show up.
+const hasHiddenGenre = (a) =>
+  [...(a.genres || []), ...(a.explicit_genres || [])].some((g) => isHiddenGenre(typeof g === 'string' ? g : g?.name))
+
+export const safeList = (arr) =>
+  Array.isArray(arr) ? arr.filter((a) => a && a.mal_id && !isAdultAnime(a) && !hasHiddenGenre(a)) : []
 
 // ── AniList → Jikan-shaped object (so pages can use either source) ──────────
 const MEDIA_FIELDS = `id idMal isAdult format status episodes seasonYear averageScore genres
@@ -146,7 +154,7 @@ export async function searchAnime(q, limit = 30) {
 
   const d = await anilist(
     `query($s: String, $n: Int) { Page(perPage: $n) {
-      media(type: ANIME, isAdult: false, search: $s, sort: [SEARCH_MATCH, POPULARITY_DESC]) { ${MEDIA_FIELDS} }
+      media(type: ANIME, isAdult: false, genre_not_in: ${NOT_GENRES}, search: $s, sort: [SEARCH_MATCH, POPULARITY_DESC]) { ${MEDIA_FIELDS} }
     } }`,
     { s: query, n: limit }
   )
@@ -165,17 +173,21 @@ const LIST_FILTER = {
   trending: 'sort: [TRENDING_DESC, POPULARITY_DESC]',
   popular: 'sort: POPULARITY_DESC',
   airing: 'status: RELEASING, sort: POPULARITY_DESC',
+  top: 'sort: SCORE_DESC',
+  movies: 'format: MOVIE, sort: POPULARITY_DESC',
 }
 const LIST_JIKAN = {
   trending: '/top/anime?filter=airing&sfw=true',
   popular: '/top/anime?filter=bypopularity&sfw=true',
   airing: '/seasons/now?sfw=true',
+  top: '/top/anime?sfw=true',
+  movies: '/top/anime?type=movie&filter=bypopularity&sfw=true',
 }
 
 export async function animeList(kind = 'trending', limit = 20) {
   const filter = LIST_FILTER[kind] || LIST_FILTER.trending
   const d = await anilist(
-    `query($n: Int) { Page(perPage: $n) { media(type: ANIME, isAdult: false, ${filter}) { ${MEDIA_FIELDS} } } }`,
+    `query($n: Int) { Page(perPage: $n) { media(type: ANIME, isAdult: false, genre_not_in: ${NOT_GENRES}, ${filter}) { ${MEDIA_FIELDS} } } }`,
     { n: limit }
   )
   const fromA = mapAniList(d?.Page?.media)
@@ -183,6 +195,42 @@ export async function animeList(kind = 'trending', limit = 20) {
 
   const j = await jikanGet(`${LIST_JIKAN[kind] || LIST_JIKAN.trending}&limit=${limit}`)
   return safeList(j?.data)
+}
+
+// ── Cover art for category tiles: the top title of each category ────────────
+// One request for all categories. Each gets the most popular title in that
+// category (= the first one on its category page); if that title was already
+// used for an earlier tile, the next one down is used so tiles don't repeat.
+// → { [genre]: { banner, poster, title } }
+export async function animeCategoryArt(genres) {
+  const parts = genres.map((g, i) =>
+    `g${i}: Page(perPage: 6) { media(type: ANIME, isAdult: false, genre: ${JSON.stringify(g)}, genre_not_in: ${NOT_GENRES}, sort: POPULARITY_DESC) { id bannerImage coverImage { extraLarge } title { english romaji } } }`
+  ).join('\n')
+  const d = await anilist(`query { ${parts} }`)
+  const out = {}
+  const used = new Set()
+  genres.forEach((g, i) => {
+    const media = d?.[`g${i}`]?.media || []
+    const pick = media.find((m) => !used.has(m.id) && m.bannerImage) || media.find((m) => !used.has(m.id)) || media[0]
+    if (!pick) return
+    used.add(pick.id)
+    out[g] = { banner: pick.bannerImage || null, poster: pick.coverImage?.extraLarge || null, title: pick.title?.english || pick.title?.romaji }
+  })
+  return out
+}
+
+// ── One category (genre), most popular first, paged → { list, hasNext } ─────
+export async function animeByGenre(genre, page = 1, perPage = 30) {
+  if (isHiddenGenre(genre)) return { list: [], hasNext: false }
+  const d = await anilist(
+    `query($g: String, $p: Int, $n: Int) { Page(page: $p, perPage: $n) {
+      pageInfo { hasNextPage }
+      media(type: ANIME, isAdult: false, genre: $g, genre_not_in: ${NOT_GENRES}, sort: POPULARITY_DESC) { ${MEDIA_FIELDS} }
+    } }`,
+    { g: genre, p: page, n: perPage }
+  )
+  if (!d?.Page) return { list: [], hasNext: false, failed: true }
+  return { list: mapAniList(d.Page.media) || [], hasNext: !!d.Page.pageInfo?.hasNextPage }
 }
 
 // ── Several titles by MAL id, in the given order (hero billboard) ───────────
@@ -246,4 +294,34 @@ export async function animeEpisodes(malId, isCancelled = () => false) {
     page += 1
   }
   return all
+}
+
+// ── Search with category filters ────────────────────────────────────────────
+// Text and/or one or more categories. A title must have ALL selected
+// categories. AniList can only filter by one genre per query, so we pull three
+// pages of the first one and narrow the rest client-side.
+export async function searchAnimeFiltered({ q = '', genres = [], minScore = 0 }) {
+  const want = genres.filter((g) => !isHiddenGenre(g))
+  const query = String(q || '').trim()
+  if (!query && !want.length) return []
+  const pages = want.length > 1 ? 3 : 1
+  const args = [
+    'type: ANIME', 'isAdult: false', `genre_not_in: ${NOT_GENRES}`,
+    query ? 'search: $s' : null,
+    want.length ? 'genre: $g' : null,
+    query ? 'sort: [SEARCH_MATCH, POPULARITY_DESC]' : 'sort: POPULARITY_DESC',
+  ].filter(Boolean).join(', ')
+  const decl = [query ? '$s: String' : null, want.length ? '$g: String' : null].filter(Boolean).join(', ')
+  const body = Array.from({ length: pages }, (_, i) =>
+    `p${i}: Page(page: ${i + 1}, perPage: 50) { media(${args}) { ${MEDIA_FIELDS} } }`).join('\n')
+  const d = await anilist(`query${decl ? `(${decl})` : ''} { ${body} }`, { ...(query ? { s: query } : {}), ...(want.length ? { g: want[0] } : {}) })
+  if (!d) throw new Error('Search is temporarily unavailable')
+  const all = Array.from({ length: pages }, (_, i) => d[`p${i}`]?.media || []).flat()
+  const seen = new Set()
+  return safeList(all.map(fromAniList)).filter((a) => {
+    if (seen.has(a.mal_id)) return false
+    seen.add(a.mal_id)
+    const names = (a.genres || []).map((g) => g.name)
+    return want.every((g) => names.includes(g)) && (!minScore || (a.score || 0) >= minScore)
+  })
 }

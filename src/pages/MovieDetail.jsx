@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import VideoPlayer from '../components/VideoPlayer'
 import { udb } from '../lib/udb'
 import Icon from '../components/Icons'
+import GenreChips from '../components/GenreChips'
 import { recordRecent } from '../lib/progress'
 import { toast } from '../lib/toast'
 import Row from '../components/Row'
@@ -123,7 +124,6 @@ export default function MovieDetail({ user, onAuthRequired }) {
   const year = movie.release_date ? movie.release_date.slice(0, 4) : null
   const rating = movie.vote_average ? movie.vote_average.toFixed(1) : null
   const runtime = fmtRuntime(movie.runtime)
-  const genres = (movie.genres || []).slice(0, 2).map((g) => g.name)
   const backdrop = movie.backdrop_path ? `${BACKDROP}${movie.backdrop_path}` : null
   const upcoming = movie.status && movie.status !== 'Released'
   const cast = (movie.credits?.cast || []).filter((c) => c.name).slice(0, 14)
@@ -145,9 +145,9 @@ export default function MovieDetail({ user, onAuthRequired }) {
             {rating && <span className="tvh-rating"><span aria-hidden="true">★</span> {rating}</span>}
             {year && <span>{year}</span>}
             {runtime && <span>{runtime}</span>}
-            {genres.map((g) => <span key={g}>{g}</span>)}
             {upcoming && <span>{movie.status}</span>}
           </div>
+          <GenreChips genres={movie.genres} className="on-art" />
           {movie.overview && (
             <p className="tvh-desc" onClick={() => setSynOpen(true)} title="Read full description">{movie.overview}</p>
           )}

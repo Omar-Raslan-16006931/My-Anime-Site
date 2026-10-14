@@ -16,6 +16,7 @@ import MovieDetail from './pages/MovieDetail'
 import TVDetail from './pages/TVDetail'
 import Search from './pages/Search'
 import Downloads from './pages/Downloads'
+import Category from './pages/Category'
 import { initVault, subscribeVault, vaultLocked } from './lib/vault'
 import { useSyncExternalStore } from 'react'
 
@@ -159,6 +160,7 @@ export default function App() {
           <Route path="/" element={<Home user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/search" element={<Search />} />
           <Route path="/downloads" element={<Downloads />} />
+          <Route path="/category/:name" element={<Category />} />
           <Route path="/anime" element={<Anime />} />
           <Route path="/movies" element={<Movies />} />
           <Route path="/tv" element={<TVShows />} />
