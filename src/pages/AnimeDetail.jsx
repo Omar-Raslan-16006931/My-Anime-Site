@@ -393,7 +393,17 @@ export default function AnimeDetail({ user, onAuthRequired }) {
                 <div className="ae-num">{num}</div>
                 <div className="ae-th">
                   {thumb ? <img src={thumb} alt={`EP ${num}`} loading="lazy" /> : null}
-                  {cont && <div className="ae-pl"><span><Icon.play width="16" height="16" /></span></div>}
+                  <div className="ae-pl"><span><Icon.play width="16" height="16" /></span></div>
+                  <button
+                    type="button"
+                    className={'ae-check' + (seen ? ' on' : '')}
+                    aria-pressed={seen}
+                    aria-label={seen ? `Mark episode ${num} as not watched` : `Mark episode ${num} as watched`}
+                    title={seen ? 'Watched · tap to undo' : 'Mark as watched'}
+                    onClick={(e) => { e.stopPropagation(); toggleSeen(num, seen) }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                  </button>
                   {(cont || seen) && <div className="ae-pb"><i style={{ width: seen && !cont ? '100%' : '55%' }} /></div>}
                 </div>
                 <div className="ae-body">
@@ -403,19 +413,6 @@ export default function AnimeDetail({ user, onAuthRequired }) {
                     {seen && !cont && <span className="ae-ok">Watched</span>}
                     {meta.map((m) => <span key={m}>{m}</span>)}
                   </div>
-                </div>
-                <div className="ae-acts">
-                  <button
-                    type="button"
-                    className={'ae-check' + (seen ? ' on' : '')}
-                    aria-pressed={seen}
-                    aria-label={seen ? `Mark episode ${num} as not watched` : `Mark episode ${num} as watched`}
-                    title={seen ? 'Watched' : 'Mark as watched'}
-                    onClick={(e) => { e.stopPropagation(); toggleSeen(num, seen) }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                  </button>
-                  <button type="button" className="ae-play" onClick={(e) => { e.stopPropagation(); play(num) }} aria-label={`Play episode ${num}`}><Icon.play width="16" height="16" /></button>
                 </div>
               </div>
             )

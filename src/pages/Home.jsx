@@ -4,7 +4,7 @@ import Hero from '../components/Hero'
 import Row from '../components/Row'
 import MediaCard from '../components/MediaCard'
 import WideCard from '../components/WideCard'
-import { getPopularMovies, getPopularTV, getTmdbImage, searchTV } from '../lib/tmdb'
+import { getPopularMovies, getPopularTV, getTrendingWeek, getTmdbImage, searchTV } from '../lib/tmdb'
 import { recentlyAiredEpisodes } from '../lib/anilist'
 import { animeByMalIds, animeList, animeCategoryArt } from '../lib/anime'
 import { udb } from '../lib/udb'
@@ -15,7 +15,11 @@ const backdrop = (path) => (path ? `https://image.tmdb.org/t/p/original${path}` 
 const IMG = 'https://image.tmdb.org/t/p/w500'
 
 // Nothing rated below this is featured on the billboard.
-const MIN_FEATURED = 7.5
+const MIN_FEATURED = 8
+// Nothing rated below this appears anywhere on the home page.
+const MIN_HOME = 7
+const okA = (a) => (a?.score || 0) >= MIN_HOME
+const okT = (x) => (x?.vote_average || 0) >= MIN_HOME
 
 // Fallback billboard if the popular picks can't load.
 const HERO_FALLBACK = [57658, 37991, 16498, 21, 5114]
@@ -69,6 +73,7 @@ export default function Home({ user, onAuthRequired }) {
   const [watching, setWatching] = useState([])
   const [catArt, setCatArt] = useState({})
   const [listKeys, setListKeys] = useState(() => new Set())
+  const [weekTop, setWeekTop] = useState([])
   const [loading, setLoading] = useState(true)
 
   // Currently Watching — sourced from the database (not local storage).
@@ -114,8 +119,8 @@ export default function Home({ user, onAuthRequired }) {
       getPopularTV().catch(() => null),
     ]).then(async ([pop, m, t]) => {
       if (!active) return
-      setMovies(m?.results || [])
-      setTv(t?.results || [])
+      setMovies((m?.results || []).filter(okT))
+      setTv((t?.results || []).filter(okT))
 
       // AniList banners are tiny (~1900×400) and look soft when stretched over
       // the billboard, so look up the full-HD TMDB backdrop for the same show.
@@ -148,11 +153,17 @@ export default function Home({ user, onAuthRequired }) {
       setLoading(false)
     })
 
-    animeList('trending', 30).then((l) => { if (active) setTrending(l) })
-    animeList('airing', 30).then((l) => { if (active) setAiring(l) })
-    animeList('movies', 20).then((l) => { if (active) setAnimeMovies(l) })
-    animeList('top', 20).then((l) => { if (active) setTopRated(l) })
-    recentlyAiredEpisodes(24).then((eps) => { if (active) setRecentEps(eps) })
+    animeList('trending', 50).then((l) => { if (active) setTrending(l.filter(okA)) })
+    animeList('airing', 50).then((l) => { if (active) setAiring(l.filter(okA)) })
+    animeList('movies', 30).then((l) => { if (active) setAnimeMovies(l.filter(okA)) })
+    animeList('top', 20).then((l) => { if (active) setTopRated(l.filter(okA)) })
+    recentlyAiredEpisodes(40).then((eps) => { if (active) setRecentEps(eps.filter((e) => (e.score || 0) >= MIN_HOME)) })
+    // Real weekly chart: TMDB's trending-this-week (movies + TV), 7+ only.
+    Promise.all([getTrendingWeek(1), getTrendingWeek(2)].map((p) => p.catch(() => null))).then((pages) => {
+      if (!active) return
+      const all = pages.flatMap((d) => d?.results || []).filter((x) => (x.media_type === 'movie' || x.media_type === 'tv') && x.poster_path && okT(x))
+      setWeekTop(all.slice(0, 10))
+    })
     animeCategoryArt(PRIORITY_CATEGORIES).then((art) => { if (active) setCatArt(art) })
 
     return () => { active = false }
@@ -252,12 +263,12 @@ export default function Home({ user, onAuthRequired }) {
         })}
       </Row>
 
-      <Row title="Top 10 This Week" loading={!trending.length}>
-        {trending.slice(0, 10).map((a, i) => <MediaCard key={a.mal_id} item={{ ...animeCard(a), rank: i + 1 }} />)}
+      <Row title="Top 10 This Week" loading={!weekTop.length}>
+        {weekTop.map((x, i) => <MediaCard key={x.media_type + x.id} item={{ ...(x.media_type === 'movie' ? movieCard(x) : tvCard({ ...x, name: x.name || x.title })), rank: i + 1 }} />)}
       </Row>
 
-      <Row title="Trending Now" loading={!trending.length} onMore={() => navigate('/anime')}>
-        {trending.slice(10).map((a) => <MediaCard key={a.mal_id} item={animeCard(a)} />)}
+      <Row title="Trending Anime" loading={!trending.length} onMore={() => navigate('/anime')}>
+        {trending.map((a) => <MediaCard key={a.mal_id} item={animeCard(a)} />)}
       </Row>
 
       <Row title="Currently Airing" wide loading={!airing.length} onMore={() => navigate('/anime')}>
