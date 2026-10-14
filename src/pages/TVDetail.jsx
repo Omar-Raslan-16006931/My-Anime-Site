@@ -4,6 +4,7 @@ import { udb } from '../lib/udb'
 import VideoPlayer from '../components/VideoPlayer'
 import Icon from '../components/Icons'
 import GenreChips from '../components/GenreChips'
+import Select from '../components/Select'
 import { recordRecent } from '../lib/progress'
 import DownloadLinks from '../components/DownloadLinks'
 import { isAdultTmdbDetails } from '../lib/tmdb'
@@ -251,16 +252,12 @@ export default function TVDetail({ user, onAuthRequired }) {
           </div>
           {seasons.length > 0 && (
             seasons.length > 6 || (isMobile && seasons.length > 3) ? (
-              <select
-                className="fu-season-select"
-                value={selectedSeason ?? ''}
-                onChange={(e) => setSelectedSeason(Number(e.target.value))}
-                aria-label="Select season"
-              >
-                {seasons.map((s) => (
-                  <option key={s.id || s.season_number} value={s.season_number}>Season {s.season_number}</option>
-                ))}
-              </select>
+              <Select
+                value={selectedSeason}
+                onChange={setSelectedSeason}
+                label="Select season"
+                options={seasons.map((s) => ({ value: s.season_number, label: s.season_number === 0 ? 'Specials' : `Season ${s.season_number}` }))}
+              />
             ) : (
               <div className="fu-seg">
                 {seasons.map((s) => (

@@ -4,6 +4,7 @@ import { udb } from '../lib/udb'
 import VideoPlayer from '../components/VideoPlayer'
 import Icon from '../components/Icons'
 import GenreChips from '../components/GenreChips'
+import Select from '../components/Select'
 import { normalizeGenres } from '../lib/categories'
 import { recordRecent } from '../lib/progress'
 import { animeDetails, animeEpisodes, isAdultAnime } from '../lib/anime'
@@ -344,16 +345,12 @@ export default function AnimeDetail({ user, onAuthRequired }) {
           </div>
           {sagas.length > 1 && (
             sagas.length > 6 || (isMobile && sagas.length > 3) ? (
-              <select
-                className="fu-season-select"
+              <Select
                 value={curSaga}
-                onChange={(e) => selectSaga(Number(e.target.value))}
-                aria-label={malId === 21 ? 'Select saga' : 'Select part'}
-              >
-                {sagas.map((s, i) => (
-                  <option key={i} value={i}>{s.name}{malId === 21 ? ' Saga' : ''} · EP {s.start}–{s.end}</option>
-                ))}
-              </select>
+                onChange={selectSaga}
+                label={malId === 21 ? 'Select saga' : 'Select part'}
+                options={sagas.map((s, i) => ({ value: i, label: `${s.name}${malId === 21 ? ' Saga' : ''} · EP ${s.start}–${s.end}` }))}
+              />
             ) : (
               <div className="fu-seg">
                 {sagas.map((s, i) => (

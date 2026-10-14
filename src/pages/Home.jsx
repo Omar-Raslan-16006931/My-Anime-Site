@@ -4,7 +4,7 @@ import Hero from '../components/Hero'
 import Row from '../components/Row'
 import MediaCard from '../components/MediaCard'
 import WideCard from '../components/WideCard'
-import { getPopularMovies, getPopularTV, getTmdbImage } from '../lib/tmdb'
+import { getPopularMovies, getPopularTV, getTmdbImage, searchTV } from '../lib/tmdb'
 import { recentlyAiredEpisodes } from '../lib/anilist'
 import { animeByMalIds, animeList, animeCategoryArt } from '../lib/anime'
 import { udb } from '../lib/udb'
@@ -114,7 +114,27 @@ export default function Home({ user, onAuthRequired }) {
       setMovies(m?.results || [])
       setTv(t?.results || [])
 
-      const animePicks = shuffle(pop.filter((a) => a.banner && a.synopsis)).slice(0, 3).map(animeHero)
+      // AniList banners are tiny (~1900×400) and look soft when stretched over
+      // the billboard, so look up the full-HD TMDB backdrop for the same show.
+      const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '')
+      const hdBackdrop = async (a) => {
+        try {
+          const names = [a.title_english, a.title].filter(Boolean)
+          for (const n of names) {
+            const r = await searchTV(n)
+            const hit = (r?.results || []).find((x) => x.backdrop_path && (norm(x.name) === norm(n) || norm(x.original_name) === norm(n) || (norm(n).length > 6 && norm(x.name).includes(norm(n)))))
+            if (hit) return backdrop(hit.backdrop_path)
+          }
+        } catch { /* keep the banner */ }
+        return null
+      }
+      const animePicks = await Promise.all(
+        shuffle(pop.filter((a) => a.banner && a.synopsis)).slice(0, 3).map(async (a) => {
+          const hd = await hdBackdrop(a)
+          const h = animeHero(a)
+          return hd ? { ...h, backdrop: hd } : h
+        })
+      )
       const mv = shuffle((m?.results || []).slice(0, 10).filter((x) => x.backdrop_path && x.overview))[0]
       const sh = shuffle((t?.results || []).slice(0, 10).filter((x) => x.backdrop_path && x.overview))[0]
       let picks = shuffle([...animePicks, mv && movieHero(mv), sh && tvHero(sh)].filter(Boolean))
