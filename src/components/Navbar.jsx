@@ -20,11 +20,21 @@ const NAV = [
   { key: 'categories', label: 'Categories', icon: Icon.grid, match: ['/category/'] },
 ]
 // Phone tab bar. Search is a button in the top bar (next to the account).
+// Clean line icons for the tab bar (24px grid, 1.8 stroke).
+const dockIcon = (children) => function DockIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
+  )
+}
+const IconHome = dockIcon(<><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></>)
+const IconAnime = dockIcon(<><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /><path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" /></>)
+const IconMovies = dockIcon(<><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /><path d="m6.2 5.3 3.1 3.9" /><path d="m12.4 3.4 3.1 4" /><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></>)
+const IconTv = dockIcon(<><rect width="20" height="15" x="2" y="7" rx="2" ry="2" /><polyline points="17 2 12 7 7 2" /></>)
 const DOCK = [
-  { to: '/', label: 'Home', icon: Icon.home, end: true },
-  { to: '/anime', label: 'Anime', icon: Icon.bolt },
-  { to: '/movies', label: 'Movies', icon: Icon.film },
-  { to: '/tv', label: 'TV', icon: Icon.tv },
+  { to: '/', label: 'Home', icon: IconHome, end: true },
+  { to: '/anime', label: 'Anime', icon: IconAnime },
+  { to: '/movies', label: 'Movies', icon: IconMovies },
+  { to: '/tv', label: 'TV', icon: IconTv },
 ]
 function dockTab(pathname) {
   if (pathname === '/') return 0
