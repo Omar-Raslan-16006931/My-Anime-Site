@@ -434,3 +434,20 @@ html::before {
   .topbar, .topbar.scrolled, .topbar.over-hero { background: #0d0c0b !important; border-bottom-color: rgba(255,255,255,0.06) !important; transition: none !important; }
   .topbar::before { display: none !important; }
 }
+
+/* ---------- Phone: smaller, tighter billboard ---------- */
+@media (max-width: 560px) {
+  .hero { min-height: min(360px, 52dvh); }
+  .hero-content { padding-bottom: 34px; }
+  .hero-content .hero-brand { font-size: 10.5px; margin-bottom: 8px !important; }
+  .hero-title { font-size: 22px; line-height: 1.12; margin-bottom: 6px; }
+  .hero-meta { font-size: 11.5px; gap: 4px 10px; margin-bottom: 6px; }
+  .hero-desc { font-size: 11.5px; line-height: 1.5; margin-bottom: 12px; -webkit-line-clamp: 2; line-clamp: 2; }
+  .hero-actions { gap: 7px; }
+  .hero-actions .btn, .hero-actions .tvh-play.hero-play { height: 34px; font-size: 13px; padding: 0 14px; gap: 6px; }
+  .hero-actions .tvh-play.hero-play { min-width: 96px; padding: 0 18px; }
+  .hero-actions .btn svg, .hero-actions .tvh-play svg { width: 14px; height: 14px; }
+  .hero-more { width: 34px; padding: 0 !important; justify-content: center; }
+  .hero-more .hero-more-label { display: none; }
+  .hero-dots { bottom: 12px; }
+}

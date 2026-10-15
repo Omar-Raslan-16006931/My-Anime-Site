@@ -78,8 +78,8 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
               {inList ? 'In My List' : 'My List'}
             </button>
           )}
-          <button className="btn btn-ghost" onClick={() => navigate(cur.href)}>
-            <Icon.info width="18" height="18" /> More Info
+          <button className="btn btn-ghost hero-more" onClick={() => navigate(cur.href)} aria-label="More info">
+            <Icon.info width="18" height="18" /><span className="hero-more-label">More Info</span>
           </button>
         </div>
       </div>
