@@ -844,7 +844,7 @@ select {
      vertically on the screen (auto margins top + bottom). */
   .player-card .modal-head { padding: 8px 10px 8px 14px; flex-shrink: 0; margin-top: auto; }
   .player-card .player-frame { flex-shrink: 0; }
-  .player-card .player-frame + .modal-body { margin-bottom: auto; }
+  .player-card .modal-body { margin-bottom: auto; }
   .player-card .modal-body { padding: 12px 14px 20px; }
 }
 
