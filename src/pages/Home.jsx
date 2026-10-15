@@ -250,7 +250,7 @@ export default function Home({ user, onAuthRequired }) {
         </Row>
       )}
 
-      <Row title="Browse by Category" wide>
+      <Row title="Browse by Category" wide onMore={() => navigate('/search?f=1')}>
         {PRIORITY_CATEGORIES.map((g) => {
           const a = catArt[g]
           return (

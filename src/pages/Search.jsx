@@ -23,7 +23,7 @@ export default function Search() {
   const minScore = Number(params.get('r')) || 0
 
   const [input, setInput] = useState(q)
-  const [showFilters, setShowFilters] = useState(false)
+  const [showFilters, setShowFilters] = useState(params.get('f') === '1')
   const [anime, setAnime] = useState(EMPTY)
   const [tv, setTv] = useState(EMPTY)
   const [movies, setMovies] = useState(EMPTY)
