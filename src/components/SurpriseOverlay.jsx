@@ -1,34 +1,51 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from './Icons'
-import { animeList } from '../lib/anime'
+import { animeList, animeByGenre } from '../lib/anime'
 import { getPopularMovies, getPopularTV, getTmdbImage } from '../lib/tmdb'
-import { normalizeGenres } from '../lib/categories'
+import { normalizeGenres, PRIORITY_CATEGORIES } from '../lib/categories'
 import { primeAudio, whoosh, tick, win, sparks } from '../lib/casino'
 
-const MIN = 7
 let pool = null // cached across opens
+const rnd = (n) => 1 + Math.floor(Math.random() * n)
+const pickOne = (arr) => arr[Math.floor(Math.random() * arr.length)]
 
+// Wide, unfiltered pool (no rating cut-off): several anime lists, a random genre
+// page, and random pages of popular movies and series.
 async function loadPool() {
   if (pool && pool.length) return pool
-  const [a, m, t] = await Promise.all([
-    animeList('popular', 40).catch(() => []),
-    getPopularMovies().catch(() => null),
-    getPopularTV().catch(() => null),
+  const genre = pickOne(PRIORITY_CATEGORIES)
+  const [lists, byGenre, m1, m2, t1, t2] = await Promise.all([
+    Promise.all(['popular', 'trending', 'top', 'movies', 'airing'].map((k) => animeList(k, 50).catch(() => []))),
+    animeByGenre(genre, rnd(5), 40).catch(() => ({ list: [] })),
+    getPopularMovies(rnd(12)).catch(() => null),
+    getPopularMovies(rnd(12)).catch(() => null),
+    getPopularTV(rnd(12)).catch(() => null),
+    getPopularTV(rnd(12)).catch(() => null),
   ])
+  const seen = new Set()
   const out = []
-  for (const x of a || []) {
-    const poster = x.images?.jpg?.large_image_url
-    if (poster && (x.score || 0) >= MIN) out.push({ id: 'a' + x.mal_id, href: `/anime/${x.mal_id}`, title: x.title_english || x.title, poster, type: 'Anime', score: x.score, genres: normalizeGenres(x.genres) })
+  const add = (it) => { if (it.poster && !seen.has(it.id)) { seen.add(it.id); out.push(it) } }
+  for (const x of [...lists.flat(), ...(byGenre.list || [])]) {
+    add({ id: 'a' + x.mal_id, kind: 'anime', href: `/anime/${x.mal_id}`, title: x.title_english || x.title, poster: x.images?.jpg?.large_image_url, type: 'Anime', score: x.score, genres: normalizeGenres(x.genres) })
   }
-  for (const x of m?.results || []) {
-    if (x.poster_path && (x.vote_average || 0) >= MIN) out.push({ id: 'm' + x.id, href: `/movie/${x.id}`, title: x.title, poster: getTmdbImage(x.poster_path), type: 'Movie', score: x.vote_average, genres: [] })
+  for (const x of [...(m1?.results || []), ...(m2?.results || [])]) {
+    add({ id: 'm' + x.id, kind: 'movie', href: `/movie/${x.id}`, title: x.title, poster: x.poster_path ? getTmdbImage(x.poster_path) : null, type: 'Movie', score: x.vote_average, genres: [] })
   }
-  for (const x of t?.results || []) {
-    if (x.poster_path && (x.vote_average || 0) >= MIN) out.push({ id: 't' + x.id, href: `/tv/${x.id}`, title: x.name, poster: getTmdbImage(x.poster_path), type: 'Series', score: x.vote_average, genres: [] })
+  for (const x of [...(t1?.results || []), ...(t2?.results || [])]) {
+    add({ id: 't' + x.id, kind: 'tv', href: `/tv/${x.id}`, title: x.name, poster: x.poster_path ? getTmdbImage(x.poster_path) : null, type: 'Series', score: x.vote_average, genres: [] })
   }
   pool = out
   return out
+}
+
+// Uniform pick across the three kinds first, so anime doesn't drown out movies and series.
+function randomIndex(list) {
+  const kinds = ['anime', 'movie', 'tv'].filter((k) => list.some((x) => x.kind === k))
+  const kind = pickOne(kinds)
+  const idx = []
+  list.forEach((x, i) => { if (x.kind === kind) idx.push(i) })
+  return pickOne(idx)
 }
 
 // Full-screen "Surprise me": a poster shuffles through titles, slows down and lands.
@@ -52,7 +69,7 @@ export default function SurpriseOverlay() {
     items.current = list
     const N = list.length
     if (!N) { setShuf({ i: -1, done: true, n: 0 }); return }
-    const fin = Math.floor(Math.random() * N)
+    const fin = randomIndex(list)
     const total = 22 + Math.floor(Math.random() * 5)
     let n = 0
     primeAudio()
@@ -75,10 +92,10 @@ export default function SurpriseOverlay() {
       if (n >= total) { land(); return }
       const c = center()
       setShuf({ i: (fin + n * 7) % N, done: false, n, total, tilt: (Math.random() - 0.5) * 10 })
-      tick(n)
+      tick(n, total)
       const f = fx.current
       f?.burst(c.x + (n % 2 ? c.w / 2 : -c.w / 2), c.y + (Math.random() - 0.5) * c.h, 5 + (n > total * 0.7 ? 5 : 0), { speed: 4 + n * 0.14, g: 0.12, life: 26, r: 1.8, angle: n % 2 ? 0 : Math.PI, spread: 1.6 })
-      if (n === total - 1) { timer.current = setTimeout(step, 520); return }
+      if (n === total - 1) { timer.current = setTimeout(step, 400); return }
       timer.current = setTimeout(step, 36 + n * n * 0.8)
     }
     step()
@@ -138,7 +155,7 @@ export default function SurpriseOverlay() {
       <div className="y-shuf-title">{it?.title || (done ? 'Try again in a moment' : '…')}</div>
       {it && (
         <div className="y-shuf-meta">
-          {it.type} · <Icon.star width="13" height="13" /> {Number(it.score).toFixed(1)}{it.genres?.length ? ` · ${it.genres.slice(0, 3).join(' · ')}` : ''}
+          {it.type}{it.score ? <> · <Icon.star width="13" height="13" /> {Number(it.score).toFixed(1)}</> : null}{it.genres?.length ? ` · ${it.genres.slice(0, 3).join(' · ')}` : ''}
         </div>
       )}
       {done && (

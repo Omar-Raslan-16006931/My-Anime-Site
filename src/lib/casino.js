@@ -68,22 +68,27 @@ export function whoosh() {
   buzz(15)
 }
 
-// One clean click per card; every card is a little higher than the last.
-export function tick(n) {
-  const f = 320 * Math.pow(1.055, n)
-  tone(f, { type: 'square', dur: 0.05, vol: 0.045 })
-  tone(f * 2, { type: 'triangle', dur: 0.035, vol: 0.025 })
+// Clicks climb a pentatonic scale and the last one lands on G5, so the win chord
+// (C major, starting on C6) sounds like a resolution instead of a random jump.
+const SCALE = [392, 440, 523.25, 587.33, 659.25, 784, 880, 1046.5] // G4 A4 C5 D5 E5 G5 A5 C6
+const LAST = 5 // index of G5
+export function tick(n, total) {
+  const p = Math.min(1, n / Math.max(1, total - 1))
+  const i = Math.round(p * LAST)
+  const f = SCALE[i]
+  tone(f, { type: 'triangle', dur: 0.07, vol: 0.07 })
+  tone(f * 2, { type: 'sine', dur: 0.04, vol: 0.02 })
   buzz(6)
 }
 
-// Landing: soft thump, then a bright rising arpeggio and a few sparkles.
+// Landing: a beat after the last click, a soft thump and a C major chord rising from C6.
 export function win() {
-  tone(110, { type: 'sine', dur: 0.4, vol: 0.14, to: 48 })
-  ;[523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => {
-    tone(f, { type: 'triangle', dur: 0.32, vol: 0.06, at: 0.08 + i * 0.07 })
-    tone(f * 2, { type: 'sine', dur: 0.22, vol: 0.018, at: 0.08 + i * 0.07 })
+  tone(130, { type: 'sine', dur: 0.4, vol: 0.14, to: 55, at: 0.12 })
+  ;[1046.5, 1318.5, 1568, 2093].forEach((f, i) => {
+    tone(f, { type: 'triangle', dur: 0.5, vol: 0.055, at: 0.14 + i * 0.06 })
+    tone(f / 2, { type: 'sine', dur: 0.6, vol: 0.03, at: 0.14 + i * 0.06 })
   })
-  for (let i = 0; i < 6; i++) tone(2400 + Math.random() * 2000, { type: 'sine', dur: 0.08, vol: 0.02, at: 0.4 + i * 0.06 })
+  for (let i = 0; i < 5; i++) tone(2600 + Math.random() * 1800, { type: 'sine', dur: 0.07, vol: 0.014, at: 0.5 + i * 0.06 })
   buzz([30, 40, 60])
 }
 
