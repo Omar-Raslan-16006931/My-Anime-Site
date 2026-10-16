@@ -66,24 +66,27 @@ const tvHero = (s) => ({
 const HIDE_KEY = 'yoru:cw-hidden'
 const readHidden = () => { try { return new Set(JSON.parse(localStorage.getItem(HIDE_KEY) || '[]')) } catch { return new Set() } }
 
+// Home rows survive leaving and coming back; they reload only on app open or a full page reload.
+const homeCache = {}
+
 export default function Home({ user, onAuthRequired }) {
   const navigate = useNavigate()
   const { profiles, active } = useProfiles()
   const me = active || profiles[0]
   const [hidden, setHidden] = useState(readHidden)
-  const [heroList, setHeroList] = useState([])
-  const [recentEps, setRecentEps] = useState([])
-  const [trending, setTrending] = useState([])
-  const [airing, setAiring] = useState([])
-  const [animeMovies, setAnimeMovies] = useState([])
-  const [topRated, setTopRated] = useState([])
-  const [movies, setMovies] = useState([])
-  const [tv, setTv] = useState([])
+  const [heroList, setHeroList] = useState(homeCache.heroList || [])
+  const [recentEps, setRecentEps] = useState(homeCache.recentEps || [])
+  const [trending, setTrending] = useState(homeCache.trending || [])
+  const [airing, setAiring] = useState(homeCache.airing || [])
+  const [animeMovies, setAnimeMovies] = useState(homeCache.animeMovies || [])
+  const [topRated, setTopRated] = useState(homeCache.topRated || [])
+  const [movies, setMovies] = useState(homeCache.movies || [])
+  const [tv, setTv] = useState(homeCache.tv || [])
   const [watching, setWatching] = useState([])
-  const [catArt, setCatArt] = useState({})
+  const [catArt, setCatArt] = useState(homeCache.catArt || {})
   const [listKeys, setListKeys] = useState(() => new Set())
-  const [weekTop, setWeekTop] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [weekTop, setWeekTop] = useState(homeCache.weekTop || [])
+  const [loading, setLoading] = useState(!homeCache.heroList?.length)
 
   // Currently Watching — sourced from the database (not local storage).
   useEffect(() => {
@@ -119,17 +122,33 @@ export default function Home({ user, onAuthRequired }) {
 
   useEffect(() => {
     let active = true
+    const sync = () => {
+      setHeroList(homeCache.heroList || []); setRecentEps(homeCache.recentEps || []); setTrending(homeCache.trending || [])
+      setAiring(homeCache.airing || []); setAnimeMovies(homeCache.animeMovies || []); setTopRated(homeCache.topRated || [])
+      setMovies(homeCache.movies || []); setTv(homeCache.tv || []); setCatArt(homeCache.catArt || {}); setWeekTop(homeCache.weekTop || [])
+      if (homeCache.heroList?.length) setLoading(false)
+    }
+    // Already loaded (or loading) in this session: reuse it instead of refetching.
+    if (homeCache.promise) {
+      sync()
+      homeCache.promise.then(() => { if (active) sync() })
+      return () => { active = false }
+    }
+    // Results always land in the cache, even if Home unmounted mid-load.
+    const put = (key, setter) => (val) => { homeCache[key] = val; if (active) setter(val) }
+    const putMovies = put('movies', setMovies)
+    const putTv = put('tv', setTv)
+    const putHero = put('heroList', setHeroList)
 
     // Billboard: popular titles — three popular anime (with wide banners),
     // one popular movie and one popular show, re-picked on every visit.
-    Promise.all([
+    const pHero = Promise.all([
       animeList('popular', 30),
       getPopularMovies().catch(() => null),
       getPopularTV().catch(() => null),
     ]).then(async ([pop, m, t]) => {
-      if (!active) return
-      setMovies((m?.results || []).filter(okT))
-      setTv((t?.results || []).filter(okT))
+      putMovies((m?.results || []).filter(okT))
+      putTv((t?.results || []).filter(okT))
 
       // AniList banners are tiny (~1900×400) and look soft when stretched over
       // the billboard, so look up the full-HD TMDB backdrop for the same show.
@@ -157,23 +176,26 @@ export default function Home({ user, onAuthRequired }) {
       let picks = shuffle([...animePicks, mv && movieHero(mv), sh && tvHero(sh)].filter(Boolean))
 
       if (!picks.length) picks = (await animeByMalIds(HERO_FALLBACK)).filter((a) => a.score >= MIN_FEATURED).map(animeHero)
-      if (!active) return
-      setHeroList(picks)
-      setLoading(false)
+      putHero(picks)
+      if (active) setLoading(false)
     })
 
-    animeList('trending', 50).then((l) => { if (active) setTrending(l.filter(okA)) })
-    animeList('airing', 50).then((l) => { if (active) setAiring(l.filter(okA)) })
-    animeList('movies', 30).then((l) => { if (active) setAnimeMovies(l.filter(okA)) })
-    animeList('top', 20).then((l) => { if (active) setTopRated(l.filter(okA)) })
-    recentlyAiredEpisodes(40).then((eps) => { if (active) setRecentEps(eps.filter((e) => (e.score || 0) >= MIN_HOME)) })
+    const pTrending = animeList('trending', 50).then((l) => put('trending', setTrending)(l.filter(okA)))
+    const pAiring = animeList('airing', 50).then((l) => put('airing', setAiring)(l.filter(okA)))
+    const pAnimeMovies = animeList('movies', 30).then((l) => put('animeMovies', setAnimeMovies)(l.filter(okA)))
+    const pTop = animeList('top', 20).then((l) => put('topRated', setTopRated)(l.filter(okA)))
+    const pEps = recentlyAiredEpisodes(40).then((eps) => put('recentEps', setRecentEps)(eps.filter((e) => (e.score || 0) >= MIN_HOME)))
     // Real weekly chart: TMDB's trending-this-week (movies + TV), 7+ only.
-    Promise.all([getTrendingWeek(1), getTrendingWeek(2)].map((p) => p.catch(() => null))).then((pages) => {
-      if (!active) return
+    const pWeek = Promise.all([getTrendingWeek(1), getTrendingWeek(2)].map((p) => p.catch(() => null))).then((pages) => {
       const all = pages.flatMap((d) => d?.results || []).filter((x) => (x.media_type === 'movie' || x.media_type === 'tv') && x.poster_path && okT(x))
-      setWeekTop(all.slice(0, 10))
+      put('weekTop', setWeekTop)(all.slice(0, 10))
     })
-    animeCategoryArt(PRIORITY_CATEGORIES).then((art) => { if (active) setCatArt(art) })
+    const pArt = animeCategoryArt(PRIORITY_CATEGORIES).then(put('catArt', setCatArt))
+
+    const settle = (p) => p.catch(() => {})
+    homeCache.promise = Promise.all([pHero, pTrending, pAiring, pAnimeMovies, pTop, pEps, pWeek, pArt].map(settle)).then(() => {
+      if (!homeCache.heroList?.length) delete homeCache.promise // failed: let the next visit retry
+    })
 
     return () => { active = false }
   }, [])

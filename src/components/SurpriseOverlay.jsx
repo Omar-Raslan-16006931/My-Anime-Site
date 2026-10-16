@@ -39,6 +39,18 @@ async function loadPool() {
   return out
 }
 
+// Wait until every poster in the roll is decoded, so no card flashes blank or repeats while loading.
+function preload(urls) {
+  const one = (u) => new Promise((done) => {
+    const im = new Image()
+    im.onload = () => done()
+    im.onerror = () => done()
+    im.src = u
+    im.decode?.().then(done, done)
+  })
+  return Promise.race([Promise.all(urls.map(one)), new Promise((done) => setTimeout(done, 5000))])
+}
+
 // Uniform pick across the three kinds first, so anime doesn't drown out movies and series.
 function randomIndex(list) {
   const kinds = ['anime', 'movie', 'tv'].filter((k) => list.some((x) => x.kind === k))
@@ -63,16 +75,26 @@ export default function SurpriseOverlay() {
     return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height } : { x: window.innerWidth / 2, y: window.innerHeight / 2, w: 200, h: 300 }
   }
 
+  const runId = useRef(0)
+
   const roll = useCallback(async () => {
     clearTimeout(timer.current)
+    primeAudio() // must happen inside the tap, before any await
+    const run = ++runId.current
+    setShuf(null)
     const list = await loadPool()
     items.current = list
     const N = list.length
     if (!N) { setShuf({ i: -1, done: true, n: 0 }); return }
     const fin = randomIndex(list)
     const total = 22 + Math.floor(Math.random() * 5)
+    // Distinct random cards for the roll (never a repeat), ending on the winner.
+    const others = list.map((_, i) => i).filter((i) => i !== fin)
+    for (let k = others.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [others[k], others[j]] = [others[j], others[k]] }
+    const seq = [...others.slice(0, total - 1), fin]
+    await preload([...new Set(seq.map((i) => list[i].poster))])
+    if (run !== runId.current) return // closed or re-rolled while loading
     let n = 0
-    primeAudio()
     whoosh()
     const land = () => {
       const c = center()
@@ -91,7 +113,7 @@ export default function SurpriseOverlay() {
       n += 1
       if (n >= total) { land(); return }
       const c = center()
-      setShuf({ i: (fin + n * 7) % N, done: false, n, total, tilt: (Math.random() - 0.5) * 10 })
+      setShuf({ i: seq[n - 1], done: false, n, total, tilt: (Math.random() - 0.5) * 10 })
       tick(n, total)
       const f = fx.current
       f?.burst(c.x + (n % 2 ? c.w / 2 : -c.w / 2), c.y + (Math.random() - 0.5) * c.h, 5 + (n > total * 0.7 ? 5 : 0), { speed: 4 + n * 0.14, g: 0.12, life: 26, r: 1.8, angle: n % 2 ? 0 : Math.PI, spread: 1.6 })
@@ -101,7 +123,7 @@ export default function SurpriseOverlay() {
     step()
   }, [])
 
-  const close = useCallback(() => { clearTimeout(timer.current); setOpen(false); setShuf(null) }, [])
+  const close = useCallback(() => { runId.current += 1; clearTimeout(timer.current); setOpen(false); setShuf(null) }, [])
 
   useEffect(() => {
     const onOpen = () => { setOpen(true); roll() }
