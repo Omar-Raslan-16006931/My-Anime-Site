@@ -120,30 +120,79 @@ async function callGemini(cfg, userText) {
   }
 }
 
-// Groq speaks the OpenAI chat-completions format.
-async function callGroq(cfg, userText) {
-  let res
+// Groq speaks the OpenAI chat-completions format. Groq retires models often, so
+// if the configured/default model is gone (404/decommissioned) we ask Groq which
+// models the key can use and pick the best chat model automatically.
+let groqPicked = null // remembered for the life of this server instance
+
+const rankGroq = (id) => {
+  const m = id.toLowerCase()
+  if (/whisper|guard|tts|orpheus|playai|embed|transcri|prompt-guard|safeguard|vision-preview/.test(m)) return -1
+  if (/gpt-oss-120b/.test(m)) return 100
+  if (/llama-4-maverick/.test(m)) return 95
+  if (/llama.*70b/.test(m)) return 90
+  if (/qwen/.test(m)) return 80
+  if (/llama-4-scout/.test(m)) return 75
+  if (/gpt-oss-20b/.test(m)) return 70
+  if (/llama/.test(m)) return 50
+  return 10
+}
+
+async function groqModelList(key) {
   try {
-    res = await fetch(GROQ_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.groqKey}` },
-      body: JSON.stringify({
-        model: cfg.groqModel || DEFAULT_GROQ_MODEL,
-        messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: userText }],
-        response_format: { type: 'json_object' },
-        temperature: 0.9,
-        max_tokens: 2048,
-      }),
-      signal: AbortSignal.timeout(8000),
-    })
-  } catch { return { ok: false, status: 504, message: 'The AI took too long to answer. Try again.' } }
-  if (!res.ok) {
+    const res = await fetch('https://api.groq.com/openai/v1/models', { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(4000) })
+    if (!res.ok) return []
+    const data = await res.json()
+    return (data?.data || []).filter((m) => m?.active !== false).map((m) => m.id).filter((id) => id && rankGroq(id) >= 0).sort((x, y) => rankGroq(y) - rankGroq(x))
+  } catch { return [] }
+}
+
+async function callGroq(cfg, userText) {
+  const deadline = Date.now() + 9000
+  const tried = new Set()
+  const queue = [cfg.groqModel || groqPicked || DEFAULT_GROQ_MODEL]
+  let discovered = false
+  let lastFail = { ok: false, status: 504, message: 'The AI took too long to answer. Try again.' }
+
+  const send = (model, jsonMode) => fetch(GROQ_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.groqKey}` },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: userText }],
+      ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
+      temperature: 0.9,
+      max_tokens: 2048,
+    }),
+    signal: AbortSignal.timeout(Math.max(2500, Math.min(7000, deadline - Date.now()))),
+  })
+
+  while (queue.length && Date.now() < deadline) {
+    const model = queue.shift()
+    if (tried.has(model)) continue
+    tried.add(model)
+    let res
+    try {
+      res = await send(model, true)
+      if (res.status === 400) res = await send(model, false) // model without JSON mode
+    } catch { continue }
+
+    if (res.ok) {
+      groqPicked = model
+      const data = await res.json().catch(() => null)
+      return { ok: true, text: data?.choices?.[0]?.message?.content || '', finish: data?.choices?.[0]?.finish_reason || '' }
+    }
     const err = await res.json().catch(() => null)
     const reason = clean(err?.error?.message, 160)
-    return { ok: false, status: res.status, message: res.status === 429 ? 'AI is busy right now. Try again in a minute.' : `Groq error (${res.status})${reason ? `: ${reason}` : ''}` }
+    lastFail = { ok: false, status: res.status, message: res.status === 429 ? 'AI is busy right now. Try again in a minute.' : `Groq error (${res.status})${reason ? `: ${reason}` : ''}` }
+    if (res.status === 401 || res.status === 403) break // bad key: no point trying others
+    // Model missing / retired / busy → look up what this key can use, try the best few.
+    if (!discovered && [400, 404, 429, 500, 503].includes(res.status)) {
+      discovered = true
+      queue.push(...(await groqModelList(cfg.groqKey)).slice(0, 3))
+    }
   }
-  const data = await res.json().catch(() => null)
-  return { ok: true, text: data?.choices?.[0]?.message?.content || '', finish: data?.choices?.[0]?.finish_reason || '' }
+  return lastFail
 }
 
 function parsePicks(text, kind, count) {
