@@ -5,6 +5,7 @@
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models'
 const DEFAULT_MODEL = 'gemini-flash-latest'
+const DEFAULT_FALLBACKS = 'gemini-2.5-flash,gemini-2.5-flash-lite'
 
 const SYSTEM = `You are the recommendation engine for AniWave, a site for anime, movies and TV shows.
 Suggest titles the user will love, based on their request and (optionally) what they already watched.
@@ -52,7 +53,7 @@ export function rateLimited(ip, now = Date.now()) {
 
 const clean = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n)
 
-export async function recommend(input, apiKey, model) {
+export async function recommend(input, apiKey, model, fallbackList) {
   if (!apiKey) return { status: 503, json: { error: 'not_configured', message: 'AI picks are not set up yet.' } }
 
   const prompt = clean(input?.prompt, 300)
@@ -67,15 +68,33 @@ export async function recommend(input, apiKey, model) {
     `Return exactly ${count} picks.`,
   ].join('\n')
 
-  const res = await fetch(`${ENDPOINT}/${encodeURIComponent(model || DEFAULT_MODEL)}:generateContent`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM }] },
-      contents: [{ role: 'user', parts: [{ text: userText }] }],
-      generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.9, maxOutputTokens: 8192 },
-    }),
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: SYSTEM }] },
+    contents: [{ role: 'user', parts: [{ text: userText }] }],
+    generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.9, maxOutputTokens: 8192 },
   })
+
+  // Google sometimes answers 503 "high demand". Retry the main model once, then
+  // fall back to other Flash models (GEMINI_FALLBACKS, comma-separated).
+  const main = model || DEFAULT_MODEL
+  const fallbacks = String(fallbackList ?? DEFAULT_FALLBACKS).split(',').map((m) => m.trim()).filter((m) => m && m !== main)
+  const attempts = [main, main, ...fallbacks]
+  const deadline = Date.now() + 9000
+  let res = null
+  for (let i = 0; i < attempts.length; i++) {
+    if (i > 0 && Date.now() > deadline) break
+    if (i === 1) await new Promise((r) => setTimeout(r, 700))
+    try {
+      res = await fetch(`${ENDPOINT}/${encodeURIComponent(attempts[i])}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body,
+        signal: AbortSignal.timeout(Math.max(2500, Math.min(7000, deadline - Date.now()))),
+      })
+    } catch { res = null; continue }
+    if (res.ok || ![429, 500, 502, 503, 504].includes(res.status)) break
+  }
+  if (!res) return { status: 504, json: { error: 'upstream', message: 'The AI took too long to answer. Try again.' } }
 
   if (!res.ok) {
     // Pass Google's own reason through (e.g. "API key not valid"), never the key.

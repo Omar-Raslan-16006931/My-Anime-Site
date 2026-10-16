@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   if (rateLimited(ip)) return res.status(429).json({ error: 'rate', message: 'Slow down a little and try again in a few minutes.' })
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {})
-    const out = await recommend(body, process.env.GEMINI_API_KEY, process.env.GEMINI_MODEL)
+    const out = await recommend(body, process.env.GEMINI_API_KEY, process.env.GEMINI_MODEL, process.env.GEMINI_FALLBACKS)
     return res.status(out.status).json(out.json)
   } catch (e) {
     return res.status(500).json({ error: 'server', message: 'Something went wrong. Try again.' })

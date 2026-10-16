@@ -37,7 +37,7 @@ function devApi(env) {
           for await (const c of req) chunks.push(c)
           const body = JSON.parse(Buffer.concat(chunks).toString() || '{}')
           const { recommend } = await server.ssrLoadModule('/api/_recommend.js')
-          const out = await recommend(body, env.GEMINI_API_KEY, env.GEMINI_MODEL)
+          const out = await recommend(body, env.GEMINI_API_KEY, env.GEMINI_MODEL, env.GEMINI_FALLBACKS)
           res.statusCode = out.status
           res.end(JSON.stringify(out.json))
         } catch (e) {
