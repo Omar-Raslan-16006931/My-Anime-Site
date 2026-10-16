@@ -1025,3 +1025,48 @@ a:focus-visible, button:focus-visible { outline-color: var(--y-ac); }
 
 .y-shuf { gap: 14px; }
 @media (max-width: 600px) { .y-shuf-poster { width: 190px; height: 285px; } .y-shuf-title { font-size: 26px; } }
+
+/* ============================================================
+   Premium motion layer — one easing language for the whole app
+   ============================================================ */
+:root { --y-ease: cubic-bezier(0.22, 1, 0.36, 1); --y-spring: cubic-bezier(0.34, 1.56, 0.64, 1); }
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; -webkit-tap-highlight-color: transparent; }
+h1, h2, h3 { text-wrap: balance; }
+
+/* Every interactive element eases its colour, border, shadow and press (zero specificity, so anything more specific still wins). */
+:where(button, a, [role='button'], summary, .btn, .chip, .y-chip, .cat-tile, .sf-toggle, .y-menu-item, .y-swatch, .card, .ywc, .ycc) {
+  transition: background-color 0.28s var(--y-ease), color 0.28s var(--y-ease), border-color 0.28s var(--y-ease), box-shadow 0.35s var(--y-ease), opacity 0.28s var(--y-ease), scale 0.4s var(--y-spring), transform 0.4s var(--y-ease), filter 0.28s var(--y-ease);
+}
+/* Press feedback uses the independent `scale` property so it never fights a button's own transform. */
+:where(button, [role='button'], .btn, .chip, .y-chip, .cat-tile, .sf-toggle, .y-menu-item, .y-swatch, .card, .ycc, .ywc):active:not(:disabled) { scale: 0.96; transition-duration: 0.12s; }
+:where(a, button, select, [tabindex]):focus-visible { outline: 2px solid var(--y-ac); outline-offset: 3px; }
+/* Text fields inside a pill show focus on the pill itself, never as a second box inside it. */
+.search-form input, .topbar-search input, .y-search input,
+.search-form input:focus, .topbar-search input:focus, .y-search input:focus, .search-form input:focus-visible { outline: none !important; box-shadow: none !important; background: transparent !important; border: 0 !important; border-radius: 0 !important; -webkit-appearance: none; appearance: none; }
+:where(input, textarea, select) { transition: border-color 0.25s var(--y-ease), background-color 0.25s var(--y-ease), box-shadow 0.3s var(--y-ease); }
+
+/* Rows reveal as they scroll into view (see Row.jsx). */
+.rv { opacity: 0; transform: translateY(24px); transition: opacity 0.8s var(--y-ease), transform 0.9s var(--y-ease); }
+.rv.rv-in { opacity: 1; transform: none; }
+.y-home-body > .rv { animation: none; }
+
+/* "See all" arrow nudges on hover; menu items cascade in. */
+.y-row .row-head a::after { content: '\203A'; display: inline-block; margin-left: 5px; transition: transform 0.35s var(--y-ease); }
+.y-row .row-head a:hover::after { transform: translateX(4px); }
+.y-menu .y-menu-item, .y-menu .y-menu-head, .y-menu .y-menu-label, .y-menu .y-swatches { animation: yoMenuItem 0.45s var(--y-ease) backwards; }
+.y-menu > *:nth-child(2) { animation-delay: 0.03s; } .y-menu > *:nth-child(3) { animation-delay: 0.06s; } .y-menu > *:nth-child(4) { animation-delay: 0.09s; }
+.y-menu > *:nth-child(5) { animation-delay: 0.12s; } .y-menu > *:nth-child(6) { animation-delay: 0.15s; } .y-menu > *:nth-child(n+7) { animation-delay: 0.18s; }
+@keyframes yoMenuItem { from { opacity: 0; transform: translateY(6px); } }
+
+/* Top-right header button: aligned to the page gutter, with a soft pill on press */
+@media (max-width: 879px) {
+  .y-top-search { width: 40px; height: 40px; margin-right: -10px; background: transparent; }
+  .y-top-search:active { scale: 0.88; background: rgba(255, 255, 255, 0.1); }
+}
+/* Card menu button reads clearly on any artwork */
+.ycc-dots { background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255, 255, 255, 0.16); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rv { opacity: 1; transform: none; transition: none; }
+  .y-menu > * { animation: none; }
+}

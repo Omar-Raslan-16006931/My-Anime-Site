@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 
 const Chevron = ({ flip }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -12,6 +12,17 @@ const Chevron = ({ flip }) => (
 // an info panel on hover, so the row needs extra room underneath.
 export default function Row({ title, href, onMore, children, loading, count = 7, wide = false, hover = false, sub, className = '' }) {
   const trackRef = useRef(null)
+  const secRef = useRef(null)
+
+  // Rows fade and rise into view as they scroll on screen.
+  useEffect(() => {
+    const el = secRef.current
+    if (!el || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
+    el.classList.add('rv')
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { el.classList.add('rv-in'); io.disconnect() } }, { rootMargin: '0px 0px -6% 0px', threshold: 0.04 })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
 
   const page = (dir) => {
     const el = trackRef.current
@@ -19,7 +30,7 @@ export default function Row({ title, href, onMore, children, loading, count = 7,
   }
 
   return (
-    <section className={'row y-row' + (hover ? ' y-row-hover' : '') + (className ? ' ' + className : '')}>
+    <section ref={secRef} className={'row y-row' + (hover ? ' y-row-hover' : '') + (className ? ' ' + className : '')}>
       <div className="row-head">
         <h2>{title}</h2>
         {sub && <span className="y-eyebrow">{sub}</span>}
