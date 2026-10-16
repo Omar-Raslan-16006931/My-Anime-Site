@@ -194,6 +194,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
 
       {/* Phone tab bar: floating pill. The selected tab expands into a white pill with its label. */}
       <nav className={'ydock' + (kbOpen ? ' hide' : '') + (dockAway ? ' away' : '')} aria-label="Primary">
+        <span className="ydock-ind" style={{ '--i': Math.max(tab, 0), opacity: tab < 0 ? 0 : undefined }} aria-hidden="true" />
         {DOCK.map((d, i) => (
           <NavLink key={d.key} to={d.to} aria-label={d.label} aria-current={i === tab ? 'page' : undefined} className={'ydock-item' + (i === tab ? ' on' : '')}>
             {d.icon}

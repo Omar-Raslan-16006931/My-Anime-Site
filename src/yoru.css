@@ -893,10 +893,10 @@ a:focus-visible, button:focus-visible { outline-color: var(--y-ac); }
 /* Dialogs: see-through blurred backdrop (the page stays visible behind), player stays dark. */
 .modal { background: rgba(6, 5, 5, 0.55); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 @media (max-width: 700px) { .modal { background: rgba(6, 5, 5, 0.55); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); } }
-.player-modal, .player-modal.modal { background: rgba(0, 0, 0, 0.92); }
+.player-modal, .player-modal.modal { background: color-mix(in srgb, var(--y-bg) 82%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 @media (max-width: 700px) {
-  .player-modal.modal { background: #000; -webkit-backdrop-filter: none; backdrop-filter: none; padding: 0; }
-  .player-modal .player-card { border: 0; border-radius: 0; box-shadow: none; outline: 0; background: #000; }
+  .player-modal.modal { background: var(--y-bg); -webkit-backdrop-filter: none; backdrop-filter: none; padding: 0; }
+  .player-modal .player-card { border: 0; border-radius: 0; box-shadow: none; outline: 0; background: var(--y-bg); }
   .player-modal .player-frame { border-radius: 0; border: 0; box-shadow: none; }
 }
 
@@ -940,3 +940,67 @@ a:focus-visible, button:focus-visible { outline-color: var(--y-ac); }
 @media (prefers-reduced-motion: reduce) {
   .ydock, .ydock.away, .ydock .ydock-item, .ydock .y-me-wrap.dockme { transition-duration: 0.01s; transition-delay: 0s; }
 }
+
+
+/* ---------- Top bar: solid and gradient are separate layers that cross-fade ---------- */
+.topbar.y-top, .topbar.y-top.over-hero { background: transparent !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; isolation: isolate; transition: none; }
+.topbar.y-top::before {
+  content: ''; display: block !important; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 1;
+  background: color-mix(in srgb, var(--y-bg) 86%, transparent); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.topbar.y-top::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; bottom: -28px; z-index: -1; pointer-events: none; opacity: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--y-bg) 78%, transparent), transparent);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.topbar.y-top.over-hero::before { opacity: 0; }
+.topbar.y-top.over-hero::after { opacity: 1; }
+@media (max-width: 879px) {
+  .topbar.y-top::before { background: var(--y-bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* ---------- Tab bar: a pill slides between tabs ---------- */
+@media (max-width: 879px) {
+  .ydock { gap: 0; }
+  .ydock-ind {
+    position: absolute; left: 8px; top: 8px; bottom: 8px; width: calc((100% - 16px) / 5); border-radius: 24px; background: var(--y-tx); pointer-events: none;
+    transform: translateX(calc(var(--i, 0) * 100%)); transition: transform 0.6s cubic-bezier(0.34, 1.35, 0.5, 1), opacity 0.3s ease;
+  }
+  .ydock.away .ydock-ind { opacity: 0; transition: opacity 0.2s ease; }
+  .ydock .ydock-item, .ydock .y-me-wrap.dockme { position: relative; z-index: 1; }
+  .ydock .ydock-item, .ydock .ydock-item.on { flex: 1; flex-direction: column; gap: 3px; background: transparent; overflow: visible; }
+  .ydock .ydock-item.on { color: var(--y-bg); }
+  .ydock-label, .ydock-item.on .ydock-label { max-width: none; margin: 0; opacity: 0.85; font-size: 10px; font-weight: 650; letter-spacing: 0.01em; }
+  .ydock-item.on svg { animation: yoTabPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .ydock-item { transition: color 0.35s ease 0.08s, transform 0.2s ease; }
+}
+@keyframes yoTabPop { 0% { transform: translateY(5px) scale(0.75); } 60% { transform: translateY(-2px) scale(1.12); } 100% { transform: none; } }
+
+/* ---------- Surprise me: slot-machine overlay ---------- */
+.y-shuf-fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+.y-shuf > *:not(.y-shuf-fx) { position: relative; z-index: 2; }
+.y-shuf-x { position: absolute !important; }
+.y-shuf-stage { position: relative; padding: 14px; border-radius: 34px; animation-duration: 0.14s; animation-timing-function: ease-out; animation-fill-mode: both; }
+/* marquee bulbs around the card */
+.y-shuf-stage::before, .y-shuf-stage::after { content: ''; position: absolute; inset: 0; border-radius: 34px; border: 5px dotted #ffd24a; pointer-events: none; filter: drop-shadow(0 0 6px #ffb02e); }
+.y-shuf-stage::before { animation: yoBulbA 0.32s steps(1) infinite; }
+.y-shuf-stage::after { animation: yoBulbB 0.32s steps(1) infinite; }
+.y-shuf-stage.won::before, .y-shuf-stage.won::after { filter: drop-shadow(0 0 14px #ffd24a) drop-shadow(0 0 28px #ff9d00); animation-duration: 0.16s; }
+@keyframes yoBulbA { 0% { opacity: 1; } 50% { opacity: 0.12; } }
+@keyframes yoBulbB { 0% { opacity: 0.12; } 50% { opacity: 1; } }
+.y-shuf-poster { position: relative; }
+.y-shuf-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; animation: yoFlash 0.11s ease-out; }
+@keyframes yoFlash { from { opacity: 0.85; } to { opacity: 0; } }
+@keyframes yoShakeA { 0% { transform: translate(0, 0); } 25% { transform: translate(var(--amp), calc(var(--amp) * -0.5)); } 60% { transform: translate(calc(var(--amp) * -0.7), calc(var(--amp) * 0.4)); } 100% { transform: translate(0, 0); } }
+@keyframes yoShakeB { 0% { transform: translate(0, 0); } 25% { transform: translate(calc(var(--amp) * -1), calc(var(--amp) * 0.5)); } 60% { transform: translate(calc(var(--amp) * 0.7), calc(var(--amp) * -0.4)); } 100% { transform: translate(0, 0); } }
+.y-shuf-stage.won { animation: yoSlam 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes yoSlam {
+  0% { transform: scale(0.9); } 14% { transform: scale(1.12) translate(10px, -6px); } 28% { transform: scale(1.05) translate(-9px, 5px); }
+  42% { transform: scale(1.09) translate(6px, 3px); } 58% { transform: scale(1.03) translate(-4px, -2px); } 100% { transform: scale(1); }
+}
+.y-shuf-flash-screen { position: fixed !important; inset: 0; background: radial-gradient(circle at center, rgba(255, 240, 180, 0.75), rgba(255, 200, 60, 0.25) 45%, transparent 75%); pointer-events: none; z-index: 4 !important; animation: yoScreenFlash 0.7s ease-out forwards; }
+@keyframes yoScreenFlash { from { opacity: 1; } to { opacity: 0; } }
+.y-shuf.won .y-shuf-title { animation: yoTitleWin 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; text-shadow: 0 0 24px rgba(255, 200, 60, 0.45); }
+@keyframes yoTitleWin { from { opacity: 0; transform: translateY(14px) scale(0.85); } }
+@media (prefers-reduced-motion: reduce) { .y-shuf-stage, .y-shuf-stage::before, .y-shuf-stage::after, .y-shuf-flash { animation: none !important; } }
