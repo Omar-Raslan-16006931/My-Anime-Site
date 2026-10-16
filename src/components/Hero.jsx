@@ -111,8 +111,7 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
                 style={{
                   transform: `translateX(${o * 60}%) translateZ(${-Math.abs(o) * 200}px) rotateY(${-o * 32}deg)`,
                   zIndex: 10 - Math.abs(o),
-                  opacity: i === idx ? 1 : far ? 0 : 0.55,
-                  filter: i === idx ? 'none' : 'brightness(.55)',
+                  opacity: far ? 0 : 1,
                 }}
                 onClick={() => (i === idx ? navigate(s.href) : go(i))}
                 aria-label={i === idx ? `Open ${s.title}` : `Show ${s.title}`}
@@ -131,7 +130,7 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
           </div>
           <div className="y-hero-m-btns">
             <button type="button" className="y-hero-m-play" onClick={play}><Icon.play width="15" height="15" />Play</button>
-            <button type="button" className="y-hero-m-more" onClick={() => navigate(cur.href)}>Details</button>
+            <button type="button" className="y-hero-m-more" onClick={() => navigate(cur.href)} aria-label="Details" title="Details"><Icon.info width="20" height="20" /></button>
             {onToggleList && (
               <button type="button" className={'y-hero-m-add' + (inList ? ' on' : '')} onClick={() => onToggleList(cur)} aria-pressed={inList} aria-label={inList ? 'In My List' : 'Add to My List'}>
                 {inList ? <Icon.check width="18" height="18" /> : <Icon.plus width="18" height="18" />}
