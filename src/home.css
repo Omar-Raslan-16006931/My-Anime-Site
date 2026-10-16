@@ -488,3 +488,6 @@ html::before {
 .nav-ai { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13.5px; font-weight: 600; color: var(--text); background: var(--tone); flex: none; transition: background 0.18s; }
 .nav-ai:hover, .nav-ai.active { background: var(--tone-hi, rgba(255,255,255,0.12)); }
 @media (max-width: 879px) { .nav-ai span { display: none; } .nav-ai { width: 34px; padding: 0; justify-content: center; margin-right: -4px; } }
+.rec-by { margin: 0 0 14px; font-size: 13px; color: var(--text3); }
+.rec-by strong { color: var(--text); font-weight: 600; }
+.rec-note { color: var(--text3); }

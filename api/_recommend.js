@@ -1,10 +1,10 @@
 // AI recommendations. Server-side only: keys live in GEMINI_API_KEY and/or
 // GROQ_API_KEY (never VITE_ variables, never sent to the browser).
 //
-// Providers: Google Gemini and Groq. If both keys are set, Gemini is tried first
-// and Groq is the backup (swap with AI_PROVIDER=groq). With one key, that one is used.
+// Providers: Google Gemini and Groq. Gemini is tried first on every request and
+// Groq is the backup. With only one key set, that one is used.
 // Optional: GEMINI_MODEL (default "gemini-3.8-flash"), GEMINI_FALLBACKS,
-//           GROQ_MODEL (default "llama-3.3-70b-versatile").
+//           GROQ_MODEL (optional; otherwise picked automatically).
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models'
 const DEFAULT_MODEL = 'gemini-3.8-flash'
@@ -90,6 +90,7 @@ async function callGemini(cfg, userText) {
   const attempts = [{ m: main, schema: true }, { m: main, schema: true }, ...fallbacks.map((m) => ({ m, schema: true }))]
   const deadline = Date.now() + 8000
   let res = null
+  let usedModel = main
   for (let i = 0; i < attempts.length; i++) {
     if (i > 0 && Date.now() > deadline) break
     if (i === 1) await new Promise((r) => setTimeout(r, 600))
@@ -101,7 +102,7 @@ async function callGemini(cfg, userText) {
         signal: AbortSignal.timeout(Math.max(2500, Math.min(7000, deadline - Date.now()))),
       })
     } catch { res = null; continue }
-    if (res.ok) break
+    if (res.ok) { usedModel = attempts[i].m; break }
     // 400 usually means this model dislikes the response schema: retry it once without.
     if (res.status === 400 && attempts[i].schema) { attempts.splice(i + 1, 0, { m: attempts[i].m, schema: false }); continue }
     if (!RETRYABLE.includes(res.status)) break
@@ -115,6 +116,7 @@ async function callGemini(cfg, userText) {
   const data = await res.json().catch(() => null)
   return {
     ok: true,
+    model: usedModel,
     text: data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '',
     finish: data?.candidates?.[0]?.finishReason || data?.promptFeedback?.blockReason || '',
   }
@@ -180,7 +182,7 @@ async function callGroq(cfg, userText) {
     if (res.ok) {
       groqPicked = model
       const data = await res.json().catch(() => null)
-      return { ok: true, text: data?.choices?.[0]?.message?.content || '', finish: data?.choices?.[0]?.finish_reason || '' }
+      return { ok: true, model, text: data?.choices?.[0]?.message?.content || '', finish: data?.choices?.[0]?.finish_reason || '' }
     }
     const err = await res.json().catch(() => null)
     const reason = clean(err?.error?.message, 160)
@@ -225,16 +227,21 @@ export async function recommend(input, cfg = {}) {
     `Return exactly ${count} picks.`,
   ].join('\n')
 
-  // Order: AI_PROVIDER first if set, otherwise Gemini then Groq; only configured ones.
-  const order = (String(cfg.provider || '').toLowerCase() === 'groq' ? ['groq', 'gemini'] : ['gemini', 'groq'])
-    .filter((p) => (p === 'gemini' ? cfg.geminiKey : cfg.groqKey))
+  // Gemini is always tried first; Groq is the backup. Only configured providers run.
+  const order = ['gemini', 'groq'].filter((p) => (p === 'gemini' ? cfg.geminiKey : cfg.groqKey))
+  let geminiFail = ''
 
   let last = null
   for (const p of order) {
     const r = p === 'gemini' ? await callGemini(cfg, userText) : await callGroq(cfg, userText)
-    if (!r.ok) { last = { status: r.status === 429 ? 429 : 502, json: { error: 'upstream', message: r.message } }; continue }
+    if (!r.ok) {
+      if (p === 'gemini') geminiFail = r.message
+      last = { status: r.status === 429 ? 429 : 502, json: { error: 'upstream', message: geminiFail && p === 'groq' ? `${geminiFail} · ${r.message}` : r.message } }
+      continue
+    }
     const picks = parsePicks(r.text, kind, count)
-    if (picks.length) return { status: 200, json: { picks, provider: p } }
+    if (picks.length) return { status: 200, json: { picks, provider: p, model: r.model, ...(p === 'groq' && geminiFail ? { note: geminiFail } : {}) } }
+    if (p === 'gemini') geminiFail = 'Gemini returned no picks'
     last = { status: 502, json: { error: 'empty', message: `No picks came back${r.finish && !/^(STOP|stop)$/.test(r.finish) ? ` (${r.finish})` : ''}. Try rephrasing.` } }
   }
   return last

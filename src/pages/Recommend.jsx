@@ -15,6 +15,7 @@ export default function Recommend({ user, onAuthRequired }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [asked, setAsked] = useState(false)
+  const [meta, setMeta] = useState(null)
 
   // Titles from My List + Currently Watching, so picks match your taste.
   useEffect(() => {
@@ -34,12 +35,13 @@ export default function Recommend({ user, onAuthRequired }) {
   }, [user])
 
   const go = useCallback(async (text = prompt, k = kind) => {
-    setLoading(true); setError(''); setAsked(true)
+    setLoading(true); setError(''); setAsked(true); setMeta(null)
     try {
-      const raw = await fetchPicks({ prompt: text, kind: k, watched: user && useHistory ? history : [] })
+      const { picks: raw, provider, model, note } = await fetchPicks({ prompt: text, kind: k, watched: user && useHistory ? history : [] })
       const resolved = (await Promise.all(raw.map(resolvePick))).filter(Boolean)
       if (!resolved.length) throw new Error('Nothing matched. Try rephrasing.')
       setPicks(resolved)
+      setMeta({ provider, model, note })
     } catch (e) {
       setPicks([])
       setError(e.code === 'not_configured' ? 'AI picks aren’t set up yet — the site owner needs to add the AI key.' : (e.message || 'Something went wrong.'))
@@ -92,6 +94,13 @@ export default function Recommend({ user, onAuthRequired }) {
       {loading ? (
         <div className="grid">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="skel skel-poster" />)}</div>
       ) : picks.length > 0 ? (
+        <>
+        {meta?.provider && (
+          <p className="rec-by">
+            Answered by <strong>{meta.provider === 'gemini' ? 'Gemini' : 'Groq'}</strong>{meta.model ? <span> · {meta.model}</span> : null}
+            {meta.note ? <span className="rec-note"> — Gemini didn’t answer ({meta.note})</span> : null}
+          </p>
+        )}
         <div className="grid rec-grid">
           {picks.map((p) => (
             <div key={p.type + p.href} className="rec-item">
@@ -100,6 +109,7 @@ export default function Recommend({ user, onAuthRequired }) {
             </div>
           ))}
         </div>
+        </>
       ) : !asked && !error ? (
         <div className="empty"><div className="emoji">✨</div><p>Pick an idea above or describe your own.</p></div>
       ) : null}

@@ -1,7 +1,7 @@
 import { searchAnimeFiltered } from './anime'
 import { searchMovies, searchTV, getTmdbImage } from './tmdb'
 
-// Ask the server (Gemini) for picks → [{ title, type, year, reason }].
+// Ask the server for picks → { picks: [{ title, type, year, reason }], provider, model, note }.
 export async function fetchPicks({ prompt, kind, watched }) {
   const res = await fetch('/api/recommend', {
     method: 'POST',
@@ -14,7 +14,7 @@ export async function fetchPicks({ prompt, kind, watched }) {
     err.code = data?.error
     throw err
   }
-  return data.picks || []
+  return { picks: data.picks || [], provider: data.provider, model: data.model, note: data.note }
 }
 
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '')
