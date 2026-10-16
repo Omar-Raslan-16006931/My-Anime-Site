@@ -51,7 +51,7 @@ export function rateLimited(ip, now = Date.now()) {
   list.push(now)
   hits.set(ip, list)
   if (hits.size > 5000) hits.clear()
-  return list.length > 40
+  return list.length > 200
 }
 
 // Read the settings from an env-like object (process.env or Vite's loaded .env).
