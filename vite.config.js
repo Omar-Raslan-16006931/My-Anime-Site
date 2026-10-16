@@ -27,6 +27,10 @@ function devApi(env) {
       // AI recommendations (Gemini). Needs GEMINI_API_KEY in your local .env file.
       server.middlewares.use('/api/recommend', async (req, res) => {
         res.setHeader('Content-Type', 'application/json')
+        if (req.method === 'GET') {
+          const { status } = await server.ssrLoadModule('/api/_recommend.js')
+          res.end(JSON.stringify(status(env.GEMINI_API_KEY, env.GEMINI_MODEL))); return
+        }
         if (req.method !== 'POST') { res.statusCode = 405; res.end('{"error":"method"}'); return }
         try {
           const chunks = []

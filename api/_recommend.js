@@ -38,6 +38,9 @@ const SCHEMA = {
 
 // Tiny per-instance rate limit (per IP): 12 requests / 10 minutes.
 const hits = new Map()
+// For the health check: is a key present? (never returns the key itself)
+export const status = (apiKey, model) => ({ configured: !!apiKey, model: model || DEFAULT_MODEL })
+
 export function rateLimited(ip, now = Date.now()) {
   const win = 10 * 60 * 1000
   const list = (hits.get(ip) || []).filter((t) => now - t < win)
@@ -75,7 +78,13 @@ export async function recommend(input, apiKey, model) {
   })
 
   if (!res.ok) {
-    return { status: res.status === 429 ? 429 : 502, json: { error: 'upstream', message: res.status === 429 ? 'AI is busy right now. Try again in a minute.' : 'The AI service had a problem. Try again.' } }
+    // Pass Google's own reason through (e.g. "API key not valid"), never the key.
+    const err = await res.json().catch(() => null)
+    const reason = clean(err?.error?.message, 160)
+    const message = res.status === 429
+      ? 'AI is busy right now. Try again in a minute.'
+      : `AI error (${res.status})${reason ? `: ${reason}` : ''}`
+    return { status: res.status === 429 ? 429 : 502, json: { error: 'upstream', message } }
   }
   const data = await res.json().catch(() => null)
   const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || ''
