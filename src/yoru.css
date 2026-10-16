@@ -915,3 +915,28 @@ a:focus-visible, button:focus-visible { outline-color: var(--y-ac); }
 @media (prefers-reduced-motion: reduce) {
   .page, .y-home, .y-home-body > * { animation: none; }
 }
+
+/* Tab bar hide/show: the buttons squeeze together into one round button, which then fades down.
+   Showing again plays it in reverse: the button rises, then opens out into the full bar. */
+@media (max-width: 879px) {
+  .ydock {
+    transition: left 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.3s, right 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.3s, gap 0.6s ease 0.3s, padding 0.6s ease 0.3s,
+      transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s ease;
+  }
+  .ydock .ydock-item, .ydock .y-me-wrap.dockme {
+    transition: flex 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.3s, opacity 0.4s ease 0.4s, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.3s, background 0.3s, color 0.3s;
+  }
+  .ydock.away {
+    left: calc(50% - 32px); right: calc(50% - 32px); gap: 0; padding: 8px 0; overflow: hidden;
+    transform: translate3d(0, calc(100% + 44px), 0); opacity: 0; pointer-events: none;
+    transition: left 0.6s cubic-bezier(0.65, 0, 0.35, 1), right 0.6s cubic-bezier(0.65, 0, 0.35, 1), gap 0.6s ease, padding 0.6s ease,
+      transform 0.7s cubic-bezier(0.65, 0, 0.35, 1) 0.55s, opacity 0.5s ease 0.65s;
+  }
+  .ydock.away .ydock-item, .ydock.away .y-me-wrap.dockme {
+    flex: 0 0 0; min-width: 0; opacity: 0; transform: scale(0.3);
+    transition: flex 0.6s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.35s ease, transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ydock, .ydock.away, .ydock .ydock-item, .ydock .y-me-wrap.dockme { transition-duration: 0.01s; transition-delay: 0s; }
+}
