@@ -1,73 +1,62 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../supabase'
-import Icon from './Icons'
-import CategoryMenu from './CategoryMenu'
 import { isNative } from '../lib/native'
+import { SCHEMES, SCHEME_NAMES, setScheme, useScheme, glow } from '../lib/theme'
+import { useProfiles, profileActions } from '../lib/profiles'
+import { openSurprise } from '../lib/surprise'
 
-// Brand wordmark.
-const BRAND = 'FuckTheJews'
+// Brand wordmark (rendered upper-case with an accent dot).
+const BRAND = 'Yoru'
 
-// Primary navigation. My List (and Downloads in the iPhone app) live in the
-// profile menu; "Categories" opens the categories panel instead of a page.
-// `match` = path prefixes that count as this tab (so the tab stays lit on
-// detail pages, e.g. /anime/21 keeps "Anime" selected).
+// Top-bar links. `match` = path prefixes that keep the link lit on detail
+// pages (e.g. /anime/21 keeps "Anime" selected).
 const NAV = [
-  { to: '/', label: 'Home', icon: Icon.home, end: true, match: [] },
-  { to: '/anime', label: 'Anime', icon: Icon.bolt, match: ['/anime'] },
-  { to: '/movies', label: 'Movies', icon: Icon.film, match: ['/movies', '/movie/'] },
-  { to: '/tv', label: 'TV', icon: Icon.tv, match: ['/tv'] },
-  { key: 'categories', label: 'Categories', icon: Icon.grid, match: ['/category/'] },
+  { to: '/', label: 'Home', end: true, match: [] },
+  { to: '/anime', label: 'Anime', match: ['/anime'] },
+  { to: '/movies', label: 'Movies', match: ['/movies', '/movie'] },
+  { to: '/tv', label: 'TV', match: ['/tv'] },
+  { to: '/simulcast', label: 'Simulcast', match: ['/simulcast'] },
+  { to: '/browse', label: 'Categories', match: ['/browse', '/category'] },
+  { to: '/watchlist', label: 'My List', match: ['/watchlist'] },
 ]
-// Phone tab bar. Search is a button in the top bar (next to the account).
-// Clean line icons for the tab bar (24px grid, 1.8 stroke).
-const dockIcon = (children) => function DockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
-  )
-}
-const IconHome = dockIcon(<><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></>)
-const IconAnime = dockIcon(<><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /><path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" /></>)
-const IconMovies = dockIcon(<><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /><path d="m6.2 5.3 3.1 3.9" /><path d="m12.4 3.4 3.1 4" /><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></>)
-const IconTv = dockIcon(<><rect width="20" height="15" x="2" y="7" rx="2" ry="2" /><polyline points="17 2 12 7 7 2" /></>)
-const DOCK = [
-  { to: '/', label: 'Home', icon: IconHome, end: true },
-  { to: '/anime', label: 'Anime', icon: IconAnime },
-  { to: '/movies', label: 'Movies', icon: IconMovies },
-  { to: '/tv', label: 'TV', icon: IconTv },
-]
-function dockTab(pathname) {
-  if (pathname === '/') return 0
-  const i = activeTab(pathname)
-  return i >= 0 && i < 4 ? i : -1
-}
+const hit = (pathname, p) => pathname === p || pathname.startsWith(p + '/')
+const navOn = (n, pathname) => (n.end ? pathname === n.to : n.match.some((p) => hit(pathname, p)))
 
-function activeTab(pathname) {
-  if (pathname === '/') return 0
-  return NAV.findIndex((n) => n.match.some((p) => pathname === p || pathname.startsWith(p.endsWith('/') ? p : p + '/')))
-}
+// Phone tab bar — line icons on a 24px grid.
+const ico = (children) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: 'none' }}>{children}</svg>
+)
+const DOCK = [
+  { key: 'home', to: '/', label: 'Home', icon: ico(<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />), match: (p) => p === '/' },
+  { key: 'simulcast', to: '/simulcast', label: 'Simulcast', icon: ico(<><rect x="3" y="4.5" width="18" height="16" rx="3.5" /><path d="M3 9.5h18M8 2.5v4M16 2.5v4" /></>), match: (p) => hit(p, '/simulcast') },
+  { key: 'search', to: '/search', label: 'Search', icon: ico(<><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></>), match: (p) => hit(p, '/search') },
+  { key: 'list', to: '/watchlist', label: 'My List', icon: ico(<path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4.5L5 21V4.5a1 1 0 0 1 1-1z" />), match: (p) => hit(p, '/watchlist') },
+  { key: 'browse', to: '/browse', label: 'Browse', icon: ico(<><rect x="3.5" y="3.5" width="7" height="7" rx="2" /><rect x="13.5" y="3.5" width="7" height="7" rx="2" /><rect x="3.5" y="13.5" width="7" height="7" rx="2" /><rect x="13.5" y="13.5" width="7" height="7" rx="2" /></>), match: (p) => ['/browse', '/category', '/anime', '/movies', '/tv'].some((x) => p === x || (x === '/category' && hit(p, x))) },
+]
+const NO_CHROME = ['/profiles', '/welcome']
 
 export default function Navbar({ user, profile, onAuthClick }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [kbOpen, setKbOpen] = useState(false)
-  const [catOpen, setCatOpen] = useState(false)
   const [dockAway, setDockAway] = useState(false)
-  const [dockMoving, setDockMoving] = useState(false)
   const [q, setQ] = useState('')
   const menuRef = useRef(null)
-  const searchRef = useRef(null)
   const baseVHRef = useRef(0)
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const tab = dockTab(pathname)
+  const scheme = useScheme()
+  const { profiles, active } = useProfiles()
 
-  // The dock is locked to the bottom and never repositioned. The ONLY thing we
-  // do for the keyboard is remove it while the keyboard is open. Detection works
-  // on BOTH iOS (visual-viewport shrinks) and Android (layout shrinks): we track
-  // the tallest visible height seen (no keyboard) and flag the keyboard when the
-  // current visible height drops well below it. ~160px separates a keyboard from
-  // the address bar; setState bails when unchanged so there's no churn/loop.
+  const account = profile?.username || user?.email?.split('@')[0] || ''
+  useEffect(() => { profileActions.ensure(account || 'Me') }, [account])
+  const me = active || profiles[0]
+  const initial = (me?.name || account || 'G')[0].toUpperCase()
+  const tab = DOCK.findIndex((d) => d.match(pathname))
+
+  // Keyboard: remove the tab bar while the on-screen keyboard is open. Works on
+  // iOS (visual viewport shrinks) and Android (layout shrinks).
   useEffect(() => {
     const vv = window.visualViewport
     const visibleH = () => (vv ? vv.height : window.innerHeight)
@@ -101,43 +90,25 @@ export default function Navbar({ user, profile, onAuthClick }) {
     }
   }, [])
 
-  // On the home page (PC) the bar sits see-through over the banner and turns
-  // solid black once you scroll. Phones always get the solid bar.
+  // Top bar is see-through over the home hero and solid after 40px of scroll.
+  // The tab bar tucks away while scrolling down and returns on scroll up.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 30)
+    let last = window.scrollY
+    const onScroll = () => {
+      const y = window.scrollY
+      setScrolled(y > 40)
+      const d = y - last
+      if (Math.abs(d) > 8) { setDockAway(d > 0 && y > 140); last = y }
+      if (y < 60) setDockAway(false)
+    }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Floating dock: tucks away while scrolling down, returns on scroll up, and
-  // tightens slightly while the page is in motion.
+  useEffect(() => { setMenuOpen(false) }, [pathname])
   useEffect(() => {
-    let last = window.scrollY
-    let stop = 0
-    const onScroll = () => {
-      const y = window.scrollY
-      const d = y - last
-      if (Math.abs(d) > 8) {
-        setDockAway(d > 0 && y > 140)
-        last = y
-      }
-      if (y < 60) setDockAway(false)
-      setDockMoving(true)
-      clearTimeout(stop)
-      stop = setTimeout(() => setDockMoving(false), 160)
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => { window.removeEventListener('scroll', onScroll); clearTimeout(stop) }
-  }, [])
-
-  // Close the categories panel whenever the page changes.
-  useEffect(() => { setCatOpen(false) }, [pathname])
-
-  useEffect(() => {
-    const onClick = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false)
-    }
+    const onClick = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
@@ -151,117 +122,75 @@ export default function Navbar({ user, profile, onAuthClick }) {
   const submitSearch = (e) => {
     e.preventDefault()
     const v = q.trim()
-    if (!v) return
-    // Blur so the phone keyboard closes and results are visible right away.
     document.activeElement?.blur?.()
-    navigate(`/search?q=${encodeURIComponent(v)}`)
+    navigate(v ? `/search?q=${encodeURIComponent(v)}` : '/search')
   }
 
-  const initial = (profile?.username || user?.email || 'G')[0].toUpperCase()
-  const overHero = pathname === '/' && !scrolled && !catOpen
+  if (NO_CHROME.includes(pathname)) return null
+  const overHero = pathname === '/' && !scrolled
+  const go = (to) => { setMenuOpen(false); navigate(to) }
 
   return (
     <>
-      <header className={'topbar' + (scrolled ? ' scrolled' : '') + (overHero ? ' over-hero' : '')}>
-        <Link to="/" className="brand">{BRAND}</Link>
+      <header className={'topbar y-top' + (overHero ? ' over-hero' : '') + (scrolled ? ' scrolled' : '')}>
+        <Link to="/" className="brand y-brand" aria-label={BRAND}>{BRAND}<i>.</i></Link>
 
-        <nav className="nav-links">
-          {NAV.map((n) => n.key === 'categories' ? (
-            <button
-              key={n.key}
-              type="button"
-              className={'nav-link' + (catOpen || pathname.startsWith('/category/') ? ' active' : '')}
-              aria-expanded={catOpen}
-              onClick={() => setCatOpen((v) => !v)}
-            >
-              {n.label}
-              <svg className={'nav-caret' + (catOpen ? ' up' : '')} viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
-            </button>
-          ) : (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              end={n.end}
-              className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
-            >
-              {n.label}
-            </NavLink>
+        <nav className="y-links" aria-label="Main">
+          {NAV.map((n) => (
+            <NavLink key={n.to} to={n.to} end={n.end} className={'y-link' + (navOn(n, pathname) ? ' on' : '')}>{n.label}</NavLink>
           ))}
         </nav>
 
-        <div className="topbar-spacer" />
+        <div className="y-top-right">
+          <button type="button" className="y-surprise" onClick={openSurprise}>Surprise me</button>
+          <form className={'y-search' + (q ? ' has-text' : '')} onSubmit={submitSearch} onClick={() => { if (pathname !== '/search') navigate('/search') }}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="6" cy="6" r="4.5" /><line x1="9.5" y1="9.5" x2="13" y2="13" /></svg>
+            <input type="search" enterKeyHint="search" placeholder="Titles, genres, people" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search anime, shows and movies" />
+          </form>
+        </div>
 
-        <Link to="/recommend" className={'nav-ai' + (pathname === '/recommend' ? ' active' : '')} title="AI picks">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /></svg>
-          <span>AI picks</span>
-        </Link>
-
-        <form
-          className={'topbar-search' + (q ? ' has-text' : '')}
-          onSubmit={submitSearch}
-          onClick={() => { if (window.innerWidth >= 880) navigate('/search'); else searchRef.current?.focus() }}
-        >
-          <Icon.search width="17" height="17" />
-          <input
-            ref={searchRef}
-            type="search"
-            enterKeyHint="search"
-            placeholder="Search titles"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            aria-label="Search anime, shows and movies"
-          />
-        </form>
-
-        <Link to="/search" className="topbar-search-btn" aria-label="Search">
-          <Icon.search width="20" height="20" />
-        </Link>
-
-        {user ? (
-          <div style={{ position: 'relative' }} ref={menuRef}>
-            <button className="avatar" onClick={() => setMenuOpen((v) => !v)} aria-label="Account menu">
-              {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}
-            </button>
-            {menuOpen && (
-              <div className="menu fade-in">
-                <div className="menu-head">@{profile?.username || user.email}</div>
-                <button className="menu-item" onClick={() => { navigate('/profile'); setMenuOpen(false) }}>Profile</button>
-                <button className="menu-item" onClick={() => { navigate('/currently-watching'); setMenuOpen(false) }}>Currently Watching</button>
-                <button className="menu-item" onClick={() => { navigate('/watchlist'); setMenuOpen(false) }}>My List</button>
-                <button className="menu-item" onClick={() => { navigate('/recommend'); setMenuOpen(false) }}>AI picks</button>
-                {isNative && <button className="menu-item" onClick={() => { navigate('/downloads'); setMenuOpen(false) }}>Downloads</button>}
-                <button className="menu-item danger" onClick={handleLogout}>Log out</button>
+        <div className="y-me-wrap" ref={menuRef}>
+          <button className="y-me" onClick={() => setMenuOpen((v) => !v)} aria-label="Account menu" aria-expanded={menuOpen}
+            style={{ background: glow(me?.hue || 0) }}>
+            {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}
+          </button>
+          {menuOpen && (
+            <div className="y-menu" role="menu">
+              <div className="y-menu-head">
+                <b>{me?.name || 'Guest'}</b>
+                <span>{user ? `@${account}` : 'Not signed in'}</span>
               </div>
-            )}
-          </div>
-        ) : (
-          <button className="btn btn-primary btn-sm" onClick={onAuthClick}>Sign In</button>
-        )}
+              <button className="y-menu-item" onClick={() => go('/profiles')}>Who’s watching?</button>
+              {user && <button className="y-menu-item" onClick={() => go('/profile')}>Account</button>}
+              {user && <button className="y-menu-item" onClick={() => go('/currently-watching')}>Currently Watching</button>}
+              <button className="y-menu-item" onClick={() => go('/watchlist')}>My List</button>
+              <button className="y-menu-item" onClick={() => go('/recommend')}>AI picks</button>
+              {isNative && <button className="y-menu-item" onClick={() => go('/downloads')}>Downloads</button>}
+              <div className="y-menu-label">Colour</div>
+              <div className="y-swatches">
+                {SCHEME_NAMES.map((k) => (
+                  <button key={k} type="button" className={'y-swatch' + (scheme === k ? ' on' : '')} title={k} aria-label={k + ' colour scheme'} aria-pressed={scheme === k} onClick={() => setScheme(k)}>
+                    <span style={{ background: SCHEMES[k].bg }} /><span style={{ background: SCHEMES[k].s2 }} /><span style={{ background: SCHEMES[k].ac }} />
+                  </button>
+                ))}
+              </div>
+              {user
+                ? <button className="y-menu-item danger" onClick={handleLogout}>Log out</button>
+                : <button className="y-menu-item strong" onClick={() => { setMenuOpen(false); onAuthClick?.() }}>Sign in</button>}
+            </div>
+          )}
+        </div>
       </header>
 
-      {/* Phone tab bar: full width, pinned to the bottom. The red glow is one
-          element that slides to the selected tab. */}
-      <nav
-        className={'dock' + (kbOpen ? ' dock-hidden' : '') + (dockAway ? ' dock-away' : '') + (dockMoving && !dockAway ? ' dock-moving' : '')}
-        aria-label="Primary"
-        style={{ '--n': DOCK.length, '--i': Math.max(tab, 0) }}
-      >
-        <span className={'dock-glow' + (tab < 0 ? ' off' : '')} aria-hidden="true" />
-        {DOCK.map((n, i) => (
-          <NavLink
-            key={n.to}
-            to={n.to}
-            end={n.end}
-            className={'dock-item' + (i === tab ? ' active' : '')}
-            aria-current={i === tab ? 'page' : undefined}
-          >
-            <n.icon />
-            <span className="dock-label">{n.label}</span>
+      {/* Phone tab bar: floating pill. The selected tab expands into a white pill with its label. */}
+      <nav className={'ydock' + (kbOpen ? ' hide' : '') + (dockAway ? ' away' : '')} aria-label="Primary">
+        {DOCK.map((d, i) => (
+          <NavLink key={d.key} to={d.to} aria-label={d.label} aria-current={i === tab ? 'page' : undefined} className={'ydock-item' + (i === tab ? ' on' : '')}>
+            {d.icon}
+            <span className="ydock-label">{d.label}</span>
           </NavLink>
         ))}
       </nav>
-
-      <CategoryMenu open={catOpen} onClose={() => setCatOpen(false)} />
     </>
   )
 }

@@ -18,6 +18,11 @@ import Search from './pages/Search'
 import Recommend from './pages/Recommend'
 import Downloads from './pages/Downloads'
 import Category from './pages/Category'
+import Browse from './pages/Browse'
+import Simulcast from './pages/Simulcast'
+import Profiles from './pages/Profiles'
+import Welcome from './pages/Welcome'
+import SurpriseOverlay from './components/SurpriseOverlay'
 import { initVault, subscribeVault, vaultLocked } from './lib/vault'
 import { useSyncExternalStore } from 'react'
 
@@ -163,6 +168,10 @@ export default function App() {
           <Route path="/recommend" element={<Recommend user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/category/:name" element={<Category />} />
+          <Route path="/browse" element={<Browse />} />
+          <Route path="/simulcast" element={<Simulcast />} />
+          <Route path="/profiles" element={<Profiles user={user} profile={profile} />} />
+          <Route path="/welcome" element={<Welcome user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/anime" element={<Anime />} />
           <Route path="/movies" element={<Movies />} />
           <Route path="/tv" element={<TVShows />} />
@@ -183,6 +192,7 @@ export default function App() {
       </div>
 
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+      <SurpriseOverlay />
       <Toasts />
     </div>
   )

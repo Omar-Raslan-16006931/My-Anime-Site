@@ -4,6 +4,9 @@ import Hero from '../components/Hero'
 import Row from '../components/Row'
 import MediaCard from '../components/MediaCard'
 import WideCard from '../components/WideCard'
+import ContinueCard from '../components/ContinueCard'
+import { NextSimulcast, SurpriseCard, MoodSection } from '../components/HomeBlocks'
+import { useProfiles } from '../lib/profiles'
 import { getPopularMovies, getPopularTV, getTrendingWeek, getTmdbImage, searchTV } from '../lib/tmdb'
 import { recentlyAiredEpisodes } from '../lib/anilist'
 import { animeByMalIds, animeList, animeCategoryArt } from '../lib/anime'
@@ -35,12 +38,12 @@ function timeAgo(unix) {
 
 const shuffle = (arr) => arr.map((x) => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map((x) => x[1])
 const animeTitle = (a) => a.title_english || a.title
-const animeMeta = (a) => [a.score ? `★ ${Number(a.score).toFixed(1)}` : null, a.type, a.episodes ? `${a.episodes} eps` : null].filter(Boolean).join(' · ')
 
 // Billboard slides carry what "My List" needs to save them.
 const animeHero = (a) => ({
-  kind: 'FEATURED ANIME',
+  type: 'Anime',
   title: animeTitle(a),
+  poster: a.images?.jpg?.large_image_url,
   backdrop: a.banner || a.images?.jpg?.large_image_url,
   score: a.score,
   year: a.year,
@@ -50,18 +53,24 @@ const animeHero = (a) => ({
   save: { key: `anime:${a.mal_id}`, mal_id: a.mal_id, title: animeTitle(a), poster: a.images?.jpg?.large_image_url || null, score: a.score },
 })
 const movieHero = (m) => ({
-  kind: 'FEATURED MOVIE', title: m.title, backdrop: backdrop(m.backdrop_path), score: m.vote_average,
+  type: 'Movie', title: m.title, backdrop: backdrop(m.backdrop_path), poster: m.poster_path ? `${IMG}${m.poster_path}` : null, score: m.vote_average,
   year: m.release_date?.slice(0, 4), desc: m.overview, href: `/movie/${m.id}`,
   save: { key: `movie:${m.id}`, media_type: 'movie', tmdb_id: m.id, title: m.title, poster: m.poster_path ? `${IMG}${m.poster_path}` : null, score: m.vote_average },
 })
 const tvHero = (s) => ({
-  kind: 'FEATURED SERIES', title: s.name, backdrop: backdrop(s.backdrop_path), score: s.vote_average,
+  type: 'Series', title: s.name, backdrop: backdrop(s.backdrop_path), poster: s.poster_path ? `${IMG}${s.poster_path}` : null, score: s.vote_average,
   year: s.first_air_date?.slice(0, 4), desc: s.overview, href: `/tv/${s.id}`,
   save: { key: `tv:${s.id}`, media_type: 'tv', tmdb_id: s.id, title: s.name, poster: s.poster_path ? `${IMG}${s.poster_path}` : null, score: s.vote_average },
 })
 
+const HIDE_KEY = 'yoru:cw-hidden'
+const readHidden = () => { try { return new Set(JSON.parse(localStorage.getItem(HIDE_KEY) || '[]')) } catch { return new Set() } }
+
 export default function Home({ user, onAuthRequired }) {
   const navigate = useNavigate()
+  const { profiles, active } = useProfiles()
+  const me = active || profiles[0]
+  const [hidden, setHidden] = useState(readHidden)
   const [heroList, setHeroList] = useState([])
   const [recentEps, setRecentEps] = useState([])
   const [trending, setTrending] = useState([])
@@ -224,8 +233,21 @@ export default function Home({ user, onAuthRequired }) {
   })
   const movieCard = (m) => ({ href: `/movie/${m.id}`, poster: getTmdbImage(m.poster_path), title: m.title, score: m.vote_average, sub: m.release_date?.slice(0, 4) })
   const tvCard = (s) => ({ href: `/tv/${s.id}`, poster: getTmdbImage(s.poster_path), title: s.name, score: s.vote_average, sub: s.first_air_date?.slice(0, 4) })
-  const wideAnime = (a) => ({ href: `/anime/${a.mal_id}`, banner: a.banner, poster: a.images?.jpg?.large_image_url, title: animeTitle(a), meta: animeMeta(a) })
+  const wideAnime = (a) => ({
+    href: `/anime/${a.mal_id}`, banner: a.banner, poster: a.images?.jpg?.large_image_url, title: animeTitle(a),
+    meta: [a.type, a.episodes ? `${a.episodes} eps` : null].filter(Boolean).join(' · '), score: a.score, genres: normalizeGenres(a.genres),
+    save: { key: `anime:${a.mal_id}`, mal_id: a.mal_id, title: animeTitle(a), poster: a.images?.jpg?.large_image_url || null, score: a.score },
+  })
+  const hideWatch = (key) => {
+    setHidden((prev) => {
+      const next = new Set(prev); next.add(key)
+      try { localStorage.setItem(HIDE_KEY, JSON.stringify([...next])) } catch { /* ignore */ }
+      return next
+    })
+    toast('Removed from Continue watching')
+  }
   const wideWatch = (i) => ({
+    key: watchKey(i),
     href: watchHref(i),
     banner: i.mal_id ? bannerByMal.get(i.mal_id) : null,
     poster: i.poster,
@@ -235,65 +257,76 @@ export default function Home({ user, onAuthRequired }) {
   })
 
   const airingWide = airing.filter((a) => a.banner)
+  const visibleWatching = watching.filter((i) => !hidden.has(watchKey(i)))
+  const fanPosters = trending.slice(0, 3).map((a) => a.images?.jpg?.large_image_url).filter(Boolean)
 
   return (
-    <div className="page home" style={{ paddingTop: 0 }}>
+    <div className="y-home">
       {loading ? (
-        <div className="skel" style={{ height: 'clamp(420px,56vw,82vh)', margin: '0 calc(-1 * clamp(16px,4vw,60px))', borderRadius: 0 }} />
+        <div className="y-skel y-hero-skel" />
       ) : (
         <Hero items={heroList} onPlay={(h) => navigate(h.href)} isInList={isInList} onToggleList={toggleList} />
       )}
 
-      {watching.length > 0 && (
-        <Row title="Continue Watching" wide onMore={() => navigate('/currently-watching')}>
-          {watching.map((i) => <WideCard key={watchKey(i)} item={wideWatch(i)} />)}
+      <div className="y-home-body">
+        {visibleWatching.length > 0 && (
+          <Row title={`Continue watching for ${me?.name || 'you'}`} wide onMore={() => navigate('/currently-watching')} className="y-cw">
+            {visibleWatching.map((i) => <ContinueCard key={watchKey(i)} item={wideWatch(i)} onRemove={() => hideWatch(watchKey(i))} />)}
+          </Row>
+        )}
+
+        <div className="y-duo">
+          <NextSimulcast />
+          <SurpriseCard posters={fanPosters} />
+        </div>
+
+        <MoodSection />
+
+        <Row title="Top 10 this week" sub="Movies and series" loading={!weekTop.length} className="y-top10">
+          {weekTop.map((x, i) => <MediaCard key={x.media_type + x.id} item={{ ...(x.media_type === 'movie' ? movieCard(x) : tvCard({ ...x, name: x.name || x.title })), rank: i + 1 }} />)}
         </Row>
-      )}
 
-      <Row title="Browse by Category" wide onMore={() => navigate('/search?f=1')}>
-        {PRIORITY_CATEGORIES.map((g) => {
-          const a = catArt[g]
-          return (
-            <Link key={g} to={categoryPath(g)} className="cat-tile" title={a?.title ? `${g} · ${a.title}` : g}>
-              {a?.banner && <img className="cat-tile-banner" src={a.banner} alt="" loading="lazy" />}
-              {a?.poster && <img className={'cat-tile-poster' + (a.banner ? '' : ' only')} src={a.poster} alt="" loading="lazy" />}
-              <span>{g}</span>
-            </Link>
-          )
-        })}
-      </Row>
+        <Row title="Browse by category" wide onMore={() => navigate('/browse')} className="y-cats">
+          {PRIORITY_CATEGORIES.map((g) => {
+            const a = catArt[g]
+            return (
+              <Link key={g} to={categoryPath(g)} className="cat-tile" title={a?.title ? `${g} · ${a.title}` : g}>
+                {a?.banner && <img className="cat-tile-banner" src={a.banner} alt="" loading="lazy" />}
+                {a?.poster && <img className={'cat-tile-poster' + (a.banner ? '' : ' only')} src={a.poster} alt="" loading="lazy" />}
+                <span>{g}</span>
+              </Link>
+            )
+          })}
+        </Row>
 
-      <Row title="Top 10 This Week" loading={!weekTop.length}>
-        {weekTop.map((x, i) => <MediaCard key={x.media_type + x.id} item={{ ...(x.media_type === 'movie' ? movieCard(x) : tvCard({ ...x, name: x.name || x.title })), rank: i + 1 }} />)}
-      </Row>
+        <Row title="Trending anime" loading={!trending.length} onMore={() => navigate('/anime')}>
+          {trending.map((a) => <MediaCard key={a.mal_id} item={animeCard(a)} />)}
+        </Row>
 
-      <Row title="Trending Anime" loading={!trending.length} onMore={() => navigate('/anime')}>
-        {trending.map((a) => <MediaCard key={a.mal_id} item={animeCard(a)} />)}
-      </Row>
+        <Row title="Currently airing" wide hover loading={!airing.length} onMore={() => navigate('/anime')}>
+          {airingWide.map((a) => { const w = wideAnime(a); return <WideCard key={a.mal_id} item={w} inList={isInList(w)} onToggleList={toggleList} /> })}
+        </Row>
 
-      <Row title="Currently Airing" wide loading={!airing.length} onMore={() => navigate('/anime')}>
-        {airingWide.map((a) => <WideCard key={a.mal_id} item={wideAnime(a)} />)}
-      </Row>
+        <Row title="New episodes" loading={!recentEps.length}>
+          {recentEps.map((e) => <MediaCard key={e.malId} item={epCard(e)} />)}
+        </Row>
 
-      <Row title="New Episodes" loading={!recentEps.length}>
-        {recentEps.map((e) => <MediaCard key={e.malId} item={epCard(e)} />)}
-      </Row>
+        <Row title="Popular movies" loading={!movies.length} onMore={() => navigate('/movies')}>
+          {movies.map((m) => <MediaCard key={m.id} item={movieCard(m)} />)}
+        </Row>
 
-      <Row title="Popular Movies" loading={!movies.length} onMore={() => navigate('/movies')}>
-        {movies.map((m) => <MediaCard key={m.id} item={movieCard(m)} />)}
-      </Row>
+        <Row title="Popular TV shows" loading={!tv.length} onMore={() => navigate('/tv')}>
+          {tv.map((s) => <MediaCard key={s.id} item={tvCard(s)} />)}
+        </Row>
 
-      <Row title="Popular TV Shows" loading={!tv.length} onMore={() => navigate('/tv')}>
-        {tv.map((s) => <MediaCard key={s.id} item={tvCard(s)} />)}
-      </Row>
+        <Row title="Anime movies" loading={!animeMovies.length}>
+          {animeMovies.map((a) => <MediaCard key={a.mal_id} item={animeCard(a)} />)}
+        </Row>
 
-      <Row title="Anime Movies" loading={!animeMovies.length}>
-        {animeMovies.map((a) => <MediaCard key={a.mal_id} item={animeCard(a)} />)}
-      </Row>
-
-      <Row title="Highest Rated Anime" loading={!topRated.length}>
-        {topRated.map((a) => <MediaCard key={a.mal_id} item={animeCard(a)} />)}
-      </Row>
+        <Row title="Highest rated anime" loading={!topRated.length}>
+          {topRated.map((a) => <MediaCard key={a.mal_id} item={animeCard(a)} />)}
+        </Row>
+      </div>
     </div>
   )
 }

@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import Icon from './Icons'
 
 // Unified poster card used across rows and grids.
-// item: { href, poster, title, sub, score, kind, progress(0..1), fav, onFav }
+// item: { href, poster, title, sub, score, kind, rank, progress(0..1), fav, onFav }
+//  • In rows (and everywhere on phones) the title sits on the poster.
+//  • In PC grids the title and details sit under the poster.
+//  • `rank` renders the outlined Top-10 numeral behind the poster.
 export default function MediaCard({ item, onClick }) {
   const navigate = useNavigate()
   const [loaded, setLoaded] = useState(false)
@@ -11,9 +14,18 @@ export default function MediaCard({ item, onClick }) {
     if (onClick) return onClick(item)
     if (item.href) navigate(item.href)
   }
+  const detail = [item.kind || item.sub].filter(Boolean)
+  const score = item.score ? Number(item.score).toFixed(1) : null
 
   return (
-    <div className="card" onClick={go}>
+    <div
+      className={'card' + (item.rank ? ' ranked' : '')}
+      onClick={go}
+      role="link"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') go() }}
+    >
+      {item.rank ? <span className="card-rank" aria-hidden="true">{item.rank}</span> : null}
       <div className="card-poster">
         {item.poster ? (
           <img
@@ -31,11 +43,14 @@ export default function MediaCard({ item, onClick }) {
           </div>
         )}
 
-        {item.score ? (
-          <span className="card-score"><Icon.star width="10" height="10" />{Number(item.score).toFixed(1)}</span>
-        ) : null}
-        {item.kind && !item.rank ? <span className="card-kind">{item.kind}</span> : null}
-        {item.rank ? <span className="card-rank" aria-hidden="true">{item.rank}</span> : null}
+        <div className="card-over">
+          <b>{item.title}</b>
+          <small>
+            {detail.join(' · ')}
+            {detail.length && score ? ' · ' : ''}
+            {score ? <><Icon.star width="10" height="10" /> {score}</> : null}
+          </small>
+        </div>
 
         {item.onFav && (
           <button
@@ -53,7 +68,11 @@ export default function MediaCard({ item, onClick }) {
       </div>
 
       <div className="card-title">{item.title}</div>
-      {item.sub ? <div className="card-sub">{item.sub}</div> : null}
+      <div className="card-sub">
+        {detail.join(' · ')}
+        {detail.length && score ? ' · ' : ''}
+        {score ? <><Icon.star width="10" height="10" /> {score}</> : null}
+      </div>
     </div>
   )
 }

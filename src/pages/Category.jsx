@@ -1,35 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import MediaCard from '../components/MediaCard'
-import { animeByGenre } from '../lib/anime'
-import { discoverMovies, discoverTV, getTmdbImage } from '../lib/tmdb'
+import { fetchPage } from '../lib/browse'
 import { CATEGORIES, isHiddenGenre, TMDB_MOVIE_GENRE, TMDB_TV_GENRE, categoryPath } from '../lib/categories'
-
-const animeCard = (a) => ({
-  href: `/anime/${a.mal_id}`,
-  poster: a.images?.jpg?.large_image_url,
-  title: a.title_english || a.title,
-  score: a.score,
-  kind: a.type,
-})
-const movieCard = (m) => ({ href: `/movie/${m.id}`, poster: getTmdbImage(m.poster_path), title: m.title, score: m.vote_average, sub: m.release_date?.slice(0, 4) })
-const tvCard = (s) => ({ href: `/tv/${s.id}`, poster: getTmdbImage(s.poster_path), title: s.name, score: s.vote_average, sub: s.first_air_date?.slice(0, 4) })
-
-async function fetchPage(tab, name, page) {
-  // Tab state can lag a category change by one render; never query TMDB without a genre.
-  if (tab === 'movie' && !TMDB_MOVIE_GENRE[name]) tab = 'anime'
-  if (tab === 'tv' && !TMDB_TV_GENRE[name]) tab = 'anime'
-  if (tab === 'movie') {
-    const d = await discoverMovies(TMDB_MOVIE_GENRE[name], page)
-    return { items: (d.results || []).filter((m) => m.poster_path).map(movieCard), hasNext: page < Math.min(d.total_pages || 1, 20) }
-  }
-  if (tab === 'tv') {
-    const d = await discoverTV(TMDB_TV_GENRE[name], page)
-    return { items: (d.results || []).filter((s) => s.poster_path).map(tvCard), hasNext: page < Math.min(d.total_pages || 1, 20) }
-  }
-  const r = await animeByGenre(name, page, 30)
-  return { items: r.list.map(animeCard), hasNext: r.hasNext, failed: r.failed }
-}
 
 export default function Category() {
   const { name: raw } = useParams()
