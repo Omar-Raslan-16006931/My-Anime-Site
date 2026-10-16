@@ -574,9 +574,12 @@ html::before { background: var(--y-bg) !important; }
 @media (max-width: 1180px) { .y-mood-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 879px) {
   .y-mood { gap: 12px; }
-  .y-mood-head { padding: 0; flex-direction: column; align-items: stretch; gap: 12px; }
+  .y-mood-head { padding: 0; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 12px; min-width: 0; }
+  .y-mood-chips { min-width: 0; max-width: 100%; }
   .y-mood-head h2 { padding: 0 20px; font-size: 17px; }
-  .y-mood-chips { flex-wrap: nowrap !important; overflow-x: auto !important; padding: 0 20px !important; scrollbar-width: none; }
+  .y-mood-chips { flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: hidden !important; padding: 2px 28px 2px 20px !important; scrollbar-width: none; overscroll-behavior-x: contain; touch-action: pan-x; -webkit-overflow-scrolling: touch;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+  .y-mood-chips .y-chip { scroll-margin-inline: 24px; }
   .y-mood-chips::-webkit-scrollbar { display: none; }
   .y-mood-chips .y-chip { padding: 8px 14px; }
   .y-mood-blurb { margin: 0; padding: 0 20px; font-size: 13px; }

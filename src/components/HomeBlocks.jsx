@@ -168,7 +168,7 @@ export function MoodSection() {
         <h2>Watch by mood</h2>
         <div className="y-chips scroll y-mood-chips">
           {MOODS.map((m) => (
-            <button key={m.k} type="button" className={'y-chip' + (m.k === mood.k ? ' on' : '')} onClick={() => setMood(m)}>{m.k}</button>
+            <button key={m.k} type="button" className={'y-chip' + (m.k === mood.k ? ' on' : '')} onClick={(e) => { setMood(m); e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }) }}>{m.k}</button>
           ))}
         </div>
         <div className="y-mood-blurb">{cur.blurb}</div>
