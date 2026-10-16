@@ -51,7 +51,15 @@ export async function weekSchedule(start = weekStartOf(), perDay = 10) {
   const from = Math.floor(start.getTime() / 1000)
   const to = from + 7 * 86400
   const q = `query($a:Int,$b:Int,$p:Int){ Page(page:$p, perPage:50){ pageInfo{hasNextPage} airingSchedules(airingAt_greater:$a, airingAt_lesser:$b, sort:TIME){ ${FIELDS} } } }`
-  const pages = await Promise.all([1, 2, 3, 4, 5, 6].map((p) => anilist(q, { a: from, b: to, p }).catch(() => null)))
+  // Pages one after another (with one retry) so AniList's burst limit doesn't reject them.
+  // Two waves of three pages: fast, but gentle enough for AniList's burst limit.
+  const get = (p) => anilist(q, { a: from, b: to, p }).catch(() => null)
+  const pages = []
+  for (const wave of [[1, 2, 3], [4, 5, 6]]) {
+    const got = await Promise.all(wave.map(get))
+    pages.push(...got)
+    if (got.some((d) => d && d.Page?.pageInfo?.hasNextPage === false)) break
+  }
   const seen = new Set()
   const all = []
   for (const d of pages) {
