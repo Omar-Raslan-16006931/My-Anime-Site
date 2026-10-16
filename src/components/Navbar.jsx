@@ -6,7 +6,7 @@ import CategoryMenu from './CategoryMenu'
 import { isNative } from '../lib/native'
 
 // Brand wordmark.
-const BRAND = 'AniWave'
+const BRAND = 'FuckTheJews'
 
 // Primary navigation. My List (and Downloads in the iPhone app) live in the
 // profile menu; "Categories" opens the categories panel instead of a page.
