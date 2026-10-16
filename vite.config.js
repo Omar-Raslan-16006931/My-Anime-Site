@@ -24,6 +24,24 @@ function devApi(env) {
         }
       })
 
+      // AI recommendations (Gemini). Needs GEMINI_API_KEY in your local .env file.
+      server.middlewares.use('/api/recommend', async (req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+        if (req.method !== 'POST') { res.statusCode = 405; res.end('{"error":"method"}'); return }
+        try {
+          const chunks = []
+          for await (const c of req) chunks.push(c)
+          const body = JSON.parse(Buffer.concat(chunks).toString() || '{}')
+          const { recommend } = await server.ssrLoadModule('/api/_recommend.js')
+          const out = await recommend(body, env.GEMINI_API_KEY, env.GEMINI_MODEL)
+          res.statusCode = out.status
+          res.end(JSON.stringify(out.json))
+        } catch (e) {
+          res.statusCode = 500
+          res.end(JSON.stringify({ error: 'server', message: 'Something went wrong. Try again.' }))
+        }
+      })
+
       // English subtitles (Wyzie). Needs WYZIE_API_KEY in your local .env file.
       server.middlewares.use('/api/subs', async (req, res) => {
         res.setHeader('Access-Control-Allow-Origin', '*')

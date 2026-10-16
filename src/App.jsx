@@ -15,6 +15,7 @@ import TVShows from './pages/TVShows'
 import MovieDetail from './pages/MovieDetail'
 import TVDetail from './pages/TVDetail'
 import Search from './pages/Search'
+import Recommend from './pages/Recommend'
 import Downloads from './pages/Downloads'
 import Category from './pages/Category'
 import { initVault, subscribeVault, vaultLocked } from './lib/vault'
@@ -159,6 +160,7 @@ export default function App() {
         <Routes location={location}>
           <Route path="/" element={<Home user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/recommend" element={<Recommend user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/category/:name" element={<Category />} />
           <Route path="/anime" element={<Anime />} />
