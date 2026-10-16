@@ -1,11 +1,11 @@
 // AI recommendations (Google Gemini). Server-side only: the key lives in
 // GEMINI_API_KEY (never a VITE_ variable, never sent to the browser).
 //
-// Optional: GEMINI_MODEL (defaults to "gemini-flash-latest").
+// Optional: GEMINI_MODEL (defaults to "gemini-3.8-flash").
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models'
-const DEFAULT_MODEL = 'gemini-flash-latest'
-const DEFAULT_FALLBACKS = 'gemini-2.5-flash,gemini-2.5-flash-lite'
+const DEFAULT_MODEL = 'gemini-3.8-flash'
+const DEFAULT_FALLBACKS = 'gemini-flash-latest'
 
 const SYSTEM = `You are the recommendation engine for AniWave, a site for anime, movies and TV shows.
 Suggest titles the user will love, based on their request and (optionally) what they already watched.
@@ -92,7 +92,7 @@ export async function recommend(input, apiKey, model, fallbackList) {
         signal: AbortSignal.timeout(Math.max(2500, Math.min(7000, deadline - Date.now()))),
       })
     } catch { res = null; continue }
-    if (res.ok || ![429, 500, 502, 503, 504].includes(res.status)) break
+    if (res.ok || ![404, 429, 500, 502, 503, 504].includes(res.status)) break
   }
   if (!res) return { status: 504, json: { error: 'upstream', message: 'The AI took too long to answer. Try again.' } }
 
