@@ -275,16 +275,16 @@ export default function Home({ user, onAuthRequired }) {
           </Row>
         )}
 
-        <div className="y-duo">
-          <NextSimulcast />
-          <SurpriseCard posters={fanPosters} />
-        </div>
-
         <MoodSection />
 
         <Row title="Top 10 this week" sub="Movies and series" loading={!weekTop.length} className="y-top10">
           {weekTop.map((x, i) => <MediaCard key={x.media_type + x.id} item={{ ...(x.media_type === 'movie' ? movieCard(x) : tvCard({ ...x, name: x.name || x.title })), rank: i + 1 }} />)}
         </Row>
+
+        <div className="y-duo">
+          <NextSimulcast />
+          <SurpriseCard posters={fanPosters} />
+        </div>
 
         <Row title="Browse by category" wide onMore={() => navigate('/browse')} className="y-cats">
           {PRIORITY_CATEGORIES.map((g) => {
