@@ -4,7 +4,7 @@ import Icon from './Icons'
 import { animeList } from '../lib/anime'
 import { getPopularMovies, getPopularTV, getTmdbImage } from '../lib/tmdb'
 import { normalizeGenres } from '../lib/categories'
-import { primeAudio, whoosh, tick, drumroll, win, sparks } from '../lib/casino'
+import { primeAudio, whoosh, tick, win, sparks } from '../lib/casino'
 
 const MIN = 7
 let pool = null // cached across opens
@@ -75,11 +75,10 @@ export default function SurpriseOverlay() {
       if (n >= total) { land(); return }
       const c = center()
       setShuf({ i: (fin + n * 7) % N, done: false, n, total, tilt: (Math.random() - 0.5) * 10 })
-      tick(n, total)
+      tick(n)
       const f = fx.current
       f?.burst(c.x + (n % 2 ? c.w / 2 : -c.w / 2), c.y + (Math.random() - 0.5) * c.h, 5 + (n > total * 0.7 ? 5 : 0), { speed: 4 + n * 0.14, g: 0.12, life: 26, r: 1.8, angle: n % 2 ? 0 : Math.PI, spread: 1.6 })
-      // Anticipation: the very last card hangs for a beat with a drum roll before landing.
-      if (n === total - 1) { drumroll(560); timer.current = setTimeout(step, 640); return }
+      if (n === total - 1) { timer.current = setTimeout(step, 520); return }
       timer.current = setTimeout(step, 36 + n * n * 0.8)
     }
     step()

@@ -2,7 +2,7 @@
 // Everything is synthesised (Web Audio + canvas), so there are no asset files.
 
 let ctx = null
-let bus = null // master chain: gain -> compressor -> speakers, plus a soft echo for shine
+let bus = null // master chain: gain -> compressor -> speakers
 
 export function primeAudio() {
   try {
@@ -13,16 +13,7 @@ export function primeAudio() {
       const comp = ctx.createDynamicsCompressor()
       comp.threshold.value = -16
       comp.ratio.value = 6
-      const echo = ctx.createDelay(0.5)
-      echo.delayTime.value = 0.17
-      const fb = ctx.createGain()
-      fb.gain.value = 0.28
-      const wet = ctx.createGain()
-      wet.gain.value = 0.22
       master.connect(comp)
-      master.connect(echo)
-      echo.connect(fb).connect(echo)
-      echo.connect(wet).connect(comp)
       comp.connect(ctx.destination)
       bus = master
     }
@@ -70,56 +61,30 @@ function noise({ dur = 0.4, vol = 0.05, from = 400, to = 4000, at = 0, q = 1.2, 
   src.start(t)
 }
 
-// Major pentatonic ladder, so the climbing ticks always sound musical.
-const PENT = [0, 2, 4, 7, 9]
-const ladder = (step) => 196 * Math.pow(2, (PENT[step % 5] + 12 * Math.floor(step / 5)) / 12)
-
-// Reel start: whoosh + a rising engine sweep.
+// Reel start: a short rising whoosh.
 export function whoosh() {
-  noise({ dur: 0.6, vol: 0.06, from: 250, to: 3600, q: 0.9 })
-  tone(90, { type: 'sawtooth', dur: 0.55, vol: 0.035, to: 480 })
-  tone(180, { type: 'triangle', dur: 0.5, vol: 0.03, to: 960 })
-  buzz(18)
+  noise({ dur: 0.35, vol: 0.03, from: 300, to: 2600, q: 0.9 })
+  tone(160, { type: 'triangle', dur: 0.3, vol: 0.03, to: 640 })
+  buzz(15)
 }
 
-// One mechanical click per card, a little higher each time. `p` is progress 0..1.
-export function tick(n, total) {
-  const p = n / total
-  const f = ladder(Math.floor(p * 14))
-  tone(f, { type: 'square', dur: 0.055, vol: 0.045 })
-  tone(f * 2, { type: 'triangle', dur: 0.04, vol: 0.03 })
-  noise({ dur: 0.03, vol: 0.05 + p * 0.03, from: 3000, to: 6000, q: 0.8 }) // ratchet
-  if (p > 0.72) tone(f / 2, { type: 'sine', dur: 0.09, vol: 0.07 * p }) // growing thud as it slows
-  buzz(5 + Math.round(p * 8))
+// One clean click per card; every card is a little higher than the last.
+export function tick(n) {
+  const f = 320 * Math.pow(1.055, n)
+  tone(f, { type: 'square', dur: 0.05, vol: 0.045 })
+  tone(f * 2, { type: 'triangle', dur: 0.035, vol: 0.025 })
+  buzz(6)
 }
 
-// Short drum-roll while the last card hangs before landing.
-export function drumroll(ms = 520) {
-  const hits = Math.round(ms / 45)
-  for (let i = 0; i < hits; i++) {
-    const at = (i * ms) / hits / 1000
-    const v = 0.03 + (i / hits) * 0.07
-    noise({ dur: 0.05, vol: v, from: 900, to: 300, at, q: 0.6 })
-    tone(130 + i * 3, { type: 'sine', dur: 0.05, vol: v * 0.9, at })
-  }
-  tone(300, { type: 'sawtooth', dur: ms / 1000, vol: 0.02, to: 1500 })
-}
-
-// Landing: boom, bright major chord with bell overtones, rising run, coin shower.
+// Landing: soft thump, then a bright rising arpeggio and a few sparkles.
 export function win() {
-  tone(120, { type: 'sine', dur: 0.5, vol: 0.28, to: 40 })
-  noise({ dur: 0.35, vol: 0.1, from: 2500, to: 500, q: 0.6 })
-  const run = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98]
-  run.forEach((f, i) => {
-    const at = 0.1 + i * 0.065
-    tone(f, { type: 'triangle', dur: 0.45, vol: 0.075, at })
-    tone(f * 2.01, { type: 'sine', dur: 0.35, vol: 0.03, at }) // bell overtone
-    tone(f * 3, { type: 'sine', dur: 0.2, vol: 0.012, at })
+  tone(110, { type: 'sine', dur: 0.4, vol: 0.14, to: 48 })
+  ;[523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => {
+    tone(f, { type: 'triangle', dur: 0.32, vol: 0.06, at: 0.08 + i * 0.07 })
+    tone(f * 2, { type: 'sine', dur: 0.22, vol: 0.018, at: 0.08 + i * 0.07 })
   })
-  ;[523.25, 659.25, 783.99, 1046.5].forEach((f) => tone(f, { type: 'sawtooth', dur: 1.0, vol: 0.022, at: 0.5, attack: 0.02 }))
-  for (let i = 0; i < 14; i++) tone(2400 + Math.random() * 3200, { type: 'sine', dur: 0.1, vol: 0.028, at: 0.35 + i * 0.05 })
-  noise({ dur: 1.1, vol: 0.028, from: 6000, to: 11000, at: 0.35, q: 0.7, type: 'highpass' })
-  buzz([30, 40, 30, 40, 80])
+  for (let i = 0; i < 6; i++) tone(2400 + Math.random() * 2000, { type: 'sine', dur: 0.08, vol: 0.02, at: 0.4 + i * 0.06 })
+  buzz([30, 40, 60])
 }
 
 const COLORS = ['#ffd24a', '#fff3b0', '#ffb02e', '#ffffff', '#ff6a4d', '#ff8fd1', '#7ad7ff']
