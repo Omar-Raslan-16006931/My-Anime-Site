@@ -15,6 +15,7 @@ Rules:
 - Never suggest adult / hentai / explicit content, and never suggest anything in the Mahou Shoujo genre.
 - Match the requested type: "anime", "movie", "tv", or a mix when the type is "all".
 - Prefer well-rated titles; vary the picks (do not return only sequels of one franchise).
+- Reply with JSON only, shaped exactly as {"picks":[{"title":string,"type":"anime"|"movie"|"tv","year":number,"reason":string}]}.
 - "reason" is ONE short, specific sentence (max 18 words) on why it fits this user. No spoilers.`
 
 const SCHEMA = {
@@ -37,7 +38,7 @@ const SCHEMA = {
   required: ['picks'],
 }
 
-// Tiny per-instance rate limit (per IP): 12 requests / 10 minutes.
+// Tiny per-instance rate limit (per IP): 40 requests / 10 minutes.
 const hits = new Map()
 // For the health check: is a key present? (never returns the key itself)
 export const status = (apiKey, model) => ({ configured: !!apiKey, model: model || DEFAULT_MODEL })
@@ -48,7 +49,7 @@ export function rateLimited(ip, now = Date.now()) {
   list.push(now)
   hits.set(ip, list)
   if (hits.size > 5000) hits.clear()
-  return list.length > 12
+  return list.length > 40
 }
 
 const clean = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n)
@@ -68,31 +69,34 @@ export async function recommend(input, apiKey, model, fallbackList) {
     `Return exactly ${count} picks.`,
   ].join('\n')
 
-  const body = JSON.stringify({
+  const makeBody = (withSchema) => JSON.stringify({
     systemInstruction: { parts: [{ text: SYSTEM }] },
     contents: [{ role: 'user', parts: [{ text: userText }] }],
-    generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.9, maxOutputTokens: 8192 },
+    generationConfig: { responseMimeType: 'application/json', ...(withSchema ? { responseSchema: SCHEMA } : {}), temperature: 0.9, maxOutputTokens: 8192 },
   })
 
   // Google sometimes answers 503 "high demand". Retry the main model once, then
   // fall back to other Flash models (GEMINI_FALLBACKS, comma-separated).
   const main = model || DEFAULT_MODEL
   const fallbacks = String(fallbackList ?? DEFAULT_FALLBACKS).split(',').map((m) => m.trim()).filter((m) => m && m !== main)
-  const attempts = [main, main, ...fallbacks]
+  const attempts = [{ m: main, schema: true }, { m: main, schema: true }, ...fallbacks.map((m) => ({ m, schema: true }))]
   const deadline = Date.now() + 9000
   let res = null
   for (let i = 0; i < attempts.length; i++) {
     if (i > 0 && Date.now() > deadline) break
     if (i === 1) await new Promise((r) => setTimeout(r, 700))
     try {
-      res = await fetch(`${ENDPOINT}/${encodeURIComponent(attempts[i])}:generateContent`, {
+      res = await fetch(`${ENDPOINT}/${encodeURIComponent(attempts[i].m)}:generateContent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body,
+        body: makeBody(attempts[i].schema),
         signal: AbortSignal.timeout(Math.max(2500, Math.min(7000, deadline - Date.now()))),
       })
     } catch { res = null; continue }
-    if (res.ok || ![404, 429, 500, 502, 503, 504].includes(res.status)) break
+    if (res.ok) break
+    // 400 usually means this model dislikes the response schema: retry it once without.
+    if (res.status === 400 && attempts[i].schema) { attempts.splice(i + 1, 0, { m: attempts[i].m, schema: false }); continue }
+    if (![404, 429, 500, 502, 503, 504].includes(res.status)) break
   }
   if (!res) return { status: 504, json: { error: 'upstream', message: 'The AI took too long to answer. Try again.' } }
 
