@@ -30,7 +30,6 @@ const ico = (children) => (
 const DOCK = [
   { key: 'home', to: '/', label: 'Home', icon: ico(<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />), match: (p) => p === '/' },
   { key: 'simulcast', to: '/simulcast', label: 'Simulcast', icon: ico(<><rect x="3" y="4.5" width="18" height="16" rx="3.5" /><path d="M3 9.5h18M8 2.5v4M16 2.5v4" /></>), match: (p) => hit(p, '/simulcast') },
-  { key: 'search', to: '/search', label: 'Search', icon: ico(<><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></>), match: (p) => hit(p, '/search') },
   { key: 'list', to: '/watchlist', label: 'My List', icon: ico(<path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4.5L5 21V4.5a1 1 0 0 1 1-1z" />), match: (p) => hit(p, '/watchlist') },
   { key: 'browse', to: '/browse', label: 'Browse', icon: ico(<><rect x="3.5" y="3.5" width="7" height="7" rx="2" /><rect x="13.5" y="3.5" width="7" height="7" rx="2" /><rect x="3.5" y="13.5" width="7" height="7" rx="2" /><rect x="13.5" y="13.5" width="7" height="7" rx="2" /></>), match: (p) => ['/browse', '/category', '/anime', '/movies', '/tv'].some((x) => p === x || (x === '/category' && hit(p, x))) },
 ]
@@ -43,6 +42,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
   const [dockAway, setDockAway] = useState(false)
   const [q, setQ] = useState('')
   const menuRef = useRef(null)
+  const dockMenuRef = useRef(null)
   const baseVHRef = useRef(0)
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -108,7 +108,10 @@ export default function Navbar({ user, profile, onAuthClick }) {
 
   useEffect(() => { setMenuOpen(false) }, [pathname])
   useEffect(() => {
-    const onClick = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    const onClick = (e) => {
+      const inside = [menuRef.current, dockMenuRef.current].some((n) => n && n.contains(e.target))
+      if (!inside) setMenuOpen(false)
+    }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
@@ -130,6 +133,40 @@ export default function Navbar({ user, profile, onAuthClick }) {
   const overHero = pathname === '/' && !scrolled
   const go = (to) => { setMenuOpen(false); navigate(to) }
 
+  const meWrap = (where, ref) => (
+    <div className={'y-me-wrap ' + where} ref={ref}>
+      <button className="y-me" onClick={() => setMenuOpen((v) => !v)} aria-label="Account menu" aria-expanded={menuOpen}
+        style={{ background: glow(me?.hue || 0) }}>
+        {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}
+      </button>
+      {menuOpen && (
+        <div className="y-menu" role="menu">
+          <div className="y-menu-head">
+            <b>{me?.name || 'Guest'}</b>
+            <span>{user ? `@${account}` : 'Not signed in'}</span>
+          </div>
+          <button className="y-menu-item" onClick={() => go('/profiles')}>Who’s watching?</button>
+          {user && <button className="y-menu-item" onClick={() => go('/profile')}>Account</button>}
+          {user && <button className="y-menu-item" onClick={() => go('/currently-watching')}>Currently Watching</button>}
+          <button className="y-menu-item" onClick={() => go('/watchlist')}>My List</button>
+          <button className="y-menu-item" onClick={() => go('/recommend')}>AI picks</button>
+          {isNative && <button className="y-menu-item" onClick={() => go('/downloads')}>Downloads</button>}
+          <div className="y-menu-label">Colour</div>
+          <div className="y-swatches">
+            {SCHEME_NAMES.map((k) => (
+              <button key={k} type="button" className={'y-swatch' + (scheme === k ? ' on' : '')} title={k} aria-label={k + ' colour scheme'} aria-pressed={scheme === k} onClick={() => setScheme(k)}>
+                <span style={{ background: SCHEMES[k].bg }} /><span style={{ background: SCHEMES[k].s2 }} /><span style={{ background: SCHEMES[k].ac }} />
+              </button>
+            ))}
+          </div>
+          {user
+            ? <button className="y-menu-item danger" onClick={handleLogout}>Log out</button>
+            : <button className="y-menu-item strong" onClick={() => { setMenuOpen(false); onAuthClick?.() }}>Sign in</button>}
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <>
       <header className={'topbar y-top' + (overHero ? ' over-hero' : '') + (scrolled ? ' scrolled' : '')}>
@@ -149,37 +186,10 @@ export default function Navbar({ user, profile, onAuthClick }) {
           </form>
         </div>
 
-        <div className="y-me-wrap" ref={menuRef}>
-          <button className="y-me" onClick={() => setMenuOpen((v) => !v)} aria-label="Account menu" aria-expanded={menuOpen}
-            style={{ background: glow(me?.hue || 0) }}>
-            {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}
-          </button>
-          {menuOpen && (
-            <div className="y-menu" role="menu">
-              <div className="y-menu-head">
-                <b>{me?.name || 'Guest'}</b>
-                <span>{user ? `@${account}` : 'Not signed in'}</span>
-              </div>
-              <button className="y-menu-item" onClick={() => go('/profiles')}>Who’s watching?</button>
-              {user && <button className="y-menu-item" onClick={() => go('/profile')}>Account</button>}
-              {user && <button className="y-menu-item" onClick={() => go('/currently-watching')}>Currently Watching</button>}
-              <button className="y-menu-item" onClick={() => go('/watchlist')}>My List</button>
-              <button className="y-menu-item" onClick={() => go('/recommend')}>AI picks</button>
-              {isNative && <button className="y-menu-item" onClick={() => go('/downloads')}>Downloads</button>}
-              <div className="y-menu-label">Colour</div>
-              <div className="y-swatches">
-                {SCHEME_NAMES.map((k) => (
-                  <button key={k} type="button" className={'y-swatch' + (scheme === k ? ' on' : '')} title={k} aria-label={k + ' colour scheme'} aria-pressed={scheme === k} onClick={() => setScheme(k)}>
-                    <span style={{ background: SCHEMES[k].bg }} /><span style={{ background: SCHEMES[k].s2 }} /><span style={{ background: SCHEMES[k].ac }} />
-                  </button>
-                ))}
-              </div>
-              {user
-                ? <button className="y-menu-item danger" onClick={handleLogout}>Log out</button>
-                : <button className="y-menu-item strong" onClick={() => { setMenuOpen(false); onAuthClick?.() }}>Sign in</button>}
-            </div>
-          )}
-        </div>
+        <Link to="/search" className="y-top-search" aria-label="Search">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></svg>
+        </Link>
+        {meWrap('top', menuRef)}
       </header>
 
       {/* Phone tab bar: floating pill. The selected tab expands into a white pill with its label. */}
@@ -190,6 +200,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
             <span className="ydock-label">{d.label}</span>
           </NavLink>
         ))}
+        {meWrap('dockme', dockMenuRef)}
       </nav>
     </>
   )

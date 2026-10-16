@@ -1,14 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { udb } from '../lib/udb'
 import Icon from '../components/Icons'
 import { toast } from '../lib/toast'
+import { useFlip } from '../lib/flip'
 
 export default function Watchlist({ user, onAuthRequired }) {
   const navigate = useNavigate()
   const [watchlist, setWatchlist] = useState([])
   const [loading, setLoading] = useState(true)
   const [confirm, setConfirm] = useState(null)
+  const [leaving, setLeaving] = useState(() => new Set())
+  const gridRef = useRef(null)
+  useFlip(gridRef, watchlist)
 
   useEffect(() => {
     if (!user) { onAuthRequired?.(); setLoading(false); return }
@@ -20,15 +24,19 @@ export default function Watchlist({ user, onAuthRequired }) {
   const href = (i) => (i.media_type === 'tv' && i.tmdb_id ? `/tv/${i.tmdb_id}` : i.media_type === 'movie' && i.tmdb_id ? `/movie/${i.tmdb_id}` : i.mal_id ? `/anime/${i.mal_id}` : '/')
   const kind = (i) => (i.media_type === 'tv' ? 'TV' : i.media_type === 'movie' ? 'MOVIE' : 'ANIME')
 
+  const keyOf = (i) => i.id || `${i.media_type}-${i.tmdb_id || i.mal_id}`
+
   const doRemove = async () => {
     const item = confirm
     if (!item) return
     setConfirm(null)
+    setLeaving((s) => new Set(s).add(keyOf(item)))
+    const wait = new Promise((r) => setTimeout(r, 420))
     let q = udb.from('watchlist').delete().eq('user_id', user.id)
     if (item.id) q = q.eq('id', item.id)
     else if (item.mal_id) q = q.eq('mal_id', item.mal_id)
     else if (item.tmdb_id && item.media_type) q = q.eq('tmdb_id', item.tmdb_id).eq('media_type', item.media_type)
-    await q
+    await Promise.all([q, wait])
     setWatchlist((prev) => prev.filter((w) => (item.id ? w.id !== item.id : item.mal_id ? w.mal_id !== item.mal_id : !(w.tmdb_id === item.tmdb_id && w.media_type === item.media_type))))
     toast(`Removed “${item.title}” from My List`)
   }
@@ -47,9 +55,9 @@ export default function Watchlist({ user, onAuthRequired }) {
           <p className="muted" style={{ marginTop: 6, fontSize: 14 }}>Tap the + on any title to save it here.</p>
         </div>
       ) : (
-        <div className="grid">
+        <div className="grid" ref={gridRef}>
           {watchlist.map((i) => (
-            <div key={i.id || `${i.media_type}-${i.tmdb_id || i.mal_id}`} className="card" onClick={() => navigate(href(i))}>
+            <div key={keyOf(i)} data-flip={keyOf(i)} className={'card' + (leaving.has(keyOf(i)) ? ' leaving' : '')} onClick={() => navigate(href(i))}>
               <div className="card-poster">
                 {i.poster ? <img src={i.poster} alt={i.title} /> : null}
                 {i.score ? <span className="card-score"><Icon.star width="10" height="10" />{Number(i.score).toFixed(1)}</span> : null}

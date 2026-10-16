@@ -176,6 +176,9 @@ html::before { background: var(--y-bg) !important; }
 .y-search input::-webkit-search-cancel-button { display: none; }
 
 .y-me-wrap { position: relative; flex: none; }
+.y-me-wrap.dockme, .y-top-search { display: none; }
+.y-top-search { width: 40px; height: 40px; place-items: center; border-radius: 50%; color: var(--y-tx); -webkit-tap-highlight-color: transparent; transition: background 0.25s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.y-top-search:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.1); }
 .y-me {
   width: 34px; height: 34px; border-radius: 10px; border: 0; cursor: pointer; display: grid; place-items: center; overflow: hidden;
   color: var(--y-bg); font-weight: 650; font-size: 14px; font-family: inherit; padding: 0;
@@ -209,7 +212,8 @@ html::before { background: var(--y-bg) !important; }
   .topbar.y-top.over-hero { background: linear-gradient(180deg, color-mix(in srgb, var(--y-bg) 70%, transparent), transparent) !important; }
   .y-brand { font-size: 22px; }
   .y-links, .y-top-right { display: none; }
-  .y-me-wrap { margin-left: auto; }
+  .y-top-search { display: grid; margin-left: auto; }
+  .y-me-wrap.top { display: none; }
   .y-me { width: 32px; height: 32px; font-size: 13px; }
 }
 @media (min-width: 880px) and (max-width: 1180px) {
@@ -242,6 +246,10 @@ html::before { background: var(--y-bg) !important; }
     transition: max-width 0.45s cubic-bezier(0.3, 0.7, 0.2, 1), margin-left 0.45s cubic-bezier(0.3, 0.7, 0.2, 1), opacity 0.3s;
   }
   .ydock-item.on .ydock-label { max-width: 90px; margin-left: 8px; opacity: 1; }
+  .ydock .y-me-wrap.dockme { display: flex; flex: 1; min-width: 0; height: 48px; align-items: center; justify-content: center; }
+  .ydock .y-me { width: 34px; height: 34px; border-radius: 50%; transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1); -webkit-tap-highlight-color: transparent; }
+  .ydock .y-me:active { transform: scale(0.88); }
+  .ydock .y-menu { top: auto; bottom: calc(100% + 16px); right: -4px; transform-origin: bottom right; }
 }
 
 /* ============================================================
@@ -342,7 +350,9 @@ html::before { background: var(--y-bg) !important; }
 .y-row .skel-poster, .y-row .skel-wide { border-radius: 14px; }
 .y-skel.skel-poster { aspect-ratio: 2 / 3; border-radius: 14px; }
 .y-skel.skel-wide { aspect-ratio: 16 / 9; border-radius: 14px; }
-.y-cw .row-track.wide { grid-auto-columns: 300px; gap: 14px; }
+.y-cw { --cw-w: 300px; --cw-gap: 14px; }
+.y-row.y-cw .row-track { display: flex; gap: 0; }
+.y-cw .ycc { flex: none; width: var(--cw-w); margin-right: var(--cw-gap); }
 .y-row-hover:hover { z-index: 30; }
 @media (hover: hover) and (min-width: 880px) {
   .y-row-hover .row-track { padding-top: 26px; padding-bottom: 150px; margin-bottom: -130px; }
@@ -417,8 +427,7 @@ html::before { background: var(--y-bg) !important; }
 .ycc-menu button { display: flex; align-items: center; gap: 7px; width: 100%; padding: 7px 10px; border-radius: 7px; border: 0; background: none; color: var(--y-tx); font: 600 12px var(--y-font); white-space: nowrap; cursor: pointer; }
 .ycc-menu button:hover { background: rgba(255, 255, 255, 0.08); }
 @media (max-width: 879px) {
-  .y-row.y-cw .row-track.wide { grid-auto-columns: 176px; gap: 10px; scroll-snap-type: x mandatory; }
-  .y-cw .ycc { scroll-snap-align: start; }
+  .y-cw { --cw-w: 176px; --cw-gap: 10px; }
   .ycc-dots { width: 26px; height: 26px; top: 6px; right: 6px; }
   .ycc-dots svg { width: 14px; height: 14px; }
   .ycc-art { border-radius: 12px; }
@@ -835,8 +844,10 @@ html::before { background: var(--y-bg) !important; }
 .btn-outline, .btn-ghost { background: rgba(255, 255, 255, 0.08); color: var(--y-tx); border: 1px solid rgba(255, 255, 255, 0.12); }
 .btn-outline:hover, .btn-ghost:hover { background: rgba(255, 255, 255, 0.16); }
 .search-field, .search-form input, .page input[type='search'], .page input[type='text'] { font-family: var(--y-font); }
-.search-form { height: 48px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.1); }
-.search-form:focus-within { border-color: var(--y-ac); }
+.search-form { display: flex; align-items: center; gap: 10px; height: auto; border-radius: 0; background: none; border: 0; }
+.search-form .topbar-search { flex: 1 1 auto; min-width: 0; max-width: none; height: 48px; border-radius: 999px; padding: 0 16px; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.1); }
+.search-form .topbar-search:focus-within { border-color: var(--y-ac); background: rgba(255, 255, 255, 0.09); }
+.search-form .btn { flex: none; height: 48px; padding: 0 22px; border-radius: 999px; }
 .sf-chips button, .fu-seg button, .sf-chips .chip { font-family: var(--y-font); border-radius: 999px; }
 .sf-chips .on, .fu-seg .on, .fu-seg button[aria-pressed='true'] { background: var(--y-ac); color: var(--y-onac); border-color: var(--y-ac); }
 .empty { color: var(--y-t3); font-family: var(--y-font); }
@@ -846,3 +857,34 @@ html::before { background: var(--y-bg) !important; }
 a:focus-visible, button:focus-visible { outline-color: var(--y-ac); }
 ::selection { background: var(--y-ac); color: var(--y-onac); }
 @media (max-width: 879px) { .page { padding-left: var(--y-pad); padding-right: var(--y-pad); } }
+
+
+/* ============================================================
+   Smooth rows, removal animations, button feel
+   ============================================================ */
+/* Free momentum scrolling (no snapping) so the swipe speed is entirely yours. */
+.row-track, .y-row .row-track, .y-top10 .row-track, .y-row.y-cw .row-track { scroll-snap-type: none !important; scroll-behavior: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.row-track > *, .y-cw .ycc, .card.ranked { scroll-snap-align: none; }
+
+/* Continue watching: card fades and shrinks, then its slot collapses so the row slides over. */
+@keyframes yoCwOut {
+  0% { opacity: 1; transform: none; width: var(--cw-w); margin-right: var(--cw-gap); }
+  45% { opacity: 0; transform: scale(0.88); width: var(--cw-w); margin-right: var(--cw-gap); }
+  100% { opacity: 0; transform: scale(0.88); width: 0; margin-right: 0; }
+}
+.ycc.leaving { overflow: hidden; pointer-events: none; animation: yoCwOut 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+/* My List / Currently Watching: card shrinks away, neighbours glide in (see lib/flip.js). */
+@keyframes yoCardOut { to { opacity: 0; transform: scale(0.82) translateY(8px); filter: blur(3px); } }
+.card.leaving { pointer-events: none; animation: yoCardOut 0.42s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+/* Confirm dialogs and buttons */
+@keyframes yoSheetIn { from { opacity: 0; transform: translateY(14px) scale(0.96); } }
+.modal > .sheet { animation: yoSheetIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.btn { transition: background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.btn:active { transform: scale(0.95); opacity: 0.9; transition-duration: 0.1s; }
+.card-fav { transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s ease; }
+.card-fav:active { transform: scale(0.82); }
+@media (prefers-reduced-motion: reduce) {
+  .ycc.leaving, .card.leaving { animation-duration: 0.01s; }
+}
