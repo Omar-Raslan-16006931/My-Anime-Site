@@ -4,7 +4,7 @@ import Icon from './Icons'
 import { animeList } from '../lib/anime'
 import { getPopularMovies, getPopularTV, getTmdbImage } from '../lib/tmdb'
 import { normalizeGenres } from '../lib/categories'
-import { primeAudio, whoosh, tick, win, sparks } from '../lib/casino'
+import { primeAudio, whoosh, tick, drumroll, win, sparks } from '../lib/casino'
 
 const MIN = 7
 let pool = null // cached across opens
@@ -53,29 +53,34 @@ export default function SurpriseOverlay() {
     const N = list.length
     if (!N) { setShuf({ i: -1, done: true, n: 0 }); return }
     const fin = Math.floor(Math.random() * N)
-    const total = 20 + Math.floor(Math.random() * 5)
+    const total = 22 + Math.floor(Math.random() * 5)
     let n = 0
     primeAudio()
     whoosh()
+    const land = () => {
+      const c = center()
+      setShuf({ i: fin, done: true, n, total })
+      win()
+      const f = fx.current
+      if (!f) return
+      f.burst(c.x, c.y, 120, { speed: 12, g: 0.22, life: 72, r: 3 })
+      f.burst(c.x - c.w / 2, c.y + c.h / 2, 46, { speed: 10, g: 0.2, life: 64, angle: -2.2, spread: 1.2 })
+      f.burst(c.x + c.w / 2, c.y + c.h / 2, 46, { speed: 10, g: 0.2, life: 64, angle: -0.95, spread: 1.2 })
+      setTimeout(() => f.burst(c.x, c.y - c.h / 2, 70, { speed: 7, g: 0.1, life: 84, r: 2 }), 200)
+      setTimeout(() => f.confetti(110), 120)
+      setTimeout(() => f.confetti(60), 900)
+    }
     const step = () => {
       n += 1
+      if (n >= total) { land(); return }
       const c = center()
-      if (n >= total) {
-        setShuf({ i: fin, done: true, n, total })
-        win()
-        const f = fx.current
-        if (f) {
-          f.burst(c.x, c.y, 110, { speed: 11, g: 0.22, life: 70, r: 3 })
-          f.burst(c.x - c.w / 2, c.y + c.h / 2, 40, { speed: 9, g: 0.2, life: 60, angle: -2.2, spread: 1.2 })
-          f.burst(c.x + c.w / 2, c.y + c.h / 2, 40, { speed: 9, g: 0.2, life: 60, angle: -0.95, spread: 1.2 })
-          setTimeout(() => f.burst(c.x, c.y - c.h / 2, 60, { speed: 6, g: 0.1, life: 80, r: 2 }), 180)
-        }
-        return
-      }
-      setShuf({ i: (fin + n * 7) % N, done: false, n, total })
-      tick(n)
-      fx.current?.burst(c.x + (n % 2 ? c.w / 2 : -c.w / 2), c.y + (Math.random() - 0.5) * c.h, 5, { speed: 4 + n * 0.12, g: 0.12, life: 24, r: 1.8, angle: n % 2 ? 0 : Math.PI, spread: 1.6 })
-      timer.current = setTimeout(step, 38 + n * n * 0.95)
+      setShuf({ i: (fin + n * 7) % N, done: false, n, total, tilt: (Math.random() - 0.5) * 10 })
+      tick(n, total)
+      const f = fx.current
+      f?.burst(c.x + (n % 2 ? c.w / 2 : -c.w / 2), c.y + (Math.random() - 0.5) * c.h, 5 + (n > total * 0.7 ? 5 : 0), { speed: 4 + n * 0.14, g: 0.12, life: 26, r: 1.8, angle: n % 2 ? 0 : Math.PI, spread: 1.6 })
+      // Anticipation: the very last card hangs for a beat with a drum roll before landing.
+      if (n === total - 1) { drumroll(560); timer.current = setTimeout(step, 640); return }
+      timer.current = setTimeout(step, 36 + n * n * 0.8)
     }
     step()
   }, [])
@@ -107,8 +112,9 @@ export default function SurpriseOverlay() {
   const it = shuf && shuf.i >= 0 ? items.current[shuf.i] : null
   const done = !!shuf?.done
   const n = shuf?.n || 0
-  const tilt = done ? 'scale(1.06)' : n % 2 ? 'rotate(-4deg) scale(.95)' : 'rotate(4deg) scale(.95)'
-  const amp = done ? 0 : 3 + (n / (shuf?.total || 22)) * 9
+  const prog = n / (shuf?.total || 24)
+  const tilt = done ? 'rotate(0deg) scale(1.06)' : `rotate(${(shuf?.tilt || 0).toFixed(1)}deg) scale(${(0.93 + prog * 0.05).toFixed(3)})`
+  const amp = done ? 0 : 2 + prog * 9
   const go = () => { const h = it?.href; close(); if (h) navigate(h) }
 
   return (
@@ -116,11 +122,18 @@ export default function SurpriseOverlay() {
       <canvas ref={canvasRef} className="y-shuf-fx" aria-hidden="true" />
       {done && <span className="y-shuf-flash-screen" aria-hidden="true" />}
       <button type="button" className="y-shuf-x" aria-label="Close" onClick={close}><Icon.close width="18" height="18" /></button>
-      <div className="y-eyebrow ac" style={{ fontWeight: 600 }}>{done ? (it ? 'Tonight’s pick' : 'Nothing to pick from') : 'Rolling'}</div>
+      <div className="y-eyebrow ac" style={{ fontWeight: 600 }}>{done ? (it ? '★ Jackpot · tonight’s pick ★' : 'Nothing to pick from') : 'Rolling…'}</div>
+      {done && <span className="y-shuf-rays" aria-hidden="true" />}
       <div className={'y-shuf-stage' + (done ? ' won' : '')} ref={posterRef} style={{ '--amp': amp + 'px', animationName: done ? 'yoSlam' : n % 2 ? 'yoShakeA' : 'yoShakeB' }}>
-        <div className="y-shuf-poster" style={{ transform: tilt }}>
-          {it?.poster ? <img src={it.poster} alt="" /> : <div className="y-skel" style={{ width: '100%', height: '100%' }} />}
-          {!done && n > 0 && <span key={n} className="y-shuf-flash" />}
+        <div className="y-shuf-card" style={{ transform: tilt }}>
+          <div className="y-shuf-pop" style={{ animationName: done ? 'none' : n % 2 ? 'yoPopA' : 'yoPopB' }}>
+            <span className="y-shuf-frame" aria-hidden="true" />
+            <span className="y-shuf-frame b" aria-hidden="true" />
+            <div className="y-shuf-poster">
+              {it?.poster ? <img src={it.poster} alt="" /> : <div className="y-skel" style={{ width: '100%', height: '100%' }} />}
+              {!done && n > 0 && <span key={n} className="y-shuf-flash" />}
+            </div>
+          </div>
         </div>
       </div>
       <div className="y-shuf-title">{it?.title || (done ? 'Try again in a moment' : '…')}</div>
