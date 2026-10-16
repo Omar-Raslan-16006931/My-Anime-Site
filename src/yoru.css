@@ -840,7 +840,7 @@ html::before { background: var(--y-bg) !important; }
 .btn { font-family: var(--y-font); border-radius: 999px; font-weight: 650; transition: transform 0.25s var(--y-out), background 0.25s, opacity 0.25s; }
 .btn:active { transform: scale(0.96); }
 .btn-primary { background: var(--y-ac); color: var(--y-onac); border-color: transparent; }
-.btn-primary:hover { filter: brightness(1.08); }
+.btn-primary:hover, .btn-primary:active, .btn-primary:focus-visible { background: var(--y-ac); color: var(--y-onac); filter: brightness(1.08); }
 .btn-outline, .btn-ghost { background: rgba(255, 255, 255, 0.08); color: var(--y-tx); border: 1px solid rgba(255, 255, 255, 0.12); }
 .btn-outline:hover, .btn-ghost:hover { background: rgba(255, 255, 255, 0.16); }
 .search-field, .search-form input, .page input[type='search'], .page input[type='text'] { font-family: var(--y-font); }
@@ -851,7 +851,8 @@ html::before { background: var(--y-bg) !important; }
 .sf-chips button, .fu-seg button, .sf-chips .chip { font-family: var(--y-font); border-radius: 999px; }
 .sf-chips .on, .fu-seg .on, .fu-seg button[aria-pressed='true'] { background: var(--y-ac); color: var(--y-onac); border-color: var(--y-ac); }
 .empty { color: var(--y-t3); font-family: var(--y-font); }
-.modal, .sheet { background: var(--y-s1); border-radius: 22px; border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: var(--y-shadow); color: var(--y-tx); font-family: var(--y-font); }
+.modal { color: var(--y-tx); font-family: var(--y-font); }
+.sheet { background: var(--y-s1); border-radius: 22px; border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: var(--y-shadow); color: var(--y-tx); font-family: var(--y-font); }
 .card-fav.on { color: var(--y-ac); }
 .card-score { font-family: var(--y-font); }
 a:focus-visible, button:focus-visible { outline-color: var(--y-ac); }
@@ -887,4 +888,30 @@ a:focus-visible, button:focus-visible { outline-color: var(--y-ac); }
 .card-fav:active { transform: scale(0.82); }
 @media (prefers-reduced-motion: reduce) {
   .ycc.leaving, .card.leaving { animation-duration: 0.01s; }
+}
+
+/* Dialogs: see-through blurred backdrop (the page stays visible behind), player stays dark. */
+.modal { background: rgba(6, 5, 5, 0.55); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+@media (max-width: 700px) { .modal { background: rgba(6, 5, 5, 0.55); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); } }
+.player-modal, .player-modal.modal { background: rgba(0, 0, 0, 0.92); }
+@media (max-width: 700px) {
+  .player-modal.modal { background: #000; -webkit-backdrop-filter: none; backdrop-filter: none; padding: 0; }
+  .player-modal .player-card { border: 0; border-radius: 0; box-shadow: none; outline: 0; background: #000; }
+  .player-modal .player-frame { border-radius: 0; border: 0; box-shadow: none; }
+}
+
+/* App-wide motion: pages ease in, home rows rise in sequence, cards give press feedback. */
+@keyframes yoPageIn { from { opacity: 0; transform: translateY(12px); } }
+.page, .y-home { animation: yoPageIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.y-home-body > * { animation: yoPageIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.y-home-body > *:nth-child(1) { animation-delay: 0.04s; }
+.y-home-body > *:nth-child(2) { animation-delay: 0.09s; }
+.y-home-body > *:nth-child(3) { animation-delay: 0.14s; }
+.y-home-body > *:nth-child(4) { animation-delay: 0.19s; }
+.y-home-body > *:nth-child(5) { animation-delay: 0.24s; }
+.y-home-body > *:nth-child(n+6) { animation-delay: 0.28s; }
+.card, .ywc, .ycc, .cat-tile { transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+.card:active, .ycc:active, .cat-tile:active { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) {
+  .page, .y-home, .y-home-body > * { animation: none; }
 }

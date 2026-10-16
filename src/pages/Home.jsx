@@ -238,7 +238,10 @@ export default function Home({ user, onAuthRequired }) {
     meta: [a.type, a.episodes ? `${a.episodes} eps` : null].filter(Boolean).join(' · '), score: a.score, genres: normalizeGenres(a.genres),
     save: { key: `anime:${a.mal_id}`, mal_id: a.mal_id, title: animeTitle(a), poster: a.images?.jpg?.large_image_url || null, score: a.score },
   })
-  const hideWatch = (key) => {
+  const hideWatch = (item) => {
+    const key = watchKey(item)
+    setWatching((prev) => prev.filter((i) => watchKey(i) !== key))
+    if (user && item.id) udb.from(item.source_table).delete().eq('id', item.id).eq('user_id', user.id).then(({ error }) => { if (error) toast('Could not remove it from your account') })
     setHidden((prev) => {
       const next = new Set(prev); next.add(key)
       try { localStorage.setItem(HIDE_KEY, JSON.stringify([...next])) } catch { /* ignore */ }
@@ -271,7 +274,7 @@ export default function Home({ user, onAuthRequired }) {
       <div className="y-home-body">
         {visibleWatching.length > 0 && (
           <Row title={`Continue watching for ${me?.name || 'you'}`} wide onMore={() => navigate('/currently-watching')} className="y-cw">
-            {visibleWatching.map((i) => <ContinueCard key={watchKey(i)} item={wideWatch(i)} onRemove={() => hideWatch(watchKey(i))} />)}
+            {visibleWatching.map((i) => <ContinueCard key={watchKey(i)} item={wideWatch(i)} onRemove={() => hideWatch(i)} />)}
           </Row>
         )}
 
