@@ -73,7 +73,7 @@ export async function recommend(input, apiKey, model) {
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: SYSTEM }] },
       contents: [{ role: 'user', parts: [{ text: userText }] }],
-      generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.9, maxOutputTokens: 2048 },
+      generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.9, maxOutputTokens: 8192 },
     }),
   })
 
@@ -88,8 +88,13 @@ export async function recommend(input, apiKey, model) {
   }
   const data = await res.json().catch(() => null)
   const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || ''
+  const finish = data?.candidates?.[0]?.finishReason || data?.promptFeedback?.blockReason || ''
   let picks = []
-  try { picks = JSON.parse(text)?.picks || [] } catch { /* fall through */ }
+  try {
+    const raw = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
+    const parsed = JSON.parse(raw)
+    picks = Array.isArray(parsed) ? parsed : (parsed?.picks || [])
+  } catch { /* fall through */ }
 
   const seen = new Set()
   picks = picks
@@ -98,6 +103,6 @@ export async function recommend(input, apiKey, model) {
     .map((p) => ({ title: clean(p.title, 120), type: p.type, year: Number(p.year) || null, reason: clean(p.reason, 200) }))
     .slice(0, count)
 
-  if (!picks.length) return { status: 502, json: { error: 'empty', message: 'No picks came back. Try rephrasing.' } }
+  if (!picks.length) return { status: 502, json: { error: 'empty', message: `No picks came back${finish && finish !== 'STOP' ? ` (${finish})` : ''}. Try rephrasing.` } }
   return { status: 200, json: { picks } }
 }
