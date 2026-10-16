@@ -403,7 +403,7 @@ html::before { background: var(--y-bg) !important; }
 .ycc-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255, 255, 255, 0.18); }
 .ycc-bar span { display: block; height: 100%; background: var(--y-ac); }
 .ycc-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; }
-.ycc-row b { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ycc-row b { min-width: 0; font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ycc-row small { font: 500 11px var(--y-font); font-variant-numeric: tabular-nums; color: var(--y-t3); white-space: nowrap; }
 .ycc-dots { position: absolute; top: 8px; right: 8px; z-index: 3; width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, 0.6); color: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; }
 .ycc-dots:hover { background: rgba(0, 0, 0, 0.85); }
@@ -411,13 +411,15 @@ html::before { background: var(--y-bg) !important; }
 .ycc-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 8px; border: 0; background: none; color: var(--y-tx); font: 600 14px var(--y-font); cursor: pointer; }
 .ycc-menu button:hover { background: rgba(255, 255, 255, 0.08); }
 @media (max-width: 879px) {
-  .y-cw .row-track.wide { grid-auto-columns: 220px; gap: 10px; scroll-snap-type: x mandatory; }
+  .y-row.y-cw .row-track.wide { grid-auto-columns: min(78vw, 300px); gap: 12px; scroll-snap-type: x mandatory; }
   .y-cw .ycc { scroll-snap-align: start; }
+  .ycc-dots { width: 26px; height: 26px; top: 6px; right: 6px; }
+  .ycc-dots svg { width: 14px; height: 14px; }
   .ycc-art { border-radius: 12px; }
   .ycc-play { width: 30px; height: 30px; left: 10px; bottom: 12px; }
   .ycc-bar { height: 3px; }
   .ycc-row { flex-direction: column; gap: 2px; }
-  .ycc-row b { font-size: 13px; }
+  .ycc-row b { font-size: 13px; max-width: 100%; }
 }
 
 /* Wide card (hover info panel on PC, poster card on phones) */
