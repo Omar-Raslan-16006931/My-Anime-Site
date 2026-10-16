@@ -24,20 +24,20 @@ function devApi(env) {
         }
       })
 
-      // AI recommendations (Gemini). Needs GEMINI_API_KEY in your local .env file.
+      // AI recommendations (Gemini and/or Groq). Needs GEMINI_API_KEY and/or GROQ_API_KEY in your local .env.
       server.middlewares.use('/api/recommend', async (req, res) => {
         res.setHeader('Content-Type', 'application/json')
         if (req.method === 'GET') {
-          const { status } = await server.ssrLoadModule('/api/_recommend.js')
-          res.end(JSON.stringify(status(env.GEMINI_API_KEY, env.GEMINI_MODEL))); return
+          const { status, configFromEnv } = await server.ssrLoadModule('/api/_recommend.js')
+          res.end(JSON.stringify(status(configFromEnv(env)))); return
         }
         if (req.method !== 'POST') { res.statusCode = 405; res.end('{"error":"method"}'); return }
         try {
           const chunks = []
           for await (const c of req) chunks.push(c)
           const body = JSON.parse(Buffer.concat(chunks).toString() || '{}')
-          const { recommend } = await server.ssrLoadModule('/api/_recommend.js')
-          const out = await recommend(body, env.GEMINI_API_KEY, env.GEMINI_MODEL, env.GEMINI_FALLBACKS)
+          const { recommend, configFromEnv } = await server.ssrLoadModule('/api/_recommend.js')
+          const out = await recommend(body, configFromEnv(env))
           res.statusCode = out.status
           res.end(JSON.stringify(out.json))
         } catch (e) {
