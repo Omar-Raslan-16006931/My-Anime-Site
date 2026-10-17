@@ -92,7 +92,6 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   const [loading, setLoading] = useState(true)
   const [epLoading, setEpLoading] = useState(false)
   const [loadError, setLoadError] = useState('')
-  const [tab, setTab] = useState('episodes')
   const [playingEp, setPlayingEp] = useState(null)
   const [opSaga, setOpSaga] = useState(0)
   const [opPage, setOpPage] = useState(0)
@@ -190,7 +189,6 @@ export default function AnimeDetail({ user, onAuthRequired }) {
     return { num, ep: episodesByNum.get(num) || null }
   })
   const milestoneTitle = (n) => (malId === 21 ? OP_MILESTONES[n] : null)
-  const isMilestone = (n) => (malId === 21 ? !!OP_MILESTONES[n] : n === 1 || n % 100 === 0)
 
   const markSeen = async (epNum) => {
     if (!user) return onAuthRequired?.()
@@ -244,7 +242,6 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   }
 
   const selectSaga = (i) => { setOpSaga(i); setOpPage(0) }
-  const changeOpPage = (d) => setOpPage((p) => Math.max(0, Math.min(sagaPageCount - 1, p + d)))
   const jumpToEp = (n) => {
     const num = parseInt(n, 10)
     if (!num || num < 1) return

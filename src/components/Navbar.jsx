@@ -30,7 +30,7 @@ const DOCK = [
 ]
 const NO_CHROME = ['/profiles', '/welcome']
 
-export default function Navbar({ user, profile, onAuthClick }) {
+export default function Navbar({ user, profile }) {
   const [scrolled, setScrolled] = useState(false)
   const [kbOpen, setKbOpen] = useState(false)
   const [q, setQ] = useState('')

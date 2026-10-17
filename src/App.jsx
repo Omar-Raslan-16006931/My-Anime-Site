@@ -157,7 +157,7 @@ export default function App() {
       </div>
     ) : (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Navbar user={user} profile={profile} onAuthClick={() => setShowAuth(true)} />
+      <Navbar user={user} profile={profile} />
       <VaultBanner />
 
       <PageStack key={dataKey} location={location} render={(loc) => (

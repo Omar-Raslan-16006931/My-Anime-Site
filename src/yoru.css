@@ -2362,3 +2362,15 @@ body { transition: none; }
   .wp.lights .wp-side { display: none; }
   .wp.lights .wp-stage { align-self: center; padding: 3vh 0; }
 }
+
+/* ---- Quick-scan fixes ---- */
+/* AI dialog: backdrop fades out with the sheet; body scrolls inside the sheet. */
+.ai-scrim.closing { animation: yoAiScrimOut 0.36s ease forwards !important; }
+@keyframes yoAiScrimOut { to { opacity: 0; } }
+.ai-sheet { display: flex !important; flex-direction: column !important; }
+.ai-sheet-body { flex: 1 1 auto; min-height: 0; }
+/* Skeletons shouldn't flash for cached content and should calm down for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .y-skel, .skel { animation: none !important; }
+  .ai-sheet, .ai-scrim, .wp { animation-duration: 0.01ms !important; }
+}

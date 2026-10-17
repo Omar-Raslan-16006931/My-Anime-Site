@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import MediaCard from '../components/MediaCard'
@@ -29,7 +29,20 @@ export default function Search({ user, onAuthRequired }) {
   const [showFilters, setShowFilters] = useState(params.get('f') === '1')
   const [aiOpen, setAiOpen] = useState(params.get('ai') === '1') // dialog mounted
   const [aiOut, setAiOut] = useState(false) // dialog playing its exit
-  const closeAi = () => { setAiOut(true); setTimeout(() => { setAiOpen(false); setAiOut(false) }, 380) }
+  const closingAi = useRef(false)
+  const closeAi = () => {
+    if (closingAi.current) return
+    closingAi.current = true
+    setAiOut(true)
+    setTimeout(() => { setAiOpen(false); setAiOut(false); closingAi.current = false }, 380)
+  }
+  // Keep the page behind the dialog still.
+  useEffect(() => {
+    if (!aiOpen) return undefined
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [aiOpen])
   useEffect(() => {
     if (!aiOpen) return undefined
     const k = (e) => { if (e.key === 'Escape') closeAi() }
