@@ -128,9 +128,11 @@ export default function Navbar({ user, profile, onAuthClick }) {
           </form>
         </div>
 
-        <Link to="/search" className="y-top-search" aria-label="Search">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></svg>
-        </Link>
+        {!onMe && (
+          <Link to="/search" className="y-top-search" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></svg>
+          </Link>
+        )}
         <Link to="/me" className={'y-me-wrap top' + (onMe ? ' on' : '')} aria-label="Your profile, list and settings">
           <span className="y-me" style={{ background: glow(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
         </Link>

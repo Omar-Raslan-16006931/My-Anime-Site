@@ -7,7 +7,6 @@ import { SCHEMES, SCHEME_NAMES, setScheme, useScheme } from '../lib/theme'
 import { useProfiles, profileActions } from '../lib/profiles'
 import CurrentlyWatching from './CurrentlyWatching'
 import Watchlist from './Watchlist'
-import Recommend from './Recommend'
 import Profile from './Profile'
 import Downloads from './Downloads'
 
@@ -20,7 +19,6 @@ const Chevron = () => <svg className="acc-go" width="16" height="16" viewBox="0 
 const SECTIONS = [
   { k: 'continue', label: 'Continue watching', user: true },
   { k: 'list', label: 'My List', user: true },
-  { k: 'ai', label: 'AI picks', sub: 'Tell it your mood, get a shortlist', user: true, icon: ico(<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z" />) },
   { k: 'account', label: 'Account info', user: true, top: true, icon: ico(<><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>) },
   ...(isNative ? [{ k: 'downloads', label: 'Downloads', sub: 'Watch offline', icon: ico(<path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14" />) }] : []),
   { k: 'look', label: 'Appearance', sub: 'Colour theme', icon: ico(<><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 0 0 18z" /></>) },
@@ -48,6 +46,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
   const logout = async () => { await supabase.auth.signOut(); navigate('/') }
 
   // Previews for the overview (first 12 of each).
+  const [lookOpen, setLookOpen] = useState(false)
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
   const [newKids, setNewKids] = useState(false)
@@ -80,7 +79,6 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
       )
     } else if (sel.k === 'continue') body = <CurrentlyWatching user={user} onAuthRequired={onAuthRequired} />
     else if (sel.k === 'list') body = <Watchlist user={user} onAuthRequired={onAuthRequired} />
-    else if (sel.k === 'ai') body = <Recommend user={user} onAuthRequired={onAuthRequired} />
     else if (sel.k === 'account') body = <Profile user={user} profile={profile} setProfile={setProfile} />
     else if (sel.k === 'downloads') body = <Downloads />
     else {
@@ -111,8 +109,6 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
   }
 
   /* ---------------- Overview ---------------- */
-  const others = profiles.filter((p) => p.id !== me?.id)
-  const switchTo = (p) => { profileActions.setActive(p.id) }
   const create = (e) => {
     e.preventDefault()
     const p = profileActions.add(newName, newKids)
@@ -124,45 +120,39 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
       <div className="acc-glow" style={{ '--h1': `oklch(0.6 0.16 ${me?.hue || 0})` }} aria-hidden="true" />
 
       <header className="acc-hero">
-        {user && (
-          <button type="button" className="acc-out" onClick={logout} aria-label="Sign out" title="Sign out">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3" /></svg>
-          </button>
-        )}
         <div className="acc-avatar-wrap">
           <button type="button" className="acc-avatar" style={{ background: vivid(me?.hue || 0) }} onClick={() => navigate('/profiles')} aria-label="Switch profile">
             {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}
           </button>
           <button type="button" className="acc-pen" onClick={() => navigate('/profiles?manage=1')} aria-label="Manage profiles" title="Manage profiles">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></svg>
           </button>
         </div>
-        <h1 className="acc-name">{me?.name || 'Guest'}</h1>
-        <span className="acc-handle">{user ? `@${account}` : 'Browsing as a guest'}</span>
-        {user && <button type="button" className="acc-info" onClick={() => pick('account')}>Account info</button>}
-
-        <div className="acc-profiles">
-          {others.map((p) => (
-            <button key={p.id} type="button" className="acc-p" onClick={() => switchTo(p)}>
-              <span style={{ background: vivid(p.hue || 0) }}>{p.name[0].toUpperCase()}</span>
-              <small>{p.name}</small>
-            </button>
-          ))}
-          {profiles.length < profileActions.max && (
-            <button type="button" className={'acc-p add' + (adding ? ' on' : '')} onClick={() => setAdding((v) => !v)} aria-expanded={adding}>
-              <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></span>
-              <small>Add</small>
-            </button>
-          )}
+        <div className="acc-id">
+          <h1 className="acc-name">{me?.name || 'Guest'}</h1>
+          <span className="acc-handle">{user ? `@${account}` : 'Browsing as a guest'}</span>
+          <div className="acc-btns">
+            {user && <button type="button" className="acc-info" onClick={() => pick('account')}>Account info</button>}
+            {profiles.length < profileActions.max && (
+              <button type="button" className={'acc-info icon' + (adding ? ' on' : '')} onClick={() => setAdding((v) => !v)} aria-expanded={adding} aria-label="Add profile" title="Add profile">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+              </button>
+            )}
+          </div>
         </div>
-        {adding && (
-          <form className="acc-add" onSubmit={create}>
-            <input autoFocus maxLength={18} placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} aria-label="New profile name" />
-            <label><input type="checkbox" checked={newKids} onChange={(e) => setNewKids(e.target.checked)} /> Kids</label>
-            <button type="submit" className="btn btn-primary btn-sm" disabled={!newName.trim()}>Add</button>
-          </form>
+        {user && (
+          <button type="button" className="acc-out" onClick={logout} aria-label="Sign out" title="Sign out">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3" /></svg>
+          </button>
         )}
       </header>
+      {adding && (
+        <form className="acc-add" onSubmit={create}>
+          <input autoFocus maxLength={18} placeholder="New profile name" value={newName} onChange={(e) => setNewName(e.target.value)} aria-label="New profile name" />
+          <label><input type="checkbox" checked={newKids} onChange={(e) => setNewKids(e.target.checked)} /> Kids</label>
+          <button type="submit" className="btn btn-primary btn-sm" disabled={!newName.trim()}>Add</button>
+        </form>
+      )}
 
       {!user ? (
         <div className="acc-cta">
@@ -200,15 +190,31 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
       )}
 
       <div className="acc-group">
-        {SECTIONS.filter((s) => s.icon && !s.top).map((s) => (
-          <button key={s.k} type="button" className="acc-item" onClick={() => pick(s.k)}>
-            <span className="acc-ico">{s.icon}</span>
-            <span className="acc-txt"><b>{s.label}</b><small>{s.sub}</small></span>
+        {isNative && (
+          <button type="button" className="acc-item" onClick={() => pick('downloads')}>
+            <span className="acc-ico">{SECTIONS.find((x) => x.k === 'downloads').icon}</span>
+            <span className="acc-txt"><b>Downloads</b><small>Watch offline</small></span>
             <Chevron />
           </button>
-        ))}
+        )}
+        <button type="button" className={'acc-item' + (lookOpen ? ' open' : '')} onClick={() => setLookOpen((v) => !v)} aria-expanded={lookOpen}>
+          <span className="acc-ico">{SECTIONS.find((x) => x.k === 'look').icon}</span>
+          <span className="acc-txt"><b>Appearance</b><small>{scheme}</small></span>
+          <Chevron />
+        </button>
+        <div className={'acc-expand' + (lookOpen ? ' open' : '')}>
+          <div>
+            <div className="me-swatches acc-swatches">
+              {SCHEME_NAMES.map((k) => (
+                <button key={k} type="button" className={'me-swatch' + (scheme === k ? ' on' : '')} aria-pressed={scheme === k} onClick={() => setScheme(k)}>
+                  <span className="me-swatch-chips"><i style={{ background: SCHEMES[k].bg }} /><i style={{ background: SCHEMES[k].s2 }} /><i style={{ background: SCHEMES[k].ac }} /></span>
+                  <b>{k}</b>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
-
     </div>
   )
 }

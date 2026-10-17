@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import MediaCard from '../components/MediaCard'
 import Browse from './Browse'
+import Recommend from './Recommend'
 import Icon from '../components/Icons'
 import { searchAnimeFiltered } from '../lib/anime'
 import { searchMovies, searchTV, discoverMovies, discoverTV, getTmdbImage } from '../lib/tmdb'
@@ -16,7 +17,7 @@ const RATINGS = [[0, 'Any'], [6, '6+'], [7, '7+'], [8, '8+']]
 
 const idsFor = (map, genres) => [...new Set(genres.map((g) => map[g]))]
 
-export default function Search() {
+export default function Search({ user, onAuthRequired }) {
   const [params, setParams] = useSearchParams()
   const q = (params.get('q') || '').trim()
   const genres = useMemo(() => (params.get('g') || '').split(',').filter((g) => CATEGORIES.includes(g)), [params])
@@ -25,6 +26,7 @@ export default function Search() {
 
   const [input, setInput] = useState(q)
   const [showFilters, setShowFilters] = useState(params.get('f') === '1')
+  const [aiOpen, setAiOpen] = useState(params.get('ai') === '1')
   const [anime, setAnime] = useState(EMPTY)
   const [tv, setTv] = useState(EMPTY)
   const [movies, setMovies] = useState(EMPTY)
@@ -142,7 +144,17 @@ export default function Search() {
       </div>
 
       {!active ? (
-        <Browse embedded />
+        <>
+          <div className={'ai-card' + (aiOpen ? ' open' : '')}>
+            <button type="button" className="ai-card-head" onClick={() => setAiOpen((v) => !v)} aria-expanded={aiOpen}>
+              <span className="ai-card-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z" /></svg></span>
+              <span className="ai-card-txt"><b>AI picks</b><small>Describe a mood, get a shortlist</small></span>
+              <svg className="ai-card-caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+            </button>
+            {aiOpen && <div className="ai-card-body embed-page"><Recommend user={user} onAuthRequired={onAuthRequired} /></div>}
+          </div>
+          <Browse embedded />
+        </>
       ) : nothing ? (
         <div className="empty">
           <div className="emoji">{anyError ? '⚠️' : '🤷'}</div>

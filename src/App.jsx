@@ -160,9 +160,9 @@ export default function App() {
       <div key={location.pathname} className="route-anim">
         <Routes location={location}>
           <Route path="/" element={<Home user={user} onAuthRequired={handleAuthRequired} />} />
-          <Route path="/search" element={<Search />} />
+          <Route path="/search" element={<Search user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/me" element={<Me user={user} profile={profile} setProfile={setProfile} onAuthRequired={handleAuthRequired} onAuthClick={() => setShowAuth(true)} />} />
-          <Route path="/recommend" element={<Navigate to="/me?s=ai" replace />} />
+          <Route path="/recommend" element={<Navigate to="/search?ai=1" replace />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/category/:name" element={<Category />} />
           <Route path="/browse" element={<Navigate to={{ pathname: '/search', search: location.search }} replace />} />
