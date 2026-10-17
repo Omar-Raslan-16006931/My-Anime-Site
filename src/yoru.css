@@ -1840,3 +1840,56 @@ body { transition: none; }
   .y-sim-day { flex: none; width: 52px; }
   .y-sim-day span { white-space: nowrap; }
 }
+
+/* Phones: compact category tiles; poster fan in fixed pixels, pinned to the top (no %-of-% or aspect-ratio guesswork). */
+@media (max-width: 879px) {
+  .y-bg-grid { gap: 8px; }
+  .y-bg-tile { height: 88px !important; padding: 10px 11px !important; border-radius: 16px !important; }
+  .y-bg-name { font-size: 19px !important; }
+  .y-bg-fan { top: 6px !important; right: 6px !important; bottom: auto !important; width: 84px !important; height: 52px !important; }
+  .y-bg-fan img { top: 0 !important; bottom: auto !important; left: auto !important; height: 52px !important; width: 35px !important; aspect-ratio: auto !important; right: calc(var(--i) * 13px) !important; border-radius: 5px !important; }
+  .y-bg-glyph { width: 30px; height: 30px; right: 8px; top: 8px; }
+}
+
+/* Settings rows (Appearance etc.): pressing tints the row in place; it never shrinks inside its rounded group. */
+.acc-item, .acc-item:active { scale: none !important; transform: none !important; }
+.acc-item { transition: background-color 0.2s ease; -webkit-tap-highlight-color: transparent; }
+.acc-item:active { background: rgba(255, 255, 255, 0.07); transition-duration: 0s; }
+
+/* Desktop instant search */
+.y-qs { position: relative; }
+.y-qs-panel { position: absolute; right: 0; top: calc(100% + 10px); width: 380px; max-height: min(70vh, 560px); overflow-y: auto; padding: 6px; border-radius: 18px; z-index: 160;
+  background: var(--y-s2); box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.07); animation: yoQs 0.18s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes yoQs { from { opacity: 0; transform: translateY(-6px); } }
+.y-qs-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 6px; border: 0; border-radius: 12px; background: none; color: var(--y-tx); text-align: left; cursor: pointer; font-family: inherit; }
+.y-qs-row.hi { background: rgba(255, 255, 255, 0.08); }
+.y-qs-art { width: 34px; height: 50px; border-radius: 6px; overflow: hidden; background: var(--y-s3); flex: none; }
+.y-qs-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.y-qs-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.y-qs-txt b { font-size: 14px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.y-qs-txt small { font-size: 12px; color: var(--y-t3); }
+.y-qs-msg { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 18px; color: var(--y-t3); font-size: 13.5px; }
+.y-qs-all { width: 100%; margin-top: 4px; padding: 11px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: var(--y-t2); font: 600 13px var(--y-font); cursor: pointer; }
+.y-qs-all:hover { background: rgba(255, 255, 255, 0.1); color: var(--y-tx); }
+@media (max-width: 879px) { .y-qs { display: none; } }
+
+/* ===== Phone tab bar: even columns, a soft pill that glides behind the active icon (light spring), icon pop ===== */
+@media (max-width: 879px) {
+  .ydock { padding: 0 8px; height: 62px; border-radius: 26px; }
+  .ydock-item { position: relative; z-index: 1; flex: 1 1 0; justify-content: flex-start; padding-top: 9px; gap: 5px; opacity: 1 !important; transition: color 0.3s ease; }
+  .ydock-item > svg, .ydock-item > .y-me { transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .ydock-item.on > svg, .ydock-item.on > .y-me { transform: translateY(0) scale(1.08); }
+  .ydock-item:active > svg, .ydock-item:active > .y-me { transform: scale(0.86); transition-duration: 0.12s; transition-timing-function: ease-out; }
+  .ydock-label { font-size: 10.5px; font-weight: 600; transition: color 0.3s ease, opacity 0.3s ease; opacity: 0.85; }
+  .ydock-item.on .ydock-label { opacity: 1; }
+  .ydock-ind {
+    position: absolute; z-index: 0; top: 5px; left: 8px; width: calc((100% - 16px) / var(--n, 4)); height: 31px; display: flex; justify-content: center; pointer-events: none;
+    transform: translateX(calc(var(--i, 0) * 100%)); transition: transform 0.5s cubic-bezier(0.34, 1.3, 0.64, 1), opacity 0.25s ease;
+  }
+  .ydock-ind::before { content: ''; width: 56px; height: 100%; border-radius: 16px; background: color-mix(in srgb, var(--y-tx) 13%, transparent); }
+  .ydock-ind.off { opacity: 0; }
+  .ydock .ydock-item.ydock-you .y-me { width: 22px; height: 22px; }
+  .ydock .ydock-item.ydock-you.on .y-me { box-shadow: 0 0 0 1.5px var(--y-tx); }
+  .y-top-dice { color: var(--y-tx); background: none; border: 0; cursor: pointer; }
+}
+@media (prefers-reduced-motion: reduce) { .ydock-ind, .ydock-item > svg { transition-duration: 0.01s !important; } }

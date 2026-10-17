@@ -1,7 +1,8 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useProfiles, profileActions, vivid } from '../lib/profiles'
 import { openSurprise } from '../lib/surprise'
+import QuickSearch from './QuickSearch'
 
 // Brand wordmark (rendered upper-case with an accent dot).
 const BRAND = 'Yoru'
@@ -33,9 +34,7 @@ const NO_CHROME = ['/profiles', '/welcome']
 export default function Navbar({ user, profile, onAuthClick }) {
   const [scrolled, setScrolled] = useState(false)
   const [kbOpen, setKbOpen] = useState(false)
-  const [q, setQ] = useState('')
   const baseVHRef = useRef(0)
-  const navigate = useNavigate()
   const { pathname } = useLocation()
   const { profiles, active } = useProfiles()
 
@@ -105,15 +104,8 @@ export default function Navbar({ user, profile, onAuthClick }) {
     paintRef.current()
   }, [pathname])
 
-  const submitSearch = (e) => {
-    e.preventDefault()
-    const v = q.trim()
-    document.activeElement?.blur?.()
-    navigate(v ? `/search?q=${encodeURIComponent(v)}` : '/search')
-  }
-
   if (NO_CHROME.includes(pathname)) return null
-  
+
   return (
     <>
       <header ref={barRef} className={'topbar y-top' + (scrolled ? ' scrolled' : '')}>
@@ -127,24 +119,20 @@ export default function Navbar({ user, profile, onAuthClick }) {
 
         <div className="y-top-right">
           <button type="button" className="y-surprise" onClick={openSurprise}>Surprise me</button>
-          <form className={'y-search' + (q ? ' has-text' : '')} onSubmit={submitSearch} onClick={() => { if (pathname !== '/search') navigate('/search') }}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="6" cy="6" r="4.5" /><line x1="9.5" y1="9.5" x2="13" y2="13" /></svg>
-            <input type="search" enterKeyHint="search" placeholder="Titles, genres, people" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search anime, shows and movies" />
-          </form>
+          <QuickSearch />
         </div>
 
-        {!onMe && (
-          <Link to="/search" className="y-top-search" aria-label="Search">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></svg>
-          </Link>
-        )}
+        <button type="button" className="y-top-search y-top-dice" onClick={openSurprise} aria-label="Surprise me" title="Surprise me">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4" /><circle cx="8.5" cy="8.5" r="1.1" fill="currentColor" /><circle cx="15.5" cy="15.5" r="1.1" fill="currentColor" /><circle cx="15.5" cy="8.5" r="1.1" fill="currentColor" /><circle cx="8.5" cy="15.5" r="1.1" fill="currentColor" /><circle cx="12" cy="12" r="1.1" fill="currentColor" /></svg>
+        </button>
         <Link to="/me" className={'y-me-wrap top' + (onMe ? ' on' : '')} aria-label="Your profile, list and settings">
           <span className="y-me" key={`${me?.id}-${me?.hue}`} style={{ background: vivid(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
         </Link>
       </header>
 
       {/* Phone tab bar: floating pill. The selected tab expands into a white pill with its label. */}
-      <nav className={'ydock' + (kbOpen ? ' hide' : '')} aria-label="Primary">
+      <nav className={'ydock' + (kbOpen ? ' hide' : '')} aria-label="Primary" style={{ '--n': DOCK.length + 1 }}>
+        <span className={'ydock-ind' + (tab < 0 ? ' off' : '')} style={{ '--i': Math.max(tab, 0) }} aria-hidden="true" />
         {DOCK.map((d, i) => (
           <NavLink key={d.key} to={d.to} aria-label={d.label} aria-current={i === tab ? 'page' : undefined} className={'ydock-item' + (i === tab ? ' on' : '')}
             onClick={(e) => { if (i === tab && pathname === d.to) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) } }}>
