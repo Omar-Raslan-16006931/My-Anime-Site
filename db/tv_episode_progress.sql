@@ -1,4 +1,4 @@
--- TV "watched" episodes for AniWave.
+-- TV "watched" episodes for Yoru.
 -- Run once in Supabase -> SQL Editor. Until then the site stores watched
 -- episodes in the browser only; after this they sync to the account.
 

@@ -4,6 +4,10 @@
 //   • One tiny shared store: every button and page that shows Watched stays in sync.
 import { useEffect, useSyncExternalStore } from 'react'
 import { udb } from './udb'
+import { profileKey } from './profiles'
+
+// Cache / local-fallback scope: the account, plus the profile when it isn't the first one.
+const scope = (user) => (profileKey() === 'main' ? user.id : `${user.id}:${profileKey()}`)
 import { toast } from './toast'
 import { animeDetails } from './anime'
 import { getMovieDetails, getTVDetails, getTmdbImage } from './tmdb'
@@ -30,12 +34,12 @@ const getSnap = () => snap
 let loading = null
 async function load(user) {
   if (!user) { uid = null; items = null; local = false; publish(); return }
-  if (uid === user.id && items) return
-  if (uid !== user.id) { uid = user.id; items = null; local = false; publish() }
+  if (uid === scope(user) && items) return
+  if (uid !== scope(user)) { uid = scope(user); items = null; local = false; publish() }
   if (loading) return loading
   loading = (async () => {
     const { data, error } = await udb.from('watched').select('*').eq('user_id', user.id).order('watched_at', { ascending: false })
-    if (error) { local = true; items = readLocal(user.id) } else items = data || []
+    if (error) { local = true; items = readLocal(scope(user)) } else items = data || []
     publish()
   })().finally(() => { loading = null })
   return loading
@@ -56,7 +60,7 @@ export async function addWatched(user, item) {
     if (error) { local = true } else { items = [data?.[0] || { ...row, user_id: user.id }, ...(items || [])]; publish(); return true }
   }
   items = [{ ...row, id: `l-${Date.now()}` }, ...(items || [])]
-  writeLocal(user.id, items); publish()
+  writeLocal(scope(user), items); publish()
   return true
 }
 
@@ -67,7 +71,7 @@ export async function removeWatched(user, item) {
   const gone = (items || []).filter((x) => watchedKey(x) === key)
   items = (items || []).filter((x) => watchedKey(x) !== key)
   publish()
-  if (local) { writeLocal(user.id, items); return }
+  if (local) { writeLocal(scope(user), items); return }
   for (const g of gone) if (g.id) await udb.from('watched').delete().eq('id', g.id).eq('user_id', user.id)
 }
 

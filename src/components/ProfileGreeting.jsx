@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useProfiles, vivid } from '../lib/profiles'
+import { useProfiles, tileBg } from '../lib/profiles'
 
 // A short "welcome" moment: the profile tile, "Welcome back, name", then it dissolves into the app.
 //  • App open: fades in and out on its own (once per session).
@@ -54,7 +54,7 @@ export default function ProfileGreeting() {
 
   if (!g) return null
   const { p, fly } = g
-  const tileStyle = { background: vivid(p.hue ?? 0) }
+  const tileStyle = { background: tileBg(p) }
   if (fly) {
     // Same box, radius and font as the picker tile; the final size comes from scale only.
     const m = (124 - fly.w) / 2
@@ -64,7 +64,7 @@ export default function ProfileGreeting() {
     <div className={'greet ' + (fly ? 'fly' : 'open')} key={p.id + (fly ? 'f' : 'o')} aria-hidden="true">
       <div className="greet-bg" />
       <div className="greet-inner">
-        <div className="greet-tile" ref={tileRef} style={tileStyle}>{p.name[0].toUpperCase()}</div>
+        <div className="greet-tile" ref={tileRef} style={tileStyle}>{!p.avatar && p.name[0].toUpperCase()}</div>
         <div className="greet-name">Welcome back, {p.name}</div>
       </div>
     </div>

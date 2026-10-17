@@ -43,7 +43,7 @@ export function isDownloading(id) { return !!active[id] }
 // Resolve AllManga for this episode and save the first single-file (MP4)
 // stream. Chunked (HLS) streams can't be saved as one file yet.
 export async function downloadAnimeEpisode({ malId, title, altTitles = [], episode, audio = 'sub', poster }) {
-  if (!isNative) throw new Error('Downloads work in the AniWave iPhone app.')
+  if (!isNative) throw new Error('Downloads work in the Yoru iPhone app.')
   const id = downloadId(malId, episode, audio)
   if (isDownloaded(id)) throw new Error('Already downloaded')
   if (active[id]) throw new Error('Already downloading')
@@ -55,9 +55,9 @@ export async function downloadAnimeEpisode({ malId, title, altTitles = [], episo
   try {
     const res = await allmangaResolve({ title, alt: altTitles, episode, translationType: audio })
     if (res?.unreachable) {
-      // The app couldn't talk to your AniWave server at all.
+      // The app couldn't talk to your Yoru server at all.
       throw new Error(import.meta.env.VITE_API_BASE
-        ? `Can’t reach the AniWave server (${res.error}). Check your internet, or that ${import.meta.env.VITE_API_BASE} is online.`
+        ? `Can’t reach the Yoru server (${res.error}). Check your internet, or that ${import.meta.env.VITE_API_BASE} is online.`
         : 'The app doesn’t know your website address. Add the VITE_API_BASE secret on GitHub and rebuild the app.')
     }
     if (!res?.ok) {

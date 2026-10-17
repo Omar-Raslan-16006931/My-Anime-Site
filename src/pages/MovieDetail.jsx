@@ -117,7 +117,7 @@ export default function MovieDetail({ user, onAuthRequired }) {
   if (isAdultTmdbDetails(movie)) {
     return (
       <div className="page">
-        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on AniWave.</p>
+        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on Yoru.</p>
           <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => navigate('/movies')}>Browse movies</button>
         </div>
       </div>
@@ -155,6 +155,7 @@ export default function MovieDetail({ user, onAuthRequired }) {
             <p className="tvh-desc" onClick={() => setSynOpen(true)} title="Read full description">{movie.overview}</p>
           )}
 
+          <div className="tvh-actions">
           <button className="tvh-play" onClick={handlePlay}>
             <Icon.play width="16" height="16" /> Play movie
           </button>
@@ -167,14 +168,15 @@ export default function MovieDetail({ user, onAuthRequired }) {
               <span>{inWatchlist ? 'In My List' : 'My List'}</span>
             </button>
             <WatchedButton user={user} onAuthRequired={onAuthRequired} build={() => (movie ? fromMovie(movie) : null)} />
-            <button className={'tvh-sc' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
+            <button title="Download" className={'tvh-sc' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
               <Icon.download width="20" height="20" />
-              <span>Download</span>
+              <span className="tvh-lbl">Download</span>
             </button>
-            <button className="tvh-sc" onClick={share}>
+            <button title="Share" className="tvh-sc" onClick={share}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3" /><path d="m7 8 5-5 5 5" /><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
-              <span>Share</span>
+              <span className="tvh-lbl">Share</span>
             </button>
+          </div>
           </div>
           <Collapse open={showDl}><div className="tvh-dl"><DownloadLinks title={movie.title} /></div></Collapse>
         </div>

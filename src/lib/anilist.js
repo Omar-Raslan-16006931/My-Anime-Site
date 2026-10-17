@@ -68,7 +68,7 @@ export async function animeTmdbInfo(anilistId, episode) {
     id,
     imdb: data?.mappings?.imdb_id || null,
     season: ep?.seasonNumber > 0 ? ep.seasonNumber : 1,
-    episode: ep?.episodeNumber ?? Number(episode) ?? 1,
+    episode: ep?.episodeNumber ?? (Number(episode) || 1),
   }
 }
 

@@ -12,7 +12,7 @@ const DEFAULT_FALLBACKS = 'gemini-flash-latest'
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile'
 
-const SYSTEM = `You are the recommendation engine for AniWave, a site for anime, movies and TV shows.
+const SYSTEM = `You are the recommendation engine for Yoru, a site for anime, movies and TV shows.
 Suggest titles the user will love, based on their request and (optionally) what they already watched.
 Rules:
 - Only real, well-known titles that exist. Use the common English title.

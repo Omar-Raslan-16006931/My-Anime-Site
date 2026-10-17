@@ -31,7 +31,7 @@ const DOCK = [
 ]
 const NO_CHROME = ['/profiles', '/welcome']
 
-export default function Navbar({ user, profile, onAuthClick }) {
+export default function Navbar({ user, profile }) {
   const [scrolled, setScrolled] = useState(false)
   const [kbOpen, setKbOpen] = useState(false)
   const baseVHRef = useRef(0)
@@ -41,6 +41,8 @@ export default function Navbar({ user, profile, onAuthClick }) {
   const account = profile?.username || user?.email?.split('@')[0] || ''
   useEffect(() => { profileActions.ensure(account || 'Me') }, [account])
   const me = active || profiles[0]
+  // A profile's own photo; the first profile also shows the account photo.
+  const photo = me?.avatar || (me && me === profiles[0] ? profile?.avatar_url : null)
   const initial = (me?.name || account || 'G')[0].toUpperCase()
   const onMe = hit(pathname, '/me')
   const tab = onMe ? DOCK.length : DOCK.findIndex((d) => d.match(pathname))
@@ -126,7 +128,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
           <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4" /><circle cx="8.5" cy="8.5" r="1.1" fill="currentColor" /><circle cx="15.5" cy="15.5" r="1.1" fill="currentColor" /><circle cx="15.5" cy="8.5" r="1.1" fill="currentColor" /><circle cx="8.5" cy="15.5" r="1.1" fill="currentColor" /><circle cx="12" cy="12" r="1.1" fill="currentColor" /></svg>
         </button>
         <Link to="/me" className={'y-me-wrap top' + (onMe ? ' on' : '')} aria-label="Your profile, list and settings">
-          <span className="y-me" key={`${me?.id}-${me?.hue}`} style={{ background: vivid(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
+          <span className="y-me" key={`${me?.id}-${me?.hue}`} style={{ background: vivid(me?.hue || 0) }}>{photo ? <img src={photo} alt="" /> : initial}</span>
         </Link>
       </header>
 
@@ -142,7 +144,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
         ))}
         <NavLink to="/me" aria-label="Your profile" aria-current={onMe ? 'page' : undefined} className={'ydock-item ydock-you' + (onMe ? ' on' : '')}
           onClick={(e) => { if (pathname === '/me' && !window.location.search) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) } }}>
-          <span className="y-me" key={`${me?.id}-${me?.hue}`} style={{ background: vivid(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
+          <span className="y-me" key={`${me?.id}-${me?.hue}`} style={{ background: vivid(me?.hue || 0) }}>{photo ? <img src={photo} alt="" /> : initial}</span>
           <span className="ydock-label">You</span>
         </NavLink>
       </nav>

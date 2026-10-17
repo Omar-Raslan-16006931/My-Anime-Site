@@ -11,7 +11,7 @@ async function getJson(url) {
     try {
       return JSON.parse(text)
     } catch {
-      return { ok: false, unreachable: true, error: `AniWave server answered ${r.status} without data` }
+      return { ok: false, unreachable: true, error: `Yoru server answered ${r.status} without data` }
     }
   } catch (e) {
     return { ok: false, unreachable: true, error: e?.message || 'Network error' }

@@ -6,7 +6,7 @@ import { allmangaResolve } from '../lib/allmanga'
 import { anilistIdFromMal, animeTmdbInfo } from '../lib/anilist'
 import DownloadLinks from './DownloadLinks'
 import { toast } from '../lib/toast'
-import { apiUrl, absoluteUrl, isNative } from '../lib/native'
+import { apiUrl, isNative } from '../lib/native'
 import { downloadAnimeEpisode, downloadId, isDownloaded, isDownloading, subscribe as subscribeDownloads } from '../lib/offline'
 
 // Subtitle delivery: VidLink takes our file natively (documented `sub_file`
@@ -129,6 +129,9 @@ export default function VideoPlayer({
   poster, // used for the Downloads list (iPhone app)
   altTitles = [], // other names (romaji, synonyms) — helps AllManga find the show
   hasNext = true,
+  watched = null, // true/false: is this episode marked watched (null = feature off)
+  onToggleWatched, // () => void
+  aside = null, // PC: episode / season picker shown as a right-hand column
 }) {
   const type = mediaType
   const displayTitle = movieTitle || title
@@ -196,6 +199,18 @@ export default function VideoPlayer({
   // Previous episode goes through the page (onJump) so it's tracked like any other.
   const canPrev = !!onJump && type !== 'movie' && safeEpisode > 1
   const goPrev = () => { setCountdown(null); onJumpRef.current?.(safeEpisode - 1, safeSeason) }
+
+  // PC gets the full-page "watch" layout; phones keep the compact sheet.
+  const mq = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(min-width: 880px)') : null
+  const [wide, setWide] = useState(() => !!mq?.matches)
+  useEffect(() => {
+    if (!mq) return undefined
+    const on = () => setWide(mq.matches)
+    mq.addEventListener?.('change', on)
+    return () => mq.removeEventListener?.('change', on)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const [menu, setMenu] = useState(false) // the "More" popover on the PC layout
 
   // Lock background scroll (html + body, so iOS doesn't rubber-band behind) + ESC.
   useEffect(() => {
@@ -273,9 +288,8 @@ export default function VideoPlayer({
 
   const baseEmbed = active?.target.kind === 'embed' ? active.target.url : ''
   // VidLink loads an external VTT via its documented sub_file option.
-  const embedUrl = baseEmbed && activeId === 'vidlink' && subsOn && subTarget
-    ? `${baseEmbed}${baseEmbed.includes('?') ? '&' : '?'}sub_file=${encodeURIComponent(absoluteUrl(subPath('vtt')))}&sub_label=English`
-    : baseEmbed
+  // The embed URL never depends on the subtitle switch, so CC on/off never reloads the player.
+  const embedUrl = baseEmbed
 
   const toggleSubs = () => {
     setSubsOn((v) => {
@@ -284,6 +298,13 @@ export default function VideoPlayer({
       return nv
     })
   }
+
+  // <video> sources: flip the English track on/off in place (no reload).
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v?.textTracks) return
+    for (const t of v.textTracks) if (t.language === 'en' || t.label === 'English') t.mode = subsOn ? 'showing' : 'hidden'
+  }, [subsOn])
 
   // Download the .srt so it can be uploaded into any embed player's CC menu.
   const downloadSubs = async () => {
@@ -318,7 +339,9 @@ export default function VideoPlayer({
   // VidLink takes the file natively and AllManga uses a <track>; every other
   // embed gets our own subtitle layer on top, timed by the playback clock the
   // player posts to the page (VidLink / MegaPlay / Videasy all do).
-  const overlayMode = !!(subsOn && subTarget && active?.target.kind === 'embed' && activeId !== 'vidlink')
+  // The subtitle layer always runs (cues loaded, clock followed); the CC switch only shows/hides it.
+  const subsEngine = !!(subTarget && active?.target.kind === 'embed')
+  const overlayMode = subsEngine && subsOn
   const vttPath = subTarget ? subPath('vtt') : null
 
   // New source / episode → forget the old clock.
@@ -333,7 +356,7 @@ export default function VideoPlayer({
 
   // Fetch + parse the English VTT when the overlay is needed.
   useEffect(() => {
-    if (!overlayMode || !vttPath) { setCues(null); return }
+    if (!subsEngine || !vttPath) { setCues(null); return }
     let on = true
     setCues(null)
     fetch(vttPath)
@@ -341,12 +364,12 @@ export default function VideoPlayer({
       .then((txt) => { if (on) setCues(parseVtt(txt)) })
       .catch(() => { if (on) setCues([]) })
     return () => { on = false }
-  }, [overlayMode, vttPath])
+  }, [subsEngine, vttPath])
 
   // Frame loop: estimate the current time between player updates and show the
   // matching line. Only re-renders when the visible text actually changes.
   useEffect(() => {
-    if (!overlayMode || !cues?.length) { setCueText(''); return }
+    if (!subsEngine || !cues?.length) { setCueText(''); return }
     let raf = 0
     let last = ''
     const tick = () => {
@@ -361,7 +384,7 @@ export default function VideoPlayer({
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [overlayMode, cues])
+  }, [subsEngine, cues])
 
   // If a player never reports its time, say so instead of showing nothing.
   useEffect(() => {
@@ -590,17 +613,7 @@ export default function VideoPlayer({
   const nowLabel = type === 'movie' ? 'Movie' : type === 'tv' ? `S${safeSeason} · E${safeEpisode}` : `Episode ${safeEpisode}`
   const nextLabel = type === 'tv' ? `S${safeSeason} · E${safeEpisode + 1}` : `Episode ${safeEpisode + 1}`
 
-  return (
-    <div className={'modal player-modal' + (lightsOff ? ' lights-off' : '')} onClick={() => (lightsOff ? setLights(false) : onClose?.())}>
-      <div className="modal-card player-card" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-head">
-          <div style={{ minWidth: 0 }}>
-            <div className="eyebrow">Now Playing · {nowLabel}</div>
-            <div className="ttl">{displayTitle}</div>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon.close width="18" height="18" /></button>
-        </div>
-
+  const frameEl = (
         <div className="player-frame" ref={frameRef}>
           {(loading || !active) && !error && (
             <div className="player-loading"><span className="spinner" /> {active ? `Loading ${active.source.label}…` : 'Preparing player…'}</div>
@@ -613,8 +626,8 @@ export default function VideoPlayer({
             </div>
           ) : active?.target.kind === 'resolve' ? (
             <video ref={videoRef} controls autoPlay playsInline>
-              {subsOn && subTarget && (
-                <track key={subPath('vtt')} kind="subtitles" srcLang="en" label="English" src={subPath('vtt')} default />
+              {subTarget && (
+                <track key={subPath('vtt')} kind="subtitles" srcLang="en" label="English" src={subPath('vtt')} default={subsOn} />
               )}
             </video>
           ) : embedUrl ? (
@@ -650,6 +663,118 @@ export default function VideoPlayer({
             </div>
           )}
         </div>
+  )
+
+  // ── PC: full-page watch layout ──────────────────────────────────────────────
+  const noteNoSubs = overlayMode && cues && cues.length === 0
+  const noteClock = overlayMode && clockMissing && !(cues && cues.length === 0)
+  if (wide) {
+    const I = (d, w = 18) => <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
+    return (
+      <div className={'wp' + (aside ? ' has-side' : '') + (lightsOff ? ' lights' : '')} onClick={() => { if (lightsOff) setLights(false) }} role="dialog" aria-modal="true" aria-label={`Watching ${displayTitle}`}>
+        <div className="wp-main">
+          <header className="wp-top">
+            <button type="button" className="wp-ibtn" onClick={onClose} aria-label="Close player" title="Close (Esc)">{I(<path d="M15 18l-6-6 6-6" />, 20)}</button>
+            <div className="wp-ttl">
+              <b>{displayTitle}</b>
+              <span>{nowLabel}</span>
+            </div>
+          </header>
+
+          <div className="wp-stage">{frameEl}</div>
+
+          <div className="wp-bar">
+            <div className="wp-bar-l">
+              {type === 'anime' && (
+                <div className="wp-seg" role="group" aria-label="Audio">
+                  {['sub', 'dub'].map((t) => <button key={t} type="button" className={audio === t ? 'on' : ''} onClick={() => setAudio(t)}>{t.toUpperCase()}</button>)}
+                </div>
+              )}
+              <label className="wp-select" title="Source">
+                {I(<><rect x="3" y="5" width="18" height="12" rx="2" /><path d="M8 21h8M12 17v4" /></>, 16)}
+                <select value={activeId || ''} onChange={(e) => pickSource(e.target.value)} disabled={!sources.length} aria-label="Source">
+                  {sources.map(({ source }) => <option key={source.id} value={source.id}>{source.label}</option>)}
+                </select>
+              </label>
+              {sources.length > 1 && (
+                <button type="button" className="wp-chip" onClick={tryAnother} title="Not playing? Switch to the next source"><Icon.refresh width="15" height="15" /> Try another source</button>
+              )}
+              {currentStream && streams.length > 1 && (
+                <label className="wp-select" title="Server">
+                  <select value={streamIdx} onChange={(e) => setStreamIdx(Number(e.target.value))} aria-label="Server">
+                    {streams.map((st, i) => <option key={i} value={i}>{st.sourceName || 'Server'} · {st.quality || 'auto'}</option>)}
+                  </select>
+                </label>
+              )}
+              {subTarget && (
+                <button type="button" className={'wp-chip' + (subsOn ? ' on' : '')} onClick={toggleSubs} aria-pressed={subsOn} title="English subtitles">
+                  {I(<><rect x="3" y="5" width="18" height="14" rx="3" /><path d="M7 13h3M13 13h4M7 16h6" /></>, 16)} CC
+                </button>
+              )}
+              {canNext && (
+                <button type="button" className={'wp-chip' + (autoNext ? ' on' : '')} onClick={toggleAuto} aria-pressed={autoNext} title="Auto-play the next episode">
+                  {I(<path d="M5 5v14l9-7zM19 5v14" />, 16)} Autoplay
+                </button>
+              )}
+              <div className="wp-more">
+                <button type="button" className={'wp-ibtn sm' + (menu ? ' on' : '') + (noteNoSubs || noteClock ? ' dot' : '')} onClick={() => setMenu((v) => !v)} aria-expanded={menu} aria-label="More options" title="More">{I(<><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" /></>)}</button>
+                {menu && (
+                  <>
+                    <div className="wp-scrim" onClick={() => setMenu(false)} />
+                    <div className="wp-pop" role="menu">
+                      {overlayMode && clockLive && (
+                        <div className="wp-pop-row">
+                          <span>Subtitle timing</span>
+                          <div className="wp-step">
+                            <button type="button" onClick={() => nudgeSubs(-0.5)} aria-label="Show subtitles sooner">−</button>
+                            <button type="button" className="v" onClick={() => setSubOffset(0)} disabled={subOffset === 0}>{subOffset === 0 ? 'In sync' : `${subOffset > 0 ? '+' : ''}${subOffset.toFixed(1)}s`}</button>
+                            <button type="button" onClick={() => nudgeSubs(0.5)} aria-label="Show subtitles later">+</button>
+                          </div>
+                        </div>
+                      )}
+                      {subTarget && <button type="button" className="wp-pop-item" onClick={downloadSubs} disabled={subBusy}><Icon.download width="16" height="16" />{subBusy ? 'Finding subtitles…' : 'Download subtitle file'}</button>}
+                      <button type="button" className={'wp-pop-item' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)}><Icon.download width="16" height="16" />Download episode</button>
+                      {isNative && offId && <button type="button" className="wp-pop-item" onClick={saveOffline} disabled={offState !== 'idle'}><Icon.download width="16" height="16" />{offState === 'saved' ? 'Saved offline' : offState === 'saving' ? 'Downloading…' : 'Save offline'}</button>}
+                      {showDl && <div className="wp-pop-dl"><DownloadLinks title={displayTitle} /></div>}
+                      {noteNoSubs && <p className="wp-note">No English subtitles found for this one.</p>}
+                      {noteClock && <p className="wp-note">This player hides its timing, so our subtitles can’t follow it. Try another source, or download the subtitle file and load it in the player’s CC menu.</p>}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="wp-bar-r">
+              <button type="button" className="wp-chip" onClick={() => { setLights(true); toast('Lights off · press Esc or click to turn them on') }} title="Dim everything except the video">{I(<><path d="M9 18h6M10 22h4" /><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z" /></>, 15)} Lights off</button>
+              <button type="button" className="wp-chip" onClick={goFullscreen} title="Fullscreen (keeps subtitles visible)">{I(<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />, 15)} Fullscreen</button>
+              <span className="wp-sep" aria-hidden="true" />
+              {watched != null && onToggleWatched && (
+                <button type="button" className={'wp-chip' + (watched ? ' on' : '')} onClick={onToggleWatched} aria-pressed={watched} title={watched ? 'Marked as watched — click to unmark' : 'Mark this episode as watched'}>
+                  {I(watched ? <path d="M20 6 9 17l-5-5" /> : <><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>, 15)} {watched ? 'Watched' : 'Mark watched'}
+                </button>
+              )}
+              {canPrev && <button type="button" className="wp-ibtn" onClick={goPrev} title="Previous episode" aria-label="Previous episode">{I(<path d="M19 5v14l-9-7zM5 5v14" />)}</button>}
+              {canNext && <button type="button" className="wp-next" onClick={goNext}>Next episode {I(<path d="M5 5v14l9-7zM19 5v14" />, 16)}</button>}
+            </div>
+          </div>
+        </div>
+        {aside && <aside className="wp-side">{aside}</aside>}
+      </div>
+    )
+  }
+
+  return (
+    <div className={'modal player-modal' + (lightsOff ? ' lights-off' : '') + (aside ? ' has-aside' : '')} onClick={() => (lightsOff ? setLights(false) : onClose?.())}>
+      <div className="modal-card player-card" onClick={(e) => e.stopPropagation()}>
+        <div className="player-main">
+        <div className="modal-head">
+          <div style={{ minWidth: 0 }}>
+            <div className="eyebrow">Now Playing · {nowLabel}</div>
+            <div className="ttl">{displayTitle}</div>
+          </div>
+          <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon.close width="18" height="18" /></button>
+        </div>
+
+        {frameEl}
 
         <div className="player-tools">
           <button type="button" className="pc-link" onClick={goFullscreen} title="Keeps the subtitles on screen (the player's own fullscreen hides them)">
@@ -778,12 +903,19 @@ export default function VideoPlayer({
                 <Icon.download width="14" height="14" /> {subBusy ? 'Finding…' : 'Subtitle file'}
               </button>
             )}
+            {watched != null && onToggleWatched && (
+              <button type="button" className={'pc-link' + (watched ? ' on' : '')} onClick={onToggleWatched} aria-pressed={watched}>
+                {watched ? '✓ Watched' : 'Mark as watched'}
+              </button>
+            )}
             <button type="button" className={'pc-link' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
               <Icon.download width="14" height="14" /> Download episode
             </button>
           </div>
           {showDl && <DownloadLinks title={displayTitle} />}
         </div>
+        </div>
+        {aside && <aside className="player-side">{aside}</aside>}
       </div>
     </div>
   )

@@ -10,6 +10,8 @@ import Select from '../components/Select'
 import { recordRecent } from '../lib/progress'
 import DownloadLinks from '../components/DownloadLinks'
 import Collapse from '../components/Collapse'
+import PlayerEpisodes from '../components/PlayerEpisodes'
+import MoreLikeThis from '../components/MoreLikeThis'
 import { isAdultTmdbDetails } from '../lib/tmdb'
 import { loadTvSeen, setTvSeen, tvEpKey } from '../lib/tvProgress'
 
@@ -171,7 +173,7 @@ export default function TVDetail({ user, onAuthRequired }) {
   if (isAdultTmdbDetails(details)) {
     return (
       <div className="page">
-        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on AniWave.</p>
+        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on Yoru.</p>
           <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => navigate('/tv')}>Browse TV shows</button>
         </div>
       </div>
@@ -217,15 +219,16 @@ export default function TVDetail({ user, onAuthRequired }) {
             <p className="tvh-desc" onClick={() => setSynOpen(true)} title="Read full description">{details.overview}</p>
           )}
 
+          <div className="tvh-actions">
           <button className="tvh-play" onClick={heroPlay}>
             <Icon.play width="16" height="16" /> {playLabel}
           </button>
 
           <div className="tvh-shortcuts">
             {resuming && (
-              <button className="tvh-sc" onClick={() => { setSelectedSeason(lastSeason); play(lastEp + 1, lastSeason) }}>
+              <button title="Next ep" className="tvh-sc" onClick={() => { setSelectedSeason(lastSeason); play(lastEp + 1, lastSeason) }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 5v14l10-7z" fill="currentColor" stroke="none" /><path d="M19 5v14" /></svg>
-                <span>Next ep</span>
+                <span className="tvh-lbl">Next ep</span>
               </button>
             )}
             <button className={'tvh-sc' + (inWatchlist ? ' on' : '')} onClick={toggleWatchlist} aria-pressed={inWatchlist}>
@@ -235,14 +238,15 @@ export default function TVDetail({ user, onAuthRequired }) {
               <span>{inWatchlist ? 'In My List' : 'My List'}</span>
             </button>
             <WatchedButton user={user} onAuthRequired={onAuthRequired} build={() => (details && details.id ? fromTV(details) : null)} />
-            <button className={'tvh-sc' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
+            <button title="Download" className={'tvh-sc' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
               <Icon.download width="20" height="20" />
-              <span>Download</span>
+              <span className="tvh-lbl">Download</span>
             </button>
-            <button className="tvh-sc" onClick={share}>
+            <button title="Share" className="tvh-sc" onClick={share}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3" /><path d="m7 8 5-5 5 5" /><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
-              <span>Share</span>
+              <span className="tvh-lbl">Share</span>
             </button>
+          </div>
           </div>
           <Collapse open={showDl}><div className="tvh-dl"><DownloadLinks title={details.name} /></div></Collapse>
         </div>
@@ -318,12 +322,14 @@ export default function TVDetail({ user, onAuthRequired }) {
         )}
       </section>
 
+      <MoreLikeThis kind="tv" id={id} />
+
       {playing && (
         <VideoPlayer
           mediaType="tv"
           tmdbId={details.id}
           title={details.name}
-          season={selectedSeason}
+          season={lastSeason ?? selectedSeason}
           episode={playing}
           onClose={() => setPlaying(null)}
           onNext={() => play(playing + 1)}
@@ -332,6 +338,26 @@ export default function TVDetail({ user, onAuthRequired }) {
             play(ep, season || selectedSeason)
           }}
           hasNext={!!seasonData?.episodes?.some((e) => e.episode_number === playing + 1)}
+          watched={seen.has(tvEpKey(lastSeason ?? selectedSeason, playing))}
+          onToggleWatched={() => { const sn = lastSeason ?? selectedSeason; markSeen(sn, playing, !seen.has(tvEpKey(sn, playing))) }}
+          aside={(
+            <PlayerEpisodes
+              heading="Episodes"
+              loading={seasonLoading}
+              seasons={seasons.map((s) => ({ value: s.season_number, label: s.season_number === 0 ? 'Specials' : `Season ${s.season_number}` }))}
+              season={selectedSeason}
+              onSeason={setSelectedSeason}
+              current={selectedSeason === (lastSeason ?? selectedSeason) ? playing : null}
+              onPick={(n) => play(n)}
+              items={(seasonData?.episodes || []).map((ep) => ({
+                num: ep.episode_number,
+                title: ep.name || `Episode ${ep.episode_number}`,
+                thumb: ep.still_path ? `${IMG}${ep.still_path}` : (details.poster_path ? `${IMG}${details.poster_path}` : null),
+                meta: [ep.air_date, typeof ep.runtime === 'number' ? `${ep.runtime} min` : null].filter(Boolean).join(' · '),
+                seen: seen.has(tvEpKey(selectedSeason, ep.episode_number)),
+              }))}
+            />
+          )}
         />
       )}
 

@@ -27,7 +27,7 @@ export default function Downloads() {
         <h1 className="section-title" style={{ marginBottom: 14 }}>Downloads</h1>
         <div className="empty">
           <div className="emoji">📲</div>
-          <p>Offline downloads work in the AniWave iPhone app.</p>
+          <p>Offline downloads work in the Yoru iPhone app.</p>
         </div>
       </div>
     )

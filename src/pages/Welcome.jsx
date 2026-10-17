@@ -10,9 +10,6 @@ const GENRES = ['Action', 'Fantasy', 'Sci-Fi', 'Mecha', 'Slice of Life', 'Romanc
 const STEPS = ['Account', 'Your taste', 'Your look', 'Profile']
 const TASTE_KEY = 'yoru:taste'
 
-const Check = () => (
-  <svg width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-)
 
 // Four-step sign-up: account → taste → setup → ready.
 export default function Welcome({ user, onAuthRequired }) {

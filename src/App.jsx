@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { weekSchedule } from './lib/schedule'
 import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom'
+import { profileActions, useProfiles, profileKeyOf } from './lib/profiles'
 import { supabase } from './supabase'
 import Navbar from './components/Navbar'
 import AuthModal from './components/AuthModal'
@@ -48,6 +50,11 @@ export default function App() {
   const initializedRef = useRef(false)
 
   const location = useLocation()
+  const profSnap = useProfiles()
+  const dataKey = profileKeyOf(profSnap) // switching profile remounts the pages so each shows its own data
+
+  // Pull (or push) this account's "Who's watching?" profiles whenever the signed-in user changes.
+  useEffect(() => { profileActions.sync(user?.id || null) }, [user?.id])
 
   const fetchProfile = useCallback(async (id) => {
     if (!id) {
@@ -131,6 +138,14 @@ export default function App() {
   // Load this account's Private history setting (and auto-unlock if this
   // device already has the key).
   useEffect(() => { initVault(user?.id) }, [user?.id])
+  // Warm the airing schedule so Home / Simulcast already have it.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const d = new Date(); d.setHours(0, 0, 0, 0)
+      weekSchedule(d, 10, 7).catch(() => {})
+    }, 600)
+    return () => clearTimeout(t)
+  }, [])
 
   // The welcome overlay is a sibling of the loading switch, so it stays mounted across it: on screen
   // from the very first frame, with neither the boot spinner nor placeholders showing before it.
@@ -142,10 +157,10 @@ export default function App() {
       </div>
     ) : (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Navbar user={user} profile={profile} onAuthClick={() => setShowAuth(true)} />
+      <Navbar user={user} profile={profile} />
       <VaultBanner />
 
-      <PageStack location={location} render={(loc) => (
+      <PageStack key={dataKey} location={location} render={(loc) => (
         <Routes location={loc}>
           <Route path="/" element={<Home user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/search" element={<Search user={user} onAuthRequired={handleAuthRequired} />} />
