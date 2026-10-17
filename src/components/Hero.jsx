@@ -116,6 +116,21 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
     return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(raf) }
   }, [phone])
 
+  // Hover parallax (PC): layers drift and the poster stage tilts with the pointer.
+  const onMouse = (e) => {
+    const el = root.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    el.style.setProperty('--mx', (((e.clientX - r.left) / r.width) * 2 - 1).toFixed(3))
+    el.style.setProperty('--my', (((e.clientY - r.top) / r.height) * 2 - 1).toFixed(3))
+  }
+  const onLeave = () => {
+    const el = root.current
+    if (!el) return
+    el.style.setProperty('--mx', '0')
+    el.style.setProperty('--my', '0')
+  }
+
   const onTouchStart = (e) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY } }
   const onTouchEnd = (e) => {
     const s = touch.current
@@ -167,13 +182,16 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
 
   /* ---------------- PC: cinematic ---------------- */
   return (
-    <div className="y-hero" ref={root} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div className="y-hero y-hero-pc" ref={root} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onMouseMove={onMouse} onMouseLeave={onLeave}>
       <div className="y-hero-bg">
-        {list.map((s, i) => s.backdrop && (
-          <img key={s.href || i} src={s.backdrop} alt="" aria-hidden="true" className={'y-hero-img' + (i === idx ? ' on' : '')} loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : 'low'} decoding="async" />
+        {list.map((s, i) => (s.poster || s.backdrop) && (
+          <img key={s.href || i} src={s.poster || s.backdrop} alt="" aria-hidden="true" className={'y-hero-pbg' + (i === idx ? ' on' : '')} loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : 'low'} decoding="async" />
         ))}
       </div>
       <div className="y-scrim y-hero-scrim" />
+      <div className="y-hero-flowwrap">
+        <Coverflow list={list} idx={idx} go={go} pause={pause} navigate={navigate} />
+      </div>
       <div className="y-hero-text" key={cur.href || idx}>
         <div className="y-hero-type">{[cur.type, 'New episodes weekly'].filter(Boolean).join(' · ')}</div>
         <h1 className="y-hero-title">{cur.title}</h1>
