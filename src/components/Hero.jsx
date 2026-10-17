@@ -52,15 +52,19 @@ export function HeroPlaceholder() {
     )
   }
   return (
-    <div className="y-hero y-ph" aria-hidden="true">
-      <div className="y-hero-text">
-        <div className="y-ph-bar" style={{ width: 160, height: 12 }} />
-        <div className="y-ph-bar" style={{ width: 'min(520px, 60%)', height: 52, borderRadius: 14 }} />
-        <div className="y-ph-bar" style={{ width: 200, height: 14 }} />
-        <div className="y-ph-bar" style={{ width: 'min(480px, 55%)', height: 44 }} />
-        <div className="y-hero-actions">
-          <div className="y-ph-bar" style={{ width: 120, height: 48, borderRadius: 16 }} />
-          <div className="y-ph-bar" style={{ width: 150, height: 48, borderRadius: 16 }} />
+    <div className="y-hero y-hero-pc y-ph" aria-hidden="true">
+      <div className="y-hero-flowwrap">
+        <div className="y-flow">
+          {[-1, 1, 0].map((o) => <div key={o} className="y-flow-card y-ph-card" style={{ transform: `translateX(${o * 60}%) translateZ(${-Math.abs(o) * 200}px) rotateY(${-o * 32}deg)`, opacity: o ? 0.55 : 1, zIndex: 20 - Math.abs(o) * 4 }} />)}
+        </div>
+      </div>
+      <div className="y-hero-pc-info">
+        <div className="y-ph-bar" style={{ width: 340, height: 40, borderRadius: 12 }} />
+        <div className="y-ph-bar" style={{ width: 240, height: 14 }} />
+        <div className="y-hero-pc-btns">
+          <div className="y-ph-bar" style={{ width: 110, height: 46, borderRadius: 999 }} />
+          <div className="y-ph-bar" style={{ width: 130, height: 46, borderRadius: 999 }} />
+          <div className="y-ph-bar" style={{ width: 46, height: 46, borderRadius: 999 }} />
         </div>
       </div>
     </div>
@@ -74,7 +78,6 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
   const count = list.length
   const [idx, setIdx] = useState(0)
   const timer = useRef(null)
-  const touch = useRef(null)
   const root = useRef(null)
 
   useEffect(() => { if (idx >= count) setIdx(0) }, [count, idx])
@@ -131,25 +134,10 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
     el.style.setProperty('--my', '0')
   }
 
-  const onTouchStart = (e) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY } }
-  const onTouchEnd = (e) => {
-    const s = touch.current
-    touch.current = null
-    if (!s || count < 2) return
-    const dx = e.changedTouches[0].clientX - s.x
-    const dy = e.changedTouches[0].clientY - s.y
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(idx + (dx < 0 ? 1 : -1))
-  }
-
   if (!count) return null
   const cur = list[Math.min(idx, count - 1)]
   const inList = isInList ? isInList(cur) : false
   const play = () => (onPlay ? onPlay(cur) : navigate(cur.href))
-  const meta = [cur.year, ...(cur.genres || []).slice(0, 2)].filter(Boolean)
-
-  const star = cur.score ? (
-    <span className="y-hero-score"><span className="y-star"><Icon.star width="13" height="13" /></span>{Number(cur.score).toFixed(1)}</span>
-  ) : null
 
   /* ---------------- Phone: draggable coverflow ---------------- */
   if (phone) {
@@ -180,50 +168,40 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
     )
   }
 
-  /* ---------------- PC: cinematic ---------------- */
+  /* ---------------- PC: coverflow (design v4) ---------------- */
   return (
-    <div className="y-hero y-hero-pc" ref={root} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onMouseMove={onMouse} onMouseLeave={onLeave}>
-      <div className="y-hero-bg">
+    <div className="y-hero y-hero-pc" ref={root} onMouseMove={onMouse} onMouseLeave={onLeave}>
+      <div className="y-hero-pbgwrap">
         {list.map((s, i) => (s.poster || s.backdrop) && (
-          <img key={s.href || i} src={s.poster || s.backdrop} alt="" aria-hidden="true" className={'y-hero-pbg' + (i === idx ? ' on' : '')} loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : 'low'} decoding="async" />
+          <img key={s.href || i} src={s.backdrop || s.poster} alt="" aria-hidden="true" className={'y-hero-pbg' + (i === idx ? ' on' : '')} loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : 'low'} decoding="async" />
         ))}
       </div>
-      <div className="y-scrim y-hero-scrim" />
+      <div className="y-hero-pc-scrim" />
       <div className="y-hero-flowwrap">
         <Coverflow list={list} idx={idx} go={go} pause={pause} navigate={navigate} />
       </div>
-      <div className="y-hero-text" key={cur.href || idx}>
-        <div className="y-hero-type">{[cur.type, 'New episodes weekly'].filter(Boolean).join(' · ')}</div>
-        <h1 className="y-hero-title">{cur.title}</h1>
-        <div className="y-hero-meta">{star}<span>{meta.join(' · ')}</span></div>
-        {cur.desc && <p className="y-hero-desc">{cur.desc}</p>}
-        <div className="y-hero-actions">
-          <button type="button" className="y-btn ac y-hero-play" onClick={play}><Icon.play width="18" height="18" />Play</button>
-          <button type="button" className="y-btn" onClick={() => navigate(cur.href)}>More info</button>
+      {count > 1 && (
+        <>
+          <button type="button" className="y-hero-pc-nav prev" aria-label="Previous title" onClick={() => go(idx - 1)}><Chev flip /></button>
+          <button type="button" className="y-hero-pc-nav next" aria-label="Next title" onClick={() => go(idx + 1)}><Chev /></button>
+        </>
+      )}
+      <div className="y-hero-pc-info" key={cur.href || idx} style={{ '--dir': dirRef.current }}>
+        <h1 className="y-hero-pc-title">{cur.title}</h1>
+        <div className="y-hero-pc-meta">
+          {cur.score ? <><span className="y-star"><Icon.star width="14" height="14" /></span>{Number(cur.score).toFixed(1)} · </> : null}
+          {[cur.type, cur.year, ...(cur.genres || []).slice(0, 2)].filter(Boolean).join(' · ')}
+        </div>
+        <div className="y-hero-pc-btns">
+          <button type="button" className="y-hero-pc-play" onClick={play}><Icon.play width="17" height="17" />Play</button>
+          <button type="button" className="y-hero-pc-more" onClick={() => navigate(cur.href)}>More info</button>
           {onToggleList && (
-            <button type="button" className="y-btn sq" onClick={() => onToggleList(cur)} aria-pressed={inList} aria-label={inList ? 'In My List' : 'Add to My List'} title={inList ? 'In My List' : 'Add to My List'}>
+            <button type="button" className={'y-hero-pc-add' + (inList ? ' on' : '')} onClick={() => onToggleList(cur)} aria-pressed={inList} aria-label={inList ? 'In My List' : 'Add to My List'} title={inList ? 'In My List' : 'Add to My List'}>
               {inList ? <Icon.check width="18" height="18" /> : <Icon.plus width="18" height="18" />}
             </button>
           )}
         </div>
       </div>
-
-      {count > 1 && (
-        <div className="y-hero-rail">
-          <div className="y-hero-arrows">
-            <button type="button" className="y-circle" aria-label="Previous title" onClick={() => go(idx - 1)}><Chev flip /></button>
-            <button type="button" className="y-circle" aria-label="Next title" onClick={() => go(idx + 1)}><Chev /></button>
-          </div>
-          <div className="y-hero-segs" style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }}>
-            {list.map((s, i) => (
-              <button type="button" key={s.href || i} className={'y-seg' + (i === idx ? ' on' : '')} onClick={() => go(i)}>
-                <span className="y-seg-bar"><i style={i === idx ? { width: '100%', transition: `width ${interval}ms linear` } : { width: 0 }} /></span>
-                <span className="y-seg-row"><em>{String(i + 1).padStart(2, '0')}</em><b>{s.title}</b></span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
