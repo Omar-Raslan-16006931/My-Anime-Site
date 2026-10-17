@@ -12,12 +12,12 @@ import Downloads from './Downloads'
 // One page for everything behind the profile picture. Sections switch in place
 // (?s=continue | list | ai | account | downloads | look).
 const SECTIONS = [
-  { k: 'continue', label: 'Continue watching', user: true },
-  { k: 'list', label: 'My List', user: true },
-  { k: 'ai', label: 'AI picks', user: true },
-  { k: 'account', label: 'Account', user: true },
-  ...(isNative ? [{ k: 'downloads', label: 'Downloads' }] : []),
-  { k: 'look', label: 'Appearance' },
+  { k: 'continue', label: 'Continue watching', sub: 'Pick up where you left off', user: true, icon: <path d="M8 5v14l11-7z" /> },
+  { k: 'list', label: 'My List', sub: 'Titles you saved', user: true, icon: <path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4.5L5 21V4.5a1 1 0 0 1 1-1z" /> },
+  { k: 'ai', label: 'AI picks', sub: 'Tell it your mood', user: true, icon: <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z" /> },
+  { k: 'account', label: 'Account', sub: 'Profile, passkeys, privacy', user: true, icon: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></> },
+  ...(isNative ? [{ k: 'downloads', label: 'Downloads', sub: 'Watch offline', icon: <path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14" /> }] : []),
+  { k: 'look', label: 'Appearance', sub: 'Colour theme', icon: <><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 0 0 18z" /></> },
 ]
 
 export default function Me({ user, profile, setProfile, onAuthRequired, onAuthClick }) {
@@ -30,8 +30,8 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
   const initial = (me?.name || account || 'G')[0].toUpperCase()
 
   const wanted = params.get('s')
-  const sel = SECTIONS.find((s) => s.k === wanted) || (user ? SECTIONS[0] : SECTIONS[SECTIONS.length - 1])
-  const pick = (k) => setParams(k === SECTIONS[0].k ? {} : { s: k }, { replace: true })
+  const sel = SECTIONS.find((s) => s.k === wanted) || null
+  const pick = (k) => setParams(k ? { s: k } : {})
   const logout = async () => { await supabase.auth.signOut(); navigate('/') }
 
   const body = () => {
@@ -53,7 +53,6 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
       default:
         return (
           <div className="me-look">
-            <p className="muted" style={{ marginBottom: 16 }}>Pick the colours the whole app uses.</p>
             <div className="me-swatches">
               {SCHEME_NAMES.map((k) => (
                 <button key={k} type="button" className={'me-swatch' + (scheme === k ? ' on' : '')} aria-pressed={scheme === k} onClick={() => setScheme(k)}>
@@ -85,19 +84,27 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
         </div>
       </header>
 
-      <nav className="me-tabs y-chips scroll" aria-label="Your sections">
-        {SECTIONS.map((s) => (
-          <button key={s.k} type="button" className={'y-chip' + (sel.k === s.k ? ' on' : '')} aria-current={sel.k === s.k ? 'true' : undefined}
-            onClick={(e) => { pick(s.k); e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }) }}>
-            {s.label}
-          </button>
-        ))}
-      </nav>
-
-      <section className="me-panel" key={sel.k}>
-        <h2 className="me-h">{sel.label}</h2>
-        {body()}
-      </section>
+      {sel ? (
+        <section className="me-panel" key={sel.k}>
+          <div className="me-bar">
+            <button type="button" className="me-back" onClick={() => pick(null)} aria-label="Back">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg>
+            </button>
+            <h2 className="me-h">{sel.label}</h2>
+          </div>
+          {body()}
+        </section>
+      ) : (
+        <nav className="me-rows" aria-label="Your sections" key="menu">
+          {SECTIONS.map((r) => (
+            <button key={r.k} type="button" className="me-row" onClick={() => pick(r.k)}>
+              <span className="me-row-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{r.icon}</svg></span>
+              <span className="me-row-txt"><b>{r.label}</b><small>{r.sub}</small></span>
+              <svg className="me-row-go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+            </button>
+          ))}
+        </nav>
+      )}
     </div>
   )
 }
