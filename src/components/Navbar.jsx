@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useProfiles, profileActions, vivid } from '../lib/profiles'
 import { openSurprise } from '../lib/surprise'
@@ -83,30 +83,62 @@ export default function Navbar({ user, profile, onAuthClick }) {
     }
   }, [])
 
-  // Top bar is see-through over the home hero and solid after 40px of scroll.
-  // The tab bar tucks away while scrolling down and returns on scroll up.
-  useEffect(() => {
-    let last = window.scrollY
-    let down = 0 // scroll distance travelled downward since the last upward move
-    const onScroll = () => {
+  // Top bar: its backdrop is driven by the scroll position itself (--tb: 0 = clear over the
+  // home hero, 1 = solid), so it never "switches" and can't flicker. Tab bar: tucks away on a
+  // deliberate scroll down, returns on a deliberate scroll up and at the end of the page.
+  // Rubber-band overscroll (iOS) is ignored so the bounce can't make it flutter.
+  const barRef = useRef(null)
+  const pathRef = useRef(pathname)
+  const awayRef = useRef(false)
+  const toggledAt = useRef(0)
+  const paintRef = useRef(() => {})
+  const setAway = (v) => {
+    if (v === awayRef.current) return
+    awayRef.current = v
+    toggledAt.current = performance.now()
+    setDockAway(v)
+  }
+  useLayoutEffect(() => {
+    let last = Math.max(0, window.scrollY)
+    let down = 0
+    let up = 0
+    let raf = 0
+    const paint = () => {
+      const y = Math.max(0, window.scrollY)
+      const t = pathRef.current === '/' ? Math.min(1, Math.max(0, (y - 12) / 120)) : 1
+      barRef.current?.style.setProperty('--tb', t.toFixed(3))
+      setScrolled((s) => (y > 40) === s ? s : y > 40)
+    }
+    paintRef.current = paint
+    const run = () => {
+      raf = 0
+      paint()
       const y = window.scrollY
-      setScrolled(y > 40)
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      if (y < 0 || y > max + 1) { last = Math.min(Math.max(y, 0), max); return } // rubber band
       const d = y - last
       last = y
-      if (y < 80) { down = 0; setDockAway(false); return }
+      const calm = performance.now() - toggledAt.current > 400 // never flutter
+      if (y < 100 || max - y < 140) { down = 0; up = 0; if (calm) setAway(false); return }
       if (d > 0) {
-        down += d
-        // Hide only after a deliberate scroll down, and never while a finger is on the bar.
-        if (down > 64 && y > 220 && !pressing.current) setDockAway(true)
-      } else if (d < -4) {
-        down = 0
-        setDockAway(false)
+        up = 0; down += d
+        if (calm && down > 90 && y > 260 && !pressing.current) setAway(true)
+      } else if (d < 0) {
+        down = 0; up -= d
+        if (calm && up > 28) setAway(false)
       }
     }
-    onScroll()
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(run) }
+    paint()
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('scroll', onScroll) }
   }, [])
+  useLayoutEffect(() => {
+    pathRef.current = pathname
+    paintRef.current()
+    awayRef.current = false
+    setDockAway(false)
+  }, [pathname])
 
   const submitSearch = (e) => {
     e.preventDefault()
@@ -116,11 +148,10 @@ export default function Navbar({ user, profile, onAuthClick }) {
   }
 
   if (NO_CHROME.includes(pathname)) return null
-  const overHero = pathname === '/' && !scrolled
-
+  
   return (
     <>
-      <header className={'topbar y-top' + (overHero ? ' over-hero' : '') + (scrolled ? ' scrolled' : '')}>
+      <header ref={barRef} className={'topbar y-top' + (scrolled ? ' scrolled' : '')}>
         <Link to="/" className="brand y-brand" aria-label={BRAND}>{BRAND}<i>.</i></Link>
 
         <nav className="y-links" aria-label="Main">

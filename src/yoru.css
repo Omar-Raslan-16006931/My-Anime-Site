@@ -893,22 +893,23 @@ a:focus-visible, button:focus-visible { outline-color: var(--y-ac); }
 }
 
 
-/* ---------- Top bar: solid and gradient are separate layers that cross-fade ---------- */
-.topbar.y-top, .topbar.y-top.over-hero { background: transparent !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; isolation: isolate; transition: none; }
+/* ---------- Top bar: two layers, cross-faded by the scroll position (--tb, set from JS) ----------
+   No class flips and no timers: the bar is exactly as solid as you have scrolled, so it can't flicker. */
+.topbar.y-top, .topbar.y-top.over-hero { --tb: 1; background: transparent !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; isolation: isolate; transition: none; }
 .topbar.y-top::before {
-  content: ''; display: block !important; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 1;
+  content: ''; display: block !important; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: var(--tb);
   background: color-mix(in srgb, var(--y-bg) 86%, transparent); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
-  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: none;
 }
 .topbar.y-top::after {
-  content: ''; position: absolute; left: 0; right: 0; top: 0; bottom: -28px; z-index: -1; pointer-events: none; opacity: 0;
+  content: ''; position: absolute; left: 0; right: 0; top: 0; bottom: -28px; z-index: -1; pointer-events: none; opacity: calc(1 - var(--tb));
   background: linear-gradient(180deg, color-mix(in srgb, var(--y-bg) 78%, transparent), transparent);
-  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: none;
 }
-.topbar.y-top.over-hero::before { opacity: 0; }
-.topbar.y-top.over-hero::after { opacity: 1; }
+.y-brand { gap: 0 !important; }
 @media (max-width: 879px) {
   .topbar.y-top::before { background: var(--y-bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .topbar.y-top, .topbar.y-top.over-hero { border-bottom: 0 !important; }
 }
 
 
@@ -1644,13 +1645,21 @@ body { transition: none; }
 @media (max-width: 879px) {
   .ydock {
     display: flex; position: fixed; left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom)); height: 64px; z-index: 140;
-    padding: 8px; gap: 0; border-radius: 32px; background: var(--y-s1);
-    box-shadow: 0 10px 18px -10px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-    clip-path: inset(-30px -20px -30px -20px round 50px); /* wide enough that the shadow is never clipped */
+    padding: 8px; gap: 0; border-radius: 32px; background: none;
+    clip-path: inset(-44px -24px -120px -24px round 50px); /* wide enough that the shadow and the scrim are never clipped */
     transform: translate3d(0, 0, 0); opacity: 1; touch-action: manipulation;
     transition: clip-path 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.18s, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
   }
   .ydock.hide { display: none; }
+  /* ::before = soft scrim so posters never peek out around the floating bar; ::after = the pill itself. */
+  .ydock::before {
+    content: ''; position: absolute; z-index: -2; pointer-events: none; left: -24px; right: -24px; top: -44px; bottom: calc(-24px - env(safe-area-inset-bottom) - 24px);
+    background: linear-gradient(to bottom, transparent 0, color-mix(in srgb, var(--y-bg) 78%, transparent) 30px, var(--y-bg) 64px);
+  }
+  .ydock::after {
+    content: ''; position: absolute; z-index: -1; pointer-events: none; inset: 0; border-radius: 32px; background: var(--y-s1);
+    box-shadow: 0 10px 18px -10px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
   .ydock.away {
     clip-path: inset(0 calc(50% - 32px) 0 calc(50% - 32px) round 32px);
     transform: translate3d(0, calc(100% + 40px), 0); opacity: 0; pointer-events: none;
