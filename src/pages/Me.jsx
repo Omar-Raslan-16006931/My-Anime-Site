@@ -180,7 +180,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
             <Chevron />
           </button>
         )}
-        <button type="button" className="acc-item" onClick={() => { if (toLook) return; setToLook(true); setTimeout(() => { previewScheme(scheme); navigate('/') }, 420) }}>
+        <button type="button" className="acc-item" onClick={() => { if (toLook) return; setToLook(true); setTimeout(() => { previewScheme(scheme); navigate('/') }, 300) }}>
           <span className="acc-ico">{SECTIONS.find((x) => x.k === 'look').icon}</span>
           <span className="acc-txt"><b>Appearance</b><small>{scheme} · preview themes</small></span>
           <Chevron />

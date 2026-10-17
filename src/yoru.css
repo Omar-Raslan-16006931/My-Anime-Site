@@ -1636,3 +1636,37 @@ html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after { transit
 .y-cw .row-head h2 .rt-lead { flex: none; }
 .y-cw .row-head h2 .rt-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .y-cw .row-head { gap: 10px; }
+
+/* ======== v4: greeting as one overlay element; calmer appearance flow ======== */
+.greet { background: transparent !important; animation: none; }
+.greet-bg { position: absolute; inset: 0; background: var(--y-bg); }
+.greet.open { animation: greetFade 2.9s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.greet.open .greet-inner { animation: greetInner 2.9s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.greet.fly { animation: gOut 0.65s cubic-bezier(0.4, 0, 0.2, 1) 2.05s forwards; }
+.greet.fly .greet-bg { opacity: 0; animation: gIn 0.75s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.greet.fly .greet-inner { position: relative; animation: none; }
+.greet.fly .greet-name { opacity: 0; animation: gText 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards; }
+.greet.fly .greet-tile { animation: none; will-change: transform; }
+@keyframes gIn { to { opacity: 1; } }
+@keyframes gOut { to { opacity: 0; } }
+@keyframes gText { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.y-who-p.picked .tile { opacity: 0; transition: none !important; }
+.y-who-p.picked .nm, .y-who-p.picked .sub { opacity: 0; }
+
+/* theme cross-fade (View Transitions) */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.45s; animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after { transition: inherit; }
+
+/* account page → home: a short, light fade (no blur/scale) */
+.me-page.to-look { opacity: 0; transform: translateY(-8px); filter: none; transition: opacity 0.28s ease, transform 0.3s ease; }
+
+/* theme bar: plain slide + fade in/out, no bounce */
+.tp-bar { animation: tpIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both; }
+@keyframes tpIn { from { opacity: 0; transform: translateY(24px); } }
+.tp-bar.out { animation: tpOut 0.38s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+@keyframes tpOut { to { opacity: 0; transform: translateY(24px); } }
+.tp-chips button.on { transform: none; }
+.tp-chips button.on i { transform: scale(1.12); }
+.tp-bar:has(.tp-keep.ok) .tp-cancel { flex-grow: 1; padding: 0 16px; opacity: 0.35; }
+.tp-bar-row button { transition: transform 0.25s ease, background 0.3s ease, color 0.3s ease, opacity 0.3s ease; }
+body { transition: none; }

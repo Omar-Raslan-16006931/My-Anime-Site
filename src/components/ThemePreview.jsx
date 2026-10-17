@@ -61,7 +61,7 @@ export function PreviewBar() {
   useEffect(() => {
     document.documentElement.classList.toggle('tp-on', previewing)
     let t
-    if (previewing) { setShown(true) } else { t = setTimeout(() => { setShown(false); setMin(false); setDone(null) }, 520) }
+    if (previewing) { setShown(true) } else { t = setTimeout(() => { setShown(false); setMin(false); setDone(null) }, 420) }
     return () => { clearTimeout(t) }
   }, [previewing])
   useEffect(() => () => document.documentElement.classList.remove('tp-on'), [])
@@ -70,7 +70,7 @@ export function PreviewBar() {
   const finish = (kind) => {
     if (done) return
     setDone(kind)
-    setTimeout(() => (kind === 'keep' ? keepPreview() : cancelPreview()), kind === 'keep' ? 520 : 140)
+    setTimeout(() => (kind === 'keep' ? keepPreview() : cancelPreview()), kind === 'keep' ? 650 : 60)
   }
 
   if (!shown) return null

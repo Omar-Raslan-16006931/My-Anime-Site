@@ -18,7 +18,6 @@ export default function Profiles({ user, profile }) {
   const [wobbling, setWobbling] = useState(params.get('manage') === '1')
   const [fresh, setFresh] = useState(null) // tile that was just created
   const [settled, setSettled] = useState(false) // initial staggered entrance is over
-  const [welcome, setWelcome] = useState('')
   const [rev, setRev] = useState({}) // bumps when a profile is edited so its tile always replays its pop
   const settleTimer = useRef(0)
   const [sheet, setSheet] = useState(null) // { id?, name, hue, kids }
@@ -38,25 +37,18 @@ export default function Profiles({ user, profile }) {
   const choose = (p, e) => {
     if (manage) { setSheet({ id: p.id, name: p.name, hue: p.hue ?? 0, kids: !!p.kids }); return }
     if (picked) return
-    // The chosen tile glides to the exact spot (and size) the welcome screen uses, while everything else fades out.
+    // Hand the tile to the welcome overlay, which flies it to the centre while this page fades away.
     const tile = e?.currentTarget?.querySelector('.tile')
-    let look = null
+    let fly = null
     if (tile) {
       const r = tile.getBoundingClientRect()
-      const dx = window.innerWidth / 2 - (r.left + r.width / 2)
-      const dy = (window.innerHeight - 172) / 2 + 62 - (r.top + r.height / 2)
-      const sc = 124 / r.width
       const cs = getComputedStyle(tile)
-      look = { w: r.width, radius: cs.borderTopLeftRadius, font: cs.fontSize }
-      requestAnimationFrame(() => {
-        tile.style.transition = 'transform 0.9s cubic-bezier(0.65, 0, 0.35, 1), box-shadow 0.6s'
-        tile.style.transform = `translate(${dx}px, ${dy}px) scale(${sc})`
-      })
+      fly = { cx: r.left + r.width / 2, cy: r.top + r.height / 2, w: tile.offsetWidth, radius: cs.borderTopLeftRadius, font: cs.fontSize, shadow: cs.boxShadow }
     }
     setPicked(p.id)
-    setWelcome(p.name)
     profileActions.setActive(p.id)
-    timer.current = setTimeout(() => { window.dispatchEvent(new CustomEvent('yoru:greet', { detail: { cont: true, look } })); navigate('/') }, 1000)
+    window.dispatchEvent(new CustomEvent('yoru:greet', { detail: { profile: p, fly } }))
+    timer.current = setTimeout(() => navigate('/'), 1000)
   }
   // Dialogs fade and drop away before they unmount.
   const closeDialogs = (after) => {
@@ -123,7 +115,6 @@ export default function Profiles({ user, profile }) {
         </div>
       </div>
       <div className="y-who-fade" />
-      {picked && <div className="y-who-welcome">Welcome back, {welcome}</div>}
       <Link to="/" className="y-who-logo y-brand">Yoru<i>.</i></Link>
 
       <div className="y-who-head">

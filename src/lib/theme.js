@@ -28,13 +28,13 @@ try {
 
 const listeners = new Set()
 
-// Colours cross-fade when the scheme changes (not on first paint).
-let animTimer = 0
-function softly() {
-  const root = document.documentElement
-  root.classList.add('theme-anim')
-  clearTimeout(animTimer)
-  animTimer = setTimeout(() => root.classList.remove('theme-anim'), 700)
+// Theme changes cross-fade with the browser's own snapshot transition (smooth and cheap);
+// browsers without it just switch instantly.
+function softly(fn) {
+  const d = typeof document !== 'undefined' ? document : null
+  const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  if (d?.startViewTransition && !reduce) { try { d.startViewTransition(fn); return } catch { /* fall through */ } }
+  fn()
 }
 
 export function applyScheme(name = current) {
@@ -53,8 +53,7 @@ export function setScheme(name) {
   if (!SCHEMES[name]) return
   current = name
   try { localStorage.setItem(KEY, name) } catch { /* ignore */ }
-  softly()
-  applyScheme(name)
+  softly(() => applyScheme(name))
   listeners.forEach((l) => l())
 }
 
@@ -66,9 +65,9 @@ export function previewScheme(name) {
   if (!SCHEMES[name]) return
   if (!previewing) committed = current
   previewing = true
+  const changed = current !== name
   current = name
-  softly()
-  applyScheme(name)
+  if (changed) softly(() => applyScheme(name))
   notify()
 }
 export function keepPreview() {
@@ -80,9 +79,9 @@ export function keepPreview() {
 export function cancelPreview() {
   if (!previewing) return
   previewing = false
+  const back = current !== committed
   current = committed
-  softly()
-  applyScheme(current)
+  if (back) softly(() => applyScheme(current))
   notify()
 }
 export const isPreviewing = () => previewing
