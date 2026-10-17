@@ -2119,3 +2119,40 @@ body { transition: none; }
 .tvh-actions .tvh-sc:has(> .tvh-lbl) { width: 46px; padding: 0; justify-content: center; }
 .tvh-actions .tvh-sc > .tvh-lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .tvh-actions .tvh-sc:has(> .tvh-lbl) svg { width: 20px; height: 20px; }
+
+/* =====================================================================
+   Phone dock — floating glass dock with a slight 3-D tilt (adapted from the "Dock" component):
+   icon-only tiles that pop + tilt + glow on press, a tooltip label, and an accent dot under the active tab.
+   Plain CSS (no Tailwind / framer-motion needed in this project).
+   ===================================================================== */
+@media (max-width: 879px) {
+  .ydock {
+    left: 50% !important; right: auto !important; width: max-content; max-width: calc(100vw - 24px);
+    height: auto !important; padding: 10px 14px 8px !important; gap: 14px; align-items: flex-end; justify-content: center;
+    border-radius: 28px !important; background: color-mix(in srgb, var(--y-s1) 72%, transparent) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(1.3); backdrop-filter: blur(24px) saturate(1.3);
+    box-shadow: 0 14px 34px -10px rgba(0, 0, 0, 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.09) !important;
+    transform: translateX(-50%) perspective(600px) rotateX(10deg); transform-origin: 50% 100%;
+    animation: yoDockBob 8s ease-in-out infinite;
+  }
+  @keyframes yoDockBob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -2px; } }
+  .ydock-item {
+    position: relative; flex: none !important; width: 48px; height: 48px; border-radius: 16px; gap: 0 !important; justify-content: center;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s, background 0.2s, box-shadow 0.25s !important;
+  }
+  .ydock-item svg { width: 24px !important; height: 24px !important; }
+  .ydock-item.on { color: var(--y-ac) !important; }
+  .ydock-item:active { opacity: 1 !important; transform: scale(1.2) rotate(-5deg); background: rgba(255, 255, 255, 0.06); box-shadow: 0 10px 22px -8px color-mix(in srgb, var(--y-ac) 45%, transparent); }
+  /* glowing ring while pressed */
+  .ydock-item::before { content: ''; position: absolute; inset: 0; border-radius: inherit; border: 1px solid color-mix(in srgb, var(--y-ac) 55%, transparent); opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+  .ydock-item:active::before { opacity: 1; }
+  /* active dot */
+  .ydock-item::after { content: ''; position: absolute; left: 50%; bottom: -5px; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--y-ac); transform: scale(0); transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .ydock-item.on::after { transform: scale(1); }
+  /* label becomes the tooltip, shown while pressed */
+  .ydock-label { position: absolute; left: 50%; bottom: calc(100% + 12px); transform: translate(-50%, 6px) scale(0.92); padding: 5px 10px; border-radius: 9px; background: var(--y-tx); color: var(--y-bg); font: 650 11.5px var(--y-font) !important; opacity: 0; pointer-events: none; transition: opacity 0.18s, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .ydock-item:active .ydock-label { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  .ydock .ydock-item.ydock-you .y-me { width: 28px !important; height: 28px !important; font-size: 13px !important; }
+  .tp-bar { bottom: calc(100px + env(safe-area-inset-bottom)) !important; }
+}
+@media (max-width: 879px) and (prefers-reduced-motion: reduce) { .ydock { animation: none; } }
