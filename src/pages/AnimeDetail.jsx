@@ -444,6 +444,8 @@ export default function AnimeDetail({ user, onAuthRequired }) {
           poster={poster}
           altTitles={[details.title, ...(details.title_synonyms || [])].filter((t) => t && t !== title)}
           hasNext={!totalEps || playingEp < totalEps}
+          watched={!!episodeProgress[Number(playingEp)]?.seen}
+          onToggleWatched={() => toggleSeen(playingEp, !!episodeProgress[Number(playingEp)]?.seen)}
           aside={(
             <PlayerEpisodes
               heading="Episodes"

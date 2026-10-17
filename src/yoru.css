@@ -2353,3 +2353,12 @@ body { transition: none; }
 .wp-ibtn.sm { width: 32px; height: 32px; }
 .wp-next { height: 38px; font-size: 13.5px; }
 .wp-sep { width: 1px; height: 22px; background: rgba(255, 255, 255, 0.12); margin: 0 4px; }
+
+/* lights off (watch page): cover everything, video dead-centre both ways */
+@media (min-width: 880px) {
+  .wp.lights { z-index: 400; padding-top: 0; grid-template-columns: minmax(0, 1fr) !important; }
+  .wp.lights .wp-main { height: 100vh; height: 100dvh; grid-template-rows: 0 minmax(0, 1fr) 0; padding: 0 3vw; }
+  .wp.lights .wp-top, .wp.lights .wp-bar { height: 0; padding: 0; overflow: hidden; }
+  .wp.lights .wp-side { display: none; }
+  .wp.lights .wp-stage { align-self: center; padding: 3vh 0; }
+}

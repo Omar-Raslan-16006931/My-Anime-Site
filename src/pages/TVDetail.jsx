@@ -338,6 +338,8 @@ export default function TVDetail({ user, onAuthRequired }) {
             play(ep, season || selectedSeason)
           }}
           hasNext={!!seasonData?.episodes?.some((e) => e.episode_number === playing + 1)}
+          watched={seen.has(tvEpKey(lastSeason ?? selectedSeason, playing))}
+          onToggleWatched={() => { const sn = lastSeason ?? selectedSeason; markSeen(sn, playing, !seen.has(tvEpKey(sn, playing))) }}
           aside={(
             <PlayerEpisodes
               heading="Episodes"

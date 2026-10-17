@@ -129,6 +129,8 @@ export default function VideoPlayer({
   poster, // used for the Downloads list (iPhone app)
   altTitles = [], // other names (romaji, synonyms) — helps AllManga find the show
   hasNext = true,
+  watched = null, // true/false: is this episode marked watched (null = feature off)
+  onToggleWatched, // () => void
   aside = null, // PC: episode / season picker shown as a right-hand column
 }) {
   const type = mediaType
@@ -745,6 +747,11 @@ export default function VideoPlayer({
               <button type="button" className="wp-chip" onClick={() => { setLights(true); toast('Lights off · press Esc or click to turn them on') }} title="Dim everything except the video">{I(<><path d="M9 18h6M10 22h4" /><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z" /></>, 15)} Lights off</button>
               <button type="button" className="wp-chip" onClick={goFullscreen} title="Fullscreen (keeps subtitles visible)">{I(<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />, 15)} Fullscreen</button>
               <span className="wp-sep" aria-hidden="true" />
+              {watched != null && onToggleWatched && (
+                <button type="button" className={'wp-chip' + (watched ? ' on' : '')} onClick={onToggleWatched} aria-pressed={watched} title={watched ? 'Marked as watched — click to unmark' : 'Mark this episode as watched'}>
+                  {I(watched ? <path d="M20 6 9 17l-5-5" /> : <><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>, 15)} {watched ? 'Watched' : 'Mark watched'}
+                </button>
+              )}
               {canPrev && <button type="button" className="wp-ibtn" onClick={goPrev} title="Previous episode" aria-label="Previous episode">{I(<path d="M19 5v14l-9-7zM5 5v14" />)}</button>}
               {canNext && <button type="button" className="wp-next" onClick={goNext}>Next episode {I(<path d="M5 5v14l9-7zM19 5v14" />, 16)}</button>}
             </div>
@@ -894,6 +901,11 @@ export default function VideoPlayer({
             {subTarget && (
               <button type="button" className="pc-link" onClick={downloadSubs} disabled={subBusy}>
                 <Icon.download width="14" height="14" /> {subBusy ? 'Finding…' : 'Subtitle file'}
+              </button>
+            )}
+            {watched != null && onToggleWatched && (
+              <button type="button" className={'pc-link' + (watched ? ' on' : '')} onClick={onToggleWatched} aria-pressed={watched}>
+                {watched ? '✓ Watched' : 'Mark as watched'}
               </button>
             )}
             <button type="button" className={'pc-link' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
