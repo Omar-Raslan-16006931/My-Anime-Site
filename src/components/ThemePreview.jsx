@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import Collapse from './Collapse'
 import { SCHEMES, SCHEME_NAMES, previewScheme, setScheme, keepPreview, cancelPreview, useScheme, usePreviewing } from '../lib/theme'
 
 // A tiny mock of the app drawn in a scheme's own colours, so a theme can be judged at a glance.
@@ -46,25 +47,43 @@ export default function ThemePicker({ onTry, instant = false }) {
 }
 
 // Floating bar shown while previewing: flip through themes while using the app, then keep or revert.
+const Check = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+
 export function PreviewBar() {
   const previewing = usePreviewing()
   const scheme = useScheme()
   const [min, setMin] = useState(false)
-  // Leave room under the page so the bar never covers the last content.
+  const [shown, setShown] = useState(previewing) // stays mounted while the bar animates away
+  const [done, setDone] = useState(null) // 'keep' | 'cancel' while the button confirms itself
+  const last = useRef(scheme) // label stays put during the exit instead of flipping to the reverted theme
+  if (previewing && !done) last.current = scheme
+
   useEffect(() => {
     document.documentElement.classList.toggle('tp-on', previewing)
-    if (!previewing) setMin(false)
-    return () => document.documentElement.classList.remove('tp-on')
+    let t
+    if (previewing) { setShown(true) } else { t = setTimeout(() => { setShown(false); setMin(false); setDone(null) }, 520) }
+    return () => { clearTimeout(t) }
   }, [previewing])
-  if (!previewing) return null
+  useEffect(() => () => document.documentElement.classList.remove('tp-on'), [])
+
+  // Keep: the button turns into a tick, then the bar slides away. Cancel: the bar slides away as the theme reverts.
+  const finish = (kind) => {
+    if (done) return
+    setDone(kind)
+    setTimeout(() => (kind === 'keep' ? keepPreview() : cancelPreview()), kind === 'keep' ? 520 : 140)
+  }
+
+  if (!shown) return null
+  const label = last.current
   return (
-    <div className={'tp-bar' + (min ? ' min' : '')} role="region" aria-label="Theme preview">
+    <div className={'tp-bar' + (min ? ' min' : '') + (!previewing ? ' out' : '')} role="region" aria-label="Theme preview">
       <button type="button" className="tp-handle" onClick={() => setMin((v) => !v)} aria-label={min ? 'Expand theme bar' : 'Minimise theme bar'} aria-expanded={!min}>
-        <span /><em>{min ? `Previewing ${scheme}` : 'Browse the app while you pick'}</em>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: min ? 'rotate(180deg)' : 'none' }}><path d="m6 9 6 6 6-6" /></svg>
+        <span className="tp-grip" />
+        <span className="tp-swap"><em className="a">Browse the app while you pick</em><em className="b">Previewing <b>{scheme}</b></em></span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="tp-caret"><path d="m6 9 6 6 6-6" /></svg>
       </button>
-      {!min && (
-        <>
+      <Collapse open={!min}>
+        <div className="tp-body">
           <div className="tp-chips" role="radiogroup" aria-label="Theme">
             {SCHEME_NAMES.map((k) => (
               <button key={k} type="button" role="radio" aria-checked={scheme === k} className={scheme === k ? 'on' : ''} onClick={() => previewScheme(k)}>
@@ -73,11 +92,14 @@ export function PreviewBar() {
             ))}
           </div>
           <div className="tp-bar-row">
-            <button type="button" className="tp-cancel" onClick={cancelPreview}>Cancel</button>
-            <button type="button" className="tp-keep" onClick={keepPreview}>Keep {scheme}</button>
+            <button type="button" className={'tp-cancel' + (done === 'cancel' ? ' busy' : '')} onClick={() => finish('cancel')}>Cancel</button>
+            <button type="button" className={'tp-keep' + (done === 'keep' ? ' ok' : '')} onClick={() => finish('keep')}>
+              <span className="k-a">Keep {label}</span>
+              <span className="k-b"><Check />Saved</span>
+            </button>
           </div>
-        </>
-      )}
+        </div>
+      </Collapse>
     </div>
   )
 }

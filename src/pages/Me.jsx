@@ -43,6 +43,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
 
   const sel = SECTIONS.find((s) => s.k === params.get('s')) || null
   const pick = (k) => setParams(k ? { s: k } : {})
+  const [toLook, setToLook] = useState(false)
   const [confirmOut, setConfirmOut] = useState(false)
   const [outClosing, setOutClosing] = useState(false)
   const closeOut = (after) => { setOutClosing(true); setTimeout(() => { setConfirmOut(false); setOutClosing(false); after?.() }, 280) }
@@ -110,7 +111,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
   /* ---------------- Overview ---------------- */
 
   return (
-    <div className="me-page acc">
+    <div className={'me-page acc' + (toLook ? ' to-look' : '')}>
       <div className="acc-glow" style={{ '--h1': `oklch(0.6 0.16 ${me?.hue || 0})` }} aria-hidden="true" />
 
       <header className="acc-hero">
@@ -179,7 +180,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
             <Chevron />
           </button>
         )}
-        <button type="button" className="acc-item" onClick={() => { previewScheme(scheme); navigate('/') }}>
+        <button type="button" className="acc-item" onClick={() => { if (toLook) return; setToLook(true); setTimeout(() => { previewScheme(scheme); navigate('/') }, 420) }}>
           <span className="acc-ico">{SECTIONS.find((x) => x.k === 'look').icon}</span>
           <span className="acc-txt"><b>Appearance</b><small>{scheme} · preview themes</small></span>
           <Chevron />

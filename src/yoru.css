@@ -1585,3 +1585,45 @@ body { transition: padding-bottom 0.45s var(--y-ease); }
 @keyframes greetFadeCont { 0%, 72% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes greetInnerCont { 0%, 72% { opacity: 1; transform: none; } 100% { opacity: 0; transform: scale(1.06); } }
 @media (prefers-reduced-motion: reduce) { .greet.cont, .greet.cont .greet-inner, .y-who-welcome { animation-duration: 0.01s; } }
+
+/* ===== Theme bar motion ===== */
+.tp-bar { animation: yoBarIn 0.6s var(--y-spring) both; transition: padding 0.4s var(--y-ease), border-radius 0.4s var(--y-ease); }
+@keyframes yoBarIn { from { opacity: 0; transform: translateY(40px) scale(0.94); } }
+.tp-bar.out { animation: yoBarOut 0.5s var(--y-ease) forwards; pointer-events: none; }
+@keyframes yoBarOut { to { opacity: 0; transform: translateY(46px) scale(0.95); } }
+.tp-bar .collapse-in { overflow: hidden; }
+.tp-body { display: flex; flex-direction: column; gap: 8px; padding-top: 2px; }
+.tp-swap { display: grid; margin-top: 8px; }
+.tp-swap em { grid-area: 1 / 1; font-style: normal; transition: opacity 0.35s var(--y-ease), transform 0.4s var(--y-ease); }
+.tp-swap .b { opacity: 0; transform: translateY(6px); }
+.tp-swap b { color: var(--y-tx); }
+.tp-bar.min .tp-swap .a { opacity: 0; transform: translateY(-6px); }
+.tp-bar.min .tp-swap .b { opacity: 1; transform: none; }
+.tp-handle { gap: 8px; }
+.tp-handle svg.tp-caret { margin-top: 8px; transition: transform 0.45s var(--y-spring); }
+.tp-bar.min .tp-caret { transform: rotate(180deg); }
+.tp-grip { position: absolute; top: 3px; left: 50%; width: 34px; height: 4px; margin-left: -17px; border-radius: 4px; background: rgba(255, 255, 255, 0.22); transition: width 0.4s var(--y-spring), background 0.3s; }
+.tp-handle:hover .tp-grip { width: 44px; margin-left: -22px; background: rgba(255, 255, 255, 0.4); }
+.tp-chips button { transition: background 0.3s var(--y-ease), border-color 0.3s var(--y-ease), color 0.3s var(--y-ease), transform 0.4s var(--y-spring); }
+.tp-chips button:active { transform: scale(0.92); }
+.tp-chips button.on { transform: scale(1.04); }
+.tp-chips button i { transition: transform 0.45s var(--y-spring); }
+.tp-chips button.on i { transform: scale(1.18); }
+.tp-bar-row button { position: relative; overflow: hidden; display: grid; place-items: center; transition: transform 0.35s var(--y-spring), background 0.35s var(--y-ease), color 0.35s var(--y-ease), opacity 0.35s var(--y-ease), flex-grow 0.45s var(--y-ease); }
+.tp-bar-row button:active { transform: scale(0.95); }
+.tp-keep > span { grid-area: 1 / 1; display: inline-flex; align-items: center; gap: 6px; transition: opacity 0.3s var(--y-ease), transform 0.4s var(--y-spring); }
+.tp-keep .k-b { opacity: 0; transform: scale(0.6); }
+.tp-keep.ok { background: #3ecf8e; color: #04170e; }
+.tp-keep.ok .k-a { opacity: 0; transform: translateY(-8px); }
+.tp-keep.ok .k-b { opacity: 1; transform: none; }
+.tp-keep.ok .k-b svg path { stroke-dasharray: 26; stroke-dashoffset: 26; animation: yoDraw 0.4s var(--y-ease) 0.12s forwards; }
+.tp-bar:has(.tp-keep.ok) .tp-cancel, .tp-cancel.busy { opacity: 0.4; }
+.tp-bar:has(.tp-keep.ok) .tp-cancel { flex-grow: 0.0001; padding: 0; opacity: 0; }
+.tp-cancel.busy { background: rgba(255, 255, 255, 0.04); }
+/* colours cross-fade when a theme changes */
+html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after { transition: background-color 0.55s ease, color 0.55s ease, border-color 0.55s ease, fill 0.55s ease, stroke 0.55s ease, box-shadow 0.55s ease !important; }
+/* leaving the account page for the theme preview */
+.me-page.to-look { opacity: 0; transform: translateY(-16px) scale(0.975); filter: blur(5px); transition: opacity 0.4s var(--y-ease), transform 0.42s var(--y-ease), filter 0.4s var(--y-ease); pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .tp-bar, .tp-bar.out { animation-duration: 0.01s; } }
+.tp-handle .tp-swap { position: static; top: auto; left: auto; width: auto; height: auto; margin: 8px 0 0; background: none; display: grid; }
+.tp-handle .tp-swap em { margin-top: 0; }

@@ -28,6 +28,15 @@ try {
 
 const listeners = new Set()
 
+// Colours cross-fade when the scheme changes (not on first paint).
+let animTimer = 0
+function softly() {
+  const root = document.documentElement
+  root.classList.add('theme-anim')
+  clearTimeout(animTimer)
+  animTimer = setTimeout(() => root.classList.remove('theme-anim'), 700)
+}
+
 export function applyScheme(name = current) {
   if (typeof document === 'undefined') return
   const q = SCHEMES[name] || SCHEMES.Cinema
@@ -44,6 +53,7 @@ export function setScheme(name) {
   if (!SCHEMES[name]) return
   current = name
   try { localStorage.setItem(KEY, name) } catch { /* ignore */ }
+  softly()
   applyScheme(name)
   listeners.forEach((l) => l())
 }
@@ -57,6 +67,7 @@ export function previewScheme(name) {
   if (!previewing) committed = current
   previewing = true
   current = name
+  softly()
   applyScheme(name)
   notify()
 }
@@ -70,6 +81,7 @@ export function cancelPreview() {
   if (!previewing) return
   previewing = false
   current = committed
+  softly()
   applyScheme(current)
   notify()
 }
