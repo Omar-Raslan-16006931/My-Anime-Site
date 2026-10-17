@@ -170,14 +170,18 @@ export default function Profiles({ user, profile }) {
   }
 
   const spin = (a, n) => (a.length ? [...a.slice(n % a.length), ...a.slice(0, n % a.length)] : a)
+  // Every row drifts at the same slow speed (px/s). The duration is worked out from the row's own
+  // length, so posters and banners no longer move at different speeds.
+  const WALL_SPEED = 18
   const rowsDef = [
-    { kind: 'p', src: wall.posters, off: 0, t: 70, rev: false },
-    { kind: 'b', src: wall.banners, off: 0, t: 90, rev: true },
-    { kind: 'p', src: wall.posters, off: 9, t: 80, rev: false },
-    { kind: 'b', src: wall.banners, off: 6, t: 100, rev: true },
-    { kind: 'p', src: wall.posters, off: 17, t: 75, rev: false },
-    { kind: 'b', src: wall.banners, off: 12, t: 85, rev: true },
+    { kind: 'p', src: wall.posters, off: 0, rev: false },
+    { kind: 'b', src: wall.banners, off: 0, rev: true },
+    { kind: 'p', src: wall.posters, off: 9, rev: false },
+    { kind: 'b', src: wall.banners, off: 6, rev: true },
+    { kind: 'p', src: wall.posters, off: 17, rev: false },
+    { kind: 'b', src: wall.banners, off: 12, rev: true },
   ].map((r) => ({ ...r, list: (() => { const s = spin(r.src, r.off); return r.kind === 'p' ? [...s, ...s] : [...s, ...s, ...s] })() }))
+    .map((r) => ({ ...r, t: Math.max(60, Math.round(((r.list.length * ((r.kind === 'p' ? 170 : 300) + 18)) / 2) / WALL_SPEED)) }))
   const canAdd = profiles.length < profileActions.max
   // The first profile is the account itself, so it wears the account photo unless it has its own.
   const shown = profiles.map((p, i) => (i === 0 && !p.avatar && profile?.avatar_url ? { ...p, avatar: profile.avatar_url } : p))
