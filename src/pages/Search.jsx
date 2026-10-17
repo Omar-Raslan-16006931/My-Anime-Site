@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import MediaCard from '../components/MediaCard'
+import Browse from './Browse'
 import Icon from '../components/Icons'
 import { searchAnimeFiltered } from '../lib/anime'
 import { searchMovies, searchTV, discoverMovies, discoverTV, getTmdbImage } from '../lib/tmdb'
@@ -86,7 +87,7 @@ export default function Search() {
 
   return (
     <div className="page">
-      <h1 className="section-title" style={{ marginBottom: 14 }}>Search</h1>
+      <h1 className="section-title" style={{ marginBottom: 14 }}>Explore</h1>
 
       <form onSubmit={submit} className="search-form">
         <div className="topbar-search search-field">
@@ -97,7 +98,7 @@ export default function Search() {
             placeholder="Anime, shows, movies…"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            autoFocus={!active}
+            autoFocus={!active && typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches}
           />
         </div>
         <button className="btn btn-primary" type="submit">Search</button>
@@ -141,7 +142,7 @@ export default function Search() {
       </div>
 
       {!active ? (
-        <div className="empty"><div className="emoji">🔍</div><p>Search by name, or pick categories above to browse.</p></div>
+        <Browse embedded />
       ) : nothing ? (
         <div className="empty">
           <div className="emoji">{anyError ? '⚠️' : '🤷'}</div>

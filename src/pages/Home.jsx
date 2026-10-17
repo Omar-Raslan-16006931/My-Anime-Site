@@ -295,7 +295,7 @@ export default function Home({ user, onAuthRequired }) {
 
       <div className="y-home-body">
         {visibleWatching.length > 0 && (
-          <Row title={`Continue watching for ${me?.name || 'you'}`} wide onMore={() => navigate('/currently-watching')} className="y-cw">
+          <Row title={`Continue watching for ${me?.name || 'you'}`} wide onMore={() => navigate('/me')} className="y-cw">
             {visibleWatching.map((i) => <ContinueCard key={watchKey(i)} item={wideWatch(i)} onRemove={() => hideWatch(i)} />)}
           </Row>
         )}
@@ -311,7 +311,7 @@ export default function Home({ user, onAuthRequired }) {
           <SurpriseCard posters={fanPosters} />
         </div>
 
-        <Row title="Browse by category" wide onMore={() => navigate('/browse')} className="y-cats">
+        <Row title="Browse by category" wide onMore={() => navigate('/search')} className="y-cats">
           {PRIORITY_CATEGORIES.map((g) => {
             const a = catArt[g]
             return (

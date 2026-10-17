@@ -6,19 +6,15 @@ import AuthModal from './components/AuthModal'
 import Toasts from './components/Toasts'
 import Home from './pages/Home'
 import Anime from './pages/Anime'
-import Watchlist from './pages/Watchlist'
-import Profile from './pages/Profile'
+import Me from './pages/Me'
 import AnimeDetail from './pages/AnimeDetail'
-import CurrentlyWatching from './pages/CurrentlyWatching'
 import Movies from './pages/Movies'
 import TVShows from './pages/TVShows'
 import MovieDetail from './pages/MovieDetail'
 import TVDetail from './pages/TVDetail'
 import Search from './pages/Search'
-import Recommend from './pages/Recommend'
 import Downloads from './pages/Downloads'
 import Category from './pages/Category'
-import Browse from './pages/Browse'
 import Simulcast from './pages/Simulcast'
 import Profiles from './pages/Profiles'
 import Welcome from './pages/Welcome'
@@ -165,10 +161,11 @@ export default function App() {
         <Routes location={location}>
           <Route path="/" element={<Home user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/search" element={<Search />} />
-          <Route path="/recommend" element={<Recommend user={user} onAuthRequired={handleAuthRequired} />} />
+          <Route path="/me" element={<Me user={user} profile={profile} setProfile={setProfile} onAuthRequired={handleAuthRequired} onAuthClick={() => setShowAuth(true)} />} />
+          <Route path="/recommend" element={<Navigate to="/me?s=ai" replace />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/category/:name" element={<Category />} />
-          <Route path="/browse" element={<Browse />} />
+          <Route path="/browse" element={<Navigate to={{ pathname: '/search', search: location.search }} replace />} />
           <Route path="/simulcast" element={<Simulcast />} />
           <Route path="/profiles" element={<Profiles user={user} profile={profile} />} />
           <Route path="/welcome" element={<Welcome user={user} onAuthRequired={handleAuthRequired} />} />
@@ -177,16 +174,10 @@ export default function App() {
           <Route path="/tv" element={<TVShows />} />
           <Route path="/movie/:id" element={<MovieDetail user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/tv/:id" element={<TVDetail user={user} onAuthRequired={handleAuthRequired} />} />
-          <Route path="/watchlist" element={<Watchlist user={user} onAuthRequired={handleAuthRequired} />} />
+          <Route path="/watchlist" element={<Navigate to="/me?s=list" replace />} />
           <Route path="/anime/:id" element={<AnimeDetail user={user} onAuthRequired={handleAuthRequired} />} />
-          <Route
-            path="/profile"
-            element={user ? <Profile user={user} profile={profile} setProfile={setProfile} /> : <Navigate to="/" replace />}
-          />
-          <Route
-            path="/currently-watching"
-            element={user ? <CurrentlyWatching user={user} onAuthRequired={handleAuthRequired} /> : <Navigate to="/" replace />}
-          />
+          <Route path="/profile" element={<Navigate to="/me?s=account" replace />} />
+          <Route path="/currently-watching" element={<Navigate to="/me" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

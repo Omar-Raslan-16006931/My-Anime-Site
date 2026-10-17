@@ -967,7 +967,7 @@ a:focus-visible, button:focus-visible { outline-color: var(--y-ac); }
 @media (max-width: 879px) {
   .ydock { gap: 0; }
   .ydock-ind {
-    position: absolute; left: 8px; top: 8px; bottom: 8px; width: calc((100% - 16px) / 5); border-radius: 24px; background: var(--y-tx); pointer-events: none;
+    position: absolute; left: 8px; top: 8px; bottom: 8px; width: calc((100% - 16px) / var(--n, 5)); border-radius: 24px; background: var(--y-tx); pointer-events: none;
     transform: translateX(calc(var(--i, 0) * 100%)); transition: transform 0.38s cubic-bezier(0.34, 1.3, 0.5, 1), opacity 0.2s ease;
   }
   .ydock.away .ydock-ind { opacity: 0; transition: opacity 0.2s ease; }
@@ -1072,4 +1072,40 @@ h1, h2, h3 { text-wrap: balance; }
 @media (prefers-reduced-motion: reduce) {
   .rv { opacity: 1; transform: none; transition: none; }
   .y-menu > * { animation: none; }
+}
+
+/* ---------- Profile hub (/me): everything behind the profile picture ---------- */
+.me-page { max-width: 1100px; margin: 0 auto; padding: calc(var(--topbar-h, 72px) + env(safe-area-inset-top) + 18px) var(--y-pad, 20px) calc(var(--dock-h, 90px) + env(safe-area-inset-bottom) + 40px); }
+.me-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; animation: yoPageIn 0.5s var(--y-ease) backwards; }
+.me-avatar { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; font-size: 26px; font-weight: 700; color: var(--y-bg); flex: none; }
+.me-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.me-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 140px; }
+.me-who h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.me-who span { font-size: 13px; color: var(--y-t3); }
+.me-actions { display: flex; gap: 8px; }
+.me-tabs { position: sticky; top: calc(var(--topbar-h, 72px) + env(safe-area-inset-top)); z-index: 5; margin: 0 calc(-1 * var(--y-pad, 20px)) 20px !important; padding: 10px var(--y-pad, 20px) !important; background: color-mix(in srgb, var(--y-bg) 92%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); overscroll-behavior-x: contain; }
+.me-panel { animation: yoPageIn 0.45s var(--y-ease) backwards; }
+.me-h { font-size: 20px; font-weight: 650; letter-spacing: -0.01em; margin-bottom: 14px; }
+/* Pages embedded as sections drop their own page frame and title */
+.me-panel .page { padding: 0; max-width: none !important; margin: 0; animation: none; }
+.me-panel .page > h1.section-title:first-child { display: none; }
+.me-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+.me-swatch { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.08); background: var(--y-s1); color: var(--y-tx); font: 600 13px var(--y-font); cursor: pointer; text-align: left; }
+.me-swatch.on { border-color: var(--y-tx); }
+.me-swatch-chips { display: flex; height: 34px; border-radius: 10px; overflow: hidden; }
+.me-swatch-chips i { flex: 1; }
+@media (max-width: 879px) { .me-page { padding-top: calc(60px + env(safe-area-inset-top)); } .me-who h1 { font-size: 22px; } .me-tabs { top: calc(56px + env(safe-area-inset-top)); } }
+
+.y-me-wrap.top { display: block; text-decoration: none; }
+.y-me-wrap.top .y-me { transition: transform 0.35s var(--y-spring), box-shadow 0.3s var(--y-ease); }
+.y-me-wrap.top:hover .y-me { transform: scale(1.08); }
+.y-me-wrap.top.on .y-me { box-shadow: 0 0 0 2px var(--y-bg), 0 0 0 4px var(--y-tx); }
+@media (max-width: 879px) {
+  .ydock .ydock-item.ydock-you .y-me { width: 26px; height: 26px; border-radius: 50%; font-size: 12px; display: grid; place-items: center; overflow: hidden; font-weight: 700; color: var(--y-bg); }
+  .ydock .ydock-item.ydock-you.on { color: var(--y-bg); }
+}
+.y-browse-embed { display: flex; flex-direction: column; gap: 22px; margin-top: 8px; }
+@media (max-width: 879px) {
+  .y-me-wrap.top { display: none; }
+  .ydock .ydock-item.ydock-you .y-me { width: 22px; height: 22px; font-size: 11px; }
 }

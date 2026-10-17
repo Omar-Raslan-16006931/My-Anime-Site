@@ -15,7 +15,7 @@ const SOURCES = [{ key: 'anime', label: 'Anime' }, { key: 'movie', label: 'Movie
 
 // Browse: three big tiles (Anime / Movies / TV), a tile per genre and a grid of
 // whatever is selected underneath.
-export default function Browse() {
+export default function Browse({ embedded = false }) {
   const [params, setParams] = useSearchParams()
   const sel = params.get('c') || 'Anime'
   const isGenre = CATEGORIES.includes(sel)
@@ -89,8 +89,8 @@ export default function Browse() {
   const pick = (c) => setParams({ c }, { replace: true })
 
   return (
-    <div className="y-page y-browse">
-      <h1 className="y-title-xl">Browse</h1>
+    <div className={embedded ? 'y-browse y-browse-embed' : 'y-page y-browse'}>
+      {!embedded && <h1 className="y-title-xl">Browse</h1>}
 
       <div className="y-bg-grid">
         {GROUPS.map((g) => (
