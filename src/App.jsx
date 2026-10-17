@@ -21,6 +21,7 @@ import Welcome from './pages/Welcome'
 import SurpriseOverlay from './components/SurpriseOverlay'
 import { PreviewBar } from './components/ThemePreview'
 import ProfileGreeting from './components/ProfileGreeting'
+import PageStack from './components/PageStack'
 import { initVault, subscribeVault, vaultLocked } from './lib/vault'
 import { useSyncExternalStore } from 'react'
 
@@ -149,8 +150,8 @@ export default function App() {
       <Navbar user={user} profile={profile} onAuthClick={() => setShowAuth(true)} />
       <VaultBanner />
 
-      <div key={location.pathname} className="route-anim">
-        <Routes location={location}>
+      <PageStack location={location} render={(loc) => (
+        <Routes location={loc}>
           <Route path="/" element={<Home user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/search" element={<Search user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/me" element={<Me user={user} profile={profile} setProfile={setProfile} onAuthRequired={handleAuthRequired} onAuthClick={() => setShowAuth(true)} />} />
@@ -172,7 +173,7 @@ export default function App() {
           <Route path="/currently-watching" element={<Navigate to="/me" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </div>
+      )} />
 
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
       <SurpriseOverlay />
