@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { udb } from '../lib/udb'
@@ -249,17 +249,60 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
 }
 
 function Shelf({ title, count, onMore, loading, empty, children }) {
+  const track = useRef(null)
+  const drag = useRef(null)
+  const suppress = useRef(false)
+  const [edge, setEdge] = useState({ l: false, r: false })
+  const measure = () => {
+    const el = track.current
+    if (el) setEdge({ l: el.scrollLeft > 4, r: el.scrollLeft < el.scrollWidth - el.clientWidth - 4 })
+  }
+  useEffect(() => { measure() }, [count, loading, children])
+  useEffect(() => {
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
+  const page = (dir) => track.current?.scrollBy({ left: dir * Math.max(track.current.clientWidth * 0.8, 240), behavior: 'smooth' })
+  const onDown = (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0 || !track.current) return
+    drag.current = { x: e.clientX, left: track.current.scrollLeft, moved: false }
+  }
+  const onMove = (e) => {
+    const d = drag.current
+    if (!d) return
+    const dx = e.clientX - d.x
+    if (!d.moved && Math.abs(dx) < 5) return
+    d.moved = true
+    track.current.classList.add('grabbing')
+    track.current.scrollLeft = d.left - dx
+  }
+  const onUp = () => {
+    const d = drag.current
+    drag.current = null
+    track.current?.classList.remove('grabbing')
+    if (d?.moved) { suppress.current = true; setTimeout(() => { suppress.current = false }, 80) }
+  }
+  const arrow = (flip) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={flip ? { transform: 'rotate(180deg)' } : undefined} aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+  )
   return (
     <section className="acc-shelf">
-      <button type="button" className="acc-shelf-head" onClick={onMore}>
-        <h2>{title}</h2>
-        {count ? <span className="acc-count">{count}</span> : null}
-        <span className="acc-see">See all<Chevron /></span>
-      </button>
+      <div className="acc-shelf-head">
+        <button type="button" className="acc-shelf-title" onClick={onMore}>
+          <h2>{title}</h2>
+          {count ? <span className="acc-count">{count}</span> : null}
+        </button>
+        <span className="acc-shelf-tools">
+          <button type="button" className="acc-see" onClick={onMore}>See all<Chevron /></button>
+          <button type="button" className="acc-arrow" onClick={() => page(-1)} disabled={!edge.l} aria-label="Scroll left" tabIndex={-1}>{arrow(true)}</button>
+          <button type="button" className="acc-arrow" onClick={() => page(1)} disabled={!edge.r} aria-label="Scroll right" tabIndex={-1}>{arrow(false)}</button>
+        </span>
+      </div>
       {loading ? (
         <div className="acc-track">{Array.from({ length: 4 }).map((_, i) => <span key={i} className="acc-tile"><span className="acc-tile-art y-skel" /></span>)}</div>
       ) : count ? (
-        <div className="acc-track">{children}</div>
+        <div className="acc-track" ref={track} onScroll={measure} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+          onClickCapture={(e) => { if (suppress.current) { e.preventDefault(); e.stopPropagation() } }} onDragStart={(e) => e.preventDefault()}>{children}</div>
       ) : (
         <p className="acc-empty">{empty}</p>
       )}

@@ -2500,3 +2500,26 @@ body { transition: none; }
 /* Time well spent: one random fun fact (tap for another) */
 .wd-fact { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; font: 500 12.5px/1.35 var(--y-font); color: var(--y-t2); animation: yoPageIn 0.45s var(--y-ease) backwards; -webkit-tap-highlight-color: transparent; }
 .wd-fact:active { color: var(--y-tx); }
+
+/* ---- Me shelves: header tools, hover lift, drag scroll (PC) ---- */
+.acc-shelf-title { display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; padding: 0; color: var(--y-tx); cursor: pointer; font: inherit; }
+.acc-shelf-tools { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.acc-see { border: 0; background: none; padding: 0 6px 0 0; cursor: pointer; margin-left: 0; font-family: inherit; }
+.acc-see:hover { color: var(--y-tx); }
+.acc-arrow { display: none; }
+@media (min-width: 880px) {
+  .acc-arrow { width: 30px; height: 30px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; color: var(--y-tx); background: rgba(255, 255, 255, 0.08); transition: background 0.2s, opacity 0.2s, transform 0.2s var(--y-out); }
+  .acc-arrow:hover:not(:disabled) { background: rgba(255, 255, 255, 0.18); transform: scale(1.06); }
+  .acc-arrow:disabled { opacity: 0.3; cursor: default; }
+  .acc-track { cursor: grab; padding-top: 8px; margin-top: -8px; padding-bottom: 12px; }
+  .acc-track.grabbing { cursor: grabbing; scroll-behavior: auto; user-select: none; }
+  .acc-track.grabbing .acc-tile { pointer-events: none; }
+  .acc-tile { transition: transform 0.35s var(--y-out); }
+  .acc-tile-art { transition: box-shadow 0.35s var(--y-out), transform 0.35s var(--y-out); }
+  .acc-tile-art img { transition: transform 0.6s var(--y-out); }
+  .acc-tile b { transition: color 0.2s; }
+  .acc-tile:hover { transform: translateY(-5px); }
+  .acc-tile:hover .acc-tile-art { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), 0 14px 28px -10px rgba(0, 0, 0, 0.8); }
+  .acc-tile:hover .acc-tile-art img { transform: scale(1.06); }
+  .acc-tile:hover b { color: var(--y-ac); }
+}
