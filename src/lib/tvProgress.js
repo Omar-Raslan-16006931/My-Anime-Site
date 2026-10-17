@@ -4,18 +4,19 @@
 // AND mirrored in localStorage. If the table hasn't been created yet, everything
 // keeps working from localStorage on this device — nothing breaks.
 import { udb } from './udb'
+import { profileKey } from './profiles'
 
-const LS_KEY = 'aw:tvseen'
+const lsKey = () => (profileKey() === 'main' ? 'aw:tvseen' : `aw:tvseen:${profileKey()}`)
 const TABLE = 'tv_episode_progress'
 let tableMissing = false
 
 const epKey = (season, episode) => `${Number(season)}:${Number(episode)}`
 
 function lsLoad() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}') } catch { return {} }
+  try { return JSON.parse(localStorage.getItem(lsKey()) || '{}') } catch { return {} }
 }
 function lsSave(all) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(all)) } catch { /* ignore */ }
+  try { localStorage.setItem(lsKey(), JSON.stringify(all)) } catch { /* ignore */ }
 }
 
 // PostgREST says the relation doesn't exist → stop asking, use localStorage.

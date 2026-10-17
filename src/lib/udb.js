@@ -9,8 +9,39 @@
 //   • Private history OFF           → replays the exact chain on Supabase.
 import { supabase } from '../supabase'
 import { initVault, vaultActive, vaultLocked, vaultTables, markDirty } from './vault'
+import { profileKey } from './profiles'
 
 const CHAIN = ['select', 'eq', 'neq', 'in', 'order', 'limit', 'single', 'maybeSingle', 'insert', 'upsert', 'update', 'delete']
+
+// Each profile has its own slice of the personal tables (profile_id). Until db/profile_data.sql has
+// been run the column doesn't exist; we detect that once and carry on exactly as before.
+let scoped = null // null = unknown, true/false after the probe
+async function profilesScoped() {
+  if (scoped !== null) return scoped
+  const { error } = await supabase.from('watchlist').select('profile_id').limit(1)
+  scoped = !(error && (error.code === '42703' || /profile_id/i.test(error.message || '')))
+  return scoped
+}
+
+function withProfile(ops, pk) {
+  if (ops.some((o) => o.name === 'eq' && o.args[0] === 'profile_id')) return ops
+  const out = []
+  let first = true
+  for (const op of ops) {
+    if (op.name === 'insert' || op.name === 'upsert') {
+      const rows = Array.isArray(op.args[0]) ? op.args[0] : [op.args[0]]
+      const tagged = rows.map((r) => ({ profile_id: pk, ...r }))
+      const opt = op.name === 'upsert' && op.args[1]?.onConflict
+      const o2 = opt && /\buser_id\b/.test(opt) && !/profile_id/.test(opt) ? { ...op.args[1], onConflict: opt.replace('user_id', 'user_id,profile_id') } : op.args[1]
+      out.push({ name: op.name, args: [Array.isArray(op.args[0]) ? tagged : tagged[0], ...(op.name === 'upsert' ? [o2] : op.args.slice(1))] })
+    } else {
+      out.push(op)
+      if (first && ['select', 'update', 'delete'].includes(op.name)) out.push({ name: 'eq', args: ['profile_id', pk] })
+    }
+    first = false
+  }
+  return out
+}
 
 class Query {
   constructor(table) { this.table = table; this.ops = [] }
@@ -19,10 +50,12 @@ class Query {
   async run() {
     const { data } = await supabase.auth.getSession()
     await initVault(data?.session?.user?.id)
-    if (vaultActive()) return runOnVault(this.table, this.ops)
+    const pk = profileKey()
+    if (vaultActive()) return runOnVault(this.table, withProfile(this.ops, pk))
     if (vaultLocked()) return lockedResult(this.ops)
+    const ops = (await profilesScoped()) ? withProfile(this.ops, pk) : this.ops
     let q = supabase.from(this.table)
-    for (const op of this.ops) q = q[op.name](...op.args)
+    for (const op of ops) q = q[op.name](...op.args)
     return q
   }
 }
@@ -42,6 +75,7 @@ function lockedResult(ops) {
 
 // ── Vault execution ──────────────────────────────────────────────────────────
 const same = (a, b) => a != null && b != null && String(a) === String(b)
+const val = (r, k) => (k === 'profile_id' ? r[k] ?? 'main' : r[k])
 
 function runOnVault(table, ops) {
   const tables = vaultTables()
@@ -49,8 +83,8 @@ function runOnVault(table, ops) {
   const rows = tables[table]
 
   const filters = ops.filter((o) => ['eq', 'neq', 'in'].includes(o.name))
-  const match = (r) => filters.every(({ name, args: [col, val] }) =>
-    name === 'eq' ? same(r[col], val) : name === 'neq' ? !same(r[col], val) : (val || []).some((v) => same(r[col], v)))
+  const match = (r) => filters.every(({ name, args: [col, v] }) =>
+    name === 'eq' ? same(val(r, col), v) : name === 'neq' ? !same(val(r, col), v) : (v || []).some((x) => same(val(r, col), x)))
   const order = ops.find((o) => o.name === 'order')
   const limit = ops.find((o) => o.name === 'limit')?.args[0]
   const single = ops.find((o) => o.name === 'single' || o.name === 'maybeSingle')
@@ -75,7 +109,7 @@ function runOnVault(table, ops) {
     const list = Array.isArray(write.args[0]) ? write.args[0] : [write.args[0]]
     const keys = String(write.args[1]?.onConflict || 'id').split(',').map((s) => s.trim())
     for (const r of list) {
-      const i = rows.findIndex((x) => keys.every((k) => same(x[k], r[k])))
+      const i = rows.findIndex((x) => keys.every((k) => same(val(x, k), val(r, k))))
       if (i >= 0) { rows[i] = { ...rows[i], ...r }; out.push(rows[i]) } else { const n = withDefaults(r); rows.push(n); out.push(n) }
     }
     markDirty()

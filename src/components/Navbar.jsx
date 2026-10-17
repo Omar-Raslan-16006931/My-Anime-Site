@@ -1,73 +1,54 @@
-import { useState, useEffect, useRef } from 'react'
-import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { supabase } from '../supabase'
-import Icon from './Icons'
-import CategoryMenu from './CategoryMenu'
-import { isNative } from '../lib/native'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
+import { useProfiles, profileActions, vivid } from '../lib/profiles'
+import { openSurprise } from '../lib/surprise'
+import QuickSearch from './QuickSearch'
 
-// Brand wordmark.
+// Brand wordmark (rendered upper-case with an accent dot).
 const BRAND = 'FuckTheJews'
 
-// Primary navigation. My List (and Downloads in the iPhone app) live in the
-// profile menu; "Categories" opens the categories panel instead of a page.
-// `match` = path prefixes that count as this tab (so the tab stays lit on
-// detail pages, e.g. /anime/21 keeps "Anime" selected).
+// Top-bar links. `match` = path prefixes that keep the link lit on detail
+// pages (e.g. /anime/21 keeps "Anime" selected).
 const NAV = [
-  { to: '/', label: 'Home', icon: Icon.home, end: true, match: [] },
-  { to: '/anime', label: 'Anime', icon: Icon.bolt, match: ['/anime'] },
-  { to: '/movies', label: 'Movies', icon: Icon.film, match: ['/movies', '/movie/'] },
-  { to: '/tv', label: 'TV', icon: Icon.tv, match: ['/tv'] },
-  { key: 'categories', label: 'Categories', icon: Icon.grid, match: ['/category/'] },
+  { to: '/', label: 'Home', end: true, match: [] },
+  { to: '/anime', label: 'Anime', match: ['/anime'] },
+  { to: '/movies', label: 'Movies', match: ['/movies', '/movie'] },
+  { to: '/tv', label: 'TV', match: ['/tv'] },
+  { to: '/simulcast', label: 'Simulcast', match: ['/simulcast'] },
+  { to: '/search', label: 'Explore', match: ['/search', '/browse', '/category'] },
 ]
-// Phone tab bar. Search is a button in the top bar (next to the account).
-// Clean line icons for the tab bar (24px grid, 1.8 stroke).
-const dockIcon = (children) => function DockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
-  )
-}
-const IconHome = dockIcon(<><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></>)
-const IconAnime = dockIcon(<><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /><path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" /></>)
-const IconMovies = dockIcon(<><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /><path d="m6.2 5.3 3.1 3.9" /><path d="m12.4 3.4 3.1 4" /><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></>)
-const IconTv = dockIcon(<><rect width="20" height="15" x="2" y="7" rx="2" ry="2" /><polyline points="17 2 12 7 7 2" /></>)
+const hit = (pathname, p) => pathname === p || pathname.startsWith(p + '/')
+const navOn = (n, pathname) => (n.end ? pathname === n.to : n.match.some((p) => hit(pathname, p)))
+
+// Phone tab bar — line icons on a 24px grid.
+const ico = (children) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: 'none' }}>{children}</svg>
+)
 const DOCK = [
-  { to: '/', label: 'Home', icon: IconHome, end: true },
-  { to: '/anime', label: 'Anime', icon: IconAnime },
-  { to: '/movies', label: 'Movies', icon: IconMovies },
-  { to: '/tv', label: 'TV', icon: IconTv },
+  { key: 'home', to: '/', label: 'Home', icon: ico(<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />), match: (p) => p === '/' },
+  { key: 'simulcast', to: '/simulcast', label: 'Simulcast', icon: ico(<><rect x="3" y="4.5" width="18" height="16" rx="3.5" /><path d="M3 9.5h18M8 2.5v4M16 2.5v4" /></>), match: (p) => hit(p, '/simulcast') },
+  { key: 'explore', to: '/search', label: 'Explore', icon: ico(<><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></>), match: (p) => ['/search', '/browse', '/category', '/anime', '/movies', '/tv'].some((x) => hit(p, x)) },
 ]
-function dockTab(pathname) {
-  if (pathname === '/') return 0
-  const i = activeTab(pathname)
-  return i >= 0 && i < 4 ? i : -1
-}
+const NO_CHROME = ['/profiles', '/welcome']
 
-function activeTab(pathname) {
-  if (pathname === '/') return 0
-  return NAV.findIndex((n) => n.match.some((p) => pathname === p || pathname.startsWith(p.endsWith('/') ? p : p + '/')))
-}
-
-export default function Navbar({ user, profile, onAuthClick }) {
-  const [menuOpen, setMenuOpen] = useState(false)
+export default function Navbar({ user, profile }) {
   const [scrolled, setScrolled] = useState(false)
   const [kbOpen, setKbOpen] = useState(false)
-  const [catOpen, setCatOpen] = useState(false)
-  const [dockAway, setDockAway] = useState(false)
-  const [dockMoving, setDockMoving] = useState(false)
-  const [q, setQ] = useState('')
-  const menuRef = useRef(null)
-  const searchRef = useRef(null)
   const baseVHRef = useRef(0)
-  const navigate = useNavigate()
   const { pathname } = useLocation()
-  const tab = dockTab(pathname)
+  const { profiles, active } = useProfiles()
 
-  // The dock is locked to the bottom and never repositioned. The ONLY thing we
-  // do for the keyboard is remove it while the keyboard is open. Detection works
-  // on BOTH iOS (visual-viewport shrinks) and Android (layout shrinks): we track
-  // the tallest visible height seen (no keyboard) and flag the keyboard when the
-  // current visible height drops well below it. ~160px separates a keyboard from
-  // the address bar; setState bails when unchanged so there's no churn/loop.
+  const account = profile?.username || user?.email?.split('@')[0] || ''
+  useEffect(() => { profileActions.ensure(account || 'Me') }, [account])
+  const me = active || profiles[0]
+  // A profile's own photo; the first profile also shows the account photo.
+  const photo = me?.avatar || (me && me === profiles[0] ? profile?.avatar_url : null)
+  const initial = (me?.name || account || 'G')[0].toUpperCase()
+  const onMe = hit(pathname, '/me')
+  const tab = onMe ? DOCK.length : DOCK.findIndex((d) => d.match(pathname))
+
+  // Keyboard: remove the tab bar while the on-screen keyboard is open. Works on
+  // iOS (visual viewport shrinks) and Android (layout shrinks).
   useEffect(() => {
     const vv = window.visualViewport
     const visibleH = () => (vv ? vv.height : window.innerHeight)
@@ -101,167 +82,73 @@ export default function Navbar({ user, profile, onAuthClick }) {
     }
   }, [])
 
-  // On the home page (PC) the bar sits see-through over the banner and turns
-  // solid black once you scroll. Phones always get the solid bar.
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 30)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  // Floating dock: tucks away while scrolling down, returns on scroll up, and
-  // tightens slightly while the page is in motion.
-  useEffect(() => {
-    let last = window.scrollY
-    let stop = 0
-    const onScroll = () => {
-      const y = window.scrollY
-      const d = y - last
-      if (Math.abs(d) > 8) {
-        setDockAway(d > 0 && y > 140)
-        last = y
-      }
-      if (y < 60) setDockAway(false)
-      setDockMoving(true)
-      clearTimeout(stop)
-      stop = setTimeout(() => setDockMoving(false), 160)
+  // Top bar: its backdrop is driven by the scroll position itself (--tb: 0 = clear over the
+  // home hero, 1 = solid), so it never "switches" and can't flicker.
+  const barRef = useRef(null)
+  const pathRef = useRef(pathname)
+  const paintRef = useRef(() => {})
+  useLayoutEffect(() => {
+    let raf = 0
+    const paint = () => {
+      const y = Math.max(0, window.scrollY)
+      const t = pathRef.current === '/' ? Math.min(1, Math.max(0, (y - 12) / 120)) : 1
+      barRef.current?.style.setProperty('--tb', t.toFixed(3))
+      setScrolled((s) => (y > 40) === s ? s : y > 40)
     }
+    paintRef.current = paint
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; paint() }) }
+    paint()
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => { window.removeEventListener('scroll', onScroll); clearTimeout(stop) }
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('scroll', onScroll) }
   }, [])
+  useLayoutEffect(() => {
+    pathRef.current = pathname
+    paintRef.current()
+  }, [pathname])
 
-  // Close the categories panel whenever the page changes.
-  useEffect(() => { setCatOpen(false) }, [pathname])
-
-  useEffect(() => {
-    const onClick = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false)
-    }
-    document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
-  }, [])
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    setMenuOpen(false)
-    navigate('/')
-  }
-
-  const submitSearch = (e) => {
-    e.preventDefault()
-    const v = q.trim()
-    if (!v) return
-    // Blur so the phone keyboard closes and results are visible right away.
-    document.activeElement?.blur?.()
-    navigate(`/search?q=${encodeURIComponent(v)}`)
-  }
-
-  const initial = (profile?.username || user?.email || 'G')[0].toUpperCase()
-  const overHero = pathname === '/' && !scrolled && !catOpen
+  if (NO_CHROME.includes(pathname)) return null
 
   return (
     <>
-      <header className={'topbar' + (scrolled ? ' scrolled' : '') + (overHero ? ' over-hero' : '')}>
-        <Link to="/" className="brand">{BRAND}</Link>
+      <header ref={barRef} className={'topbar y-top' + (scrolled ? ' scrolled' : '') + (onMe ? ' on-me' : '')}>
+        <Link to="/" className="brand y-brand" aria-label={BRAND}>{BRAND}<i>.</i></Link>
+        {onMe && <span className="y-top-title" aria-hidden="true">Profile</span>}
 
-        <nav className="nav-links">
-          {NAV.map((n) => n.key === 'categories' ? (
-            <button
-              key={n.key}
-              type="button"
-              className={'nav-link' + (catOpen || pathname.startsWith('/category/') ? ' active' : '')}
-              aria-expanded={catOpen}
-              onClick={() => setCatOpen((v) => !v)}
-            >
-              {n.label}
-              <svg className={'nav-caret' + (catOpen ? ' up' : '')} viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
-            </button>
-          ) : (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              end={n.end}
-              className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
-            >
-              {n.label}
-            </NavLink>
+        <nav className="y-links" aria-label="Main">
+          {NAV.map((n) => (
+            <NavLink key={n.to} to={n.to} end={n.end} className={'y-link' + (navOn(n, pathname) ? ' on' : '')}>{n.label}</NavLink>
           ))}
         </nav>
 
-        <div className="topbar-spacer" />
+        <div className="y-top-right">
+          <button type="button" className="y-surprise" onClick={openSurprise}>Surprise me</button>
+          {pathname !== '/search' && <QuickSearch />}
+        </div>
 
-        <Link to="/recommend" className={'nav-ai' + (pathname === '/recommend' ? ' active' : '')} title="AI picks">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /></svg>
-          <span>AI picks</span>
+        <button type="button" className="y-top-search y-top-dice" onClick={openSurprise} aria-label="Surprise me" title="Surprise me">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4" /><circle cx="8.5" cy="8.5" r="1.1" fill="currentColor" /><circle cx="15.5" cy="15.5" r="1.1" fill="currentColor" /><circle cx="15.5" cy="8.5" r="1.1" fill="currentColor" /><circle cx="8.5" cy="15.5" r="1.1" fill="currentColor" /><circle cx="12" cy="12" r="1.1" fill="currentColor" /></svg>
+        </button>
+        <Link to="/me" className={'y-me-wrap top' + (onMe ? ' on' : '')} aria-label="Your profile, list and settings">
+          <span className="y-me" key={`${me?.id}-${me?.hue}`} style={{ background: vivid(me?.hue || 0) }}>{photo ? <img src={photo} alt="" /> : initial}</span>
         </Link>
-
-        <form
-          className={'topbar-search' + (q ? ' has-text' : '')}
-          onSubmit={submitSearch}
-          onClick={() => { if (window.innerWidth >= 880) navigate('/search'); else searchRef.current?.focus() }}
-        >
-          <Icon.search width="17" height="17" />
-          <input
-            ref={searchRef}
-            type="search"
-            enterKeyHint="search"
-            placeholder="Search titles"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            aria-label="Search anime, shows and movies"
-          />
-        </form>
-
-        <Link to="/search" className="topbar-search-btn" aria-label="Search">
-          <Icon.search width="20" height="20" />
-        </Link>
-
-        {user ? (
-          <div style={{ position: 'relative' }} ref={menuRef}>
-            <button className="avatar" onClick={() => setMenuOpen((v) => !v)} aria-label="Account menu">
-              {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}
-            </button>
-            {menuOpen && (
-              <div className="menu fade-in">
-                <div className="menu-head">@{profile?.username || user.email}</div>
-                <button className="menu-item" onClick={() => { navigate('/profile'); setMenuOpen(false) }}>Profile</button>
-                <button className="menu-item" onClick={() => { navigate('/currently-watching'); setMenuOpen(false) }}>Currently Watching</button>
-                <button className="menu-item" onClick={() => { navigate('/watchlist'); setMenuOpen(false) }}>My List</button>
-                <button className="menu-item" onClick={() => { navigate('/recommend'); setMenuOpen(false) }}>AI picks</button>
-                {isNative && <button className="menu-item" onClick={() => { navigate('/downloads'); setMenuOpen(false) }}>Downloads</button>}
-                <button className="menu-item danger" onClick={handleLogout}>Log out</button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <button className="btn btn-primary btn-sm" onClick={onAuthClick}>Sign In</button>
-        )}
       </header>
 
-      {/* Phone tab bar: full width, pinned to the bottom. The red glow is one
-          element that slides to the selected tab. */}
-      <nav
-        className={'dock' + (kbOpen ? ' dock-hidden' : '') + (dockAway ? ' dock-away' : '') + (dockMoving && !dockAway ? ' dock-moving' : '')}
-        aria-label="Primary"
-        style={{ '--n': DOCK.length, '--i': Math.max(tab, 0) }}
-      >
-        <span className={'dock-glow' + (tab < 0 ? ' off' : '')} aria-hidden="true" />
-        {DOCK.map((n, i) => (
-          <NavLink
-            key={n.to}
-            to={n.to}
-            end={n.end}
-            className={'dock-item' + (i === tab ? ' active' : '')}
-            aria-current={i === tab ? 'page' : undefined}
-          >
-            <n.icon />
-            <span className="dock-label">{n.label}</span>
+      {/* Phone tab bar: floating pill. The selected tab expands into a white pill with its label. */}
+      <nav className={'ydock' + (kbOpen ? ' hide' : '')} aria-label="Primary" style={{ '--n': DOCK.length + 1 }}>
+        <span className={'ydock-ind' + (tab < 0 ? ' off' : '')} style={{ '--i': Math.max(tab, 0) }} aria-hidden="true" />
+        {DOCK.map((d, i) => (
+          <NavLink key={d.key} to={d.to} aria-label={d.label} aria-current={i === tab ? 'page' : undefined} className={'ydock-item' + (i === tab ? ' on' : '')}
+            onClick={(e) => { if (i === tab && pathname === d.to) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) } }}>
+            {d.icon}
+            <span className="ydock-label">{d.label}</span>
           </NavLink>
         ))}
+        <NavLink to="/me" aria-label="Your profile" aria-current={onMe ? 'page' : undefined} className={'ydock-item ydock-you' + (onMe ? ' on' : '')}
+          onClick={(e) => { if (pathname === '/me' && !window.location.search) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) } }}>
+          <span className="y-me" key={`${me?.id}-${me?.hue}`} style={{ background: vivid(me?.hue || 0) }}>{photo ? <img src={photo} alt="" /> : initial}</span>
+          <span className="ydock-label">You</span>
+        </NavLink>
       </nav>
-
-      <CategoryMenu open={catOpen} onClose={() => setCatOpen(false)} />
     </>
   )
 }

@@ -1,14 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { udb } from '../lib/udb'
 import Icon from '../components/Icons'
 import { toast } from '../lib/toast'
+import { useFlip } from '../lib/flip'
+import { markWatched } from '../lib/watched'
 
 export default function CurrentlyWatching({ user, onAuthRequired }) {
   const navigate = useNavigate()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [confirm, setConfirm] = useState(null)
+  const [leaving, setLeaving] = useState(() => new Set())
+  const gridRef = useRef(null)
+  useFlip(gridRef, items)
 
   useEffect(() => {
     if (!user) { setLoading(false); return }
@@ -37,9 +42,20 @@ export default function CurrentlyWatching({ user, onAuthRequired }) {
     if (!confirm) return
     const item = confirm
     setConfirm(null)
-    await udb.from(item.source_table || 'currently_watching').delete().eq('id', item.id).eq('user_id', user.id)
+    setLeaving((s) => new Set(s).add(keyOf(item)))
+    const wait = new Promise((r) => setTimeout(r, 420))
+    await Promise.all([udb.from(item.source_table || 'currently_watching').delete().eq('id', item.id).eq('user_id', user.id), wait])
     setItems((prev) => prev.filter((x) => keyOf(x) !== keyOf(item)))
     toast(`Removed “${item.title}”`)
+  }
+
+  // Finished it: save to Watched, then take it off Continue watching with the same removal animation.
+  const doWatched = async (item) => {
+    setLeaving((s) => new Set(s).add(keyOf(item)))
+    const wait = new Promise((r) => setTimeout(r, 420))
+    await Promise.all([markWatched(user, item), wait])
+    await udb.from(item.source_table || 'currently_watching').delete().eq('id', item.id).eq('user_id', user.id)
+    setItems((prev) => prev.filter((x) => keyOf(x) !== keyOf(item)))
   }
 
   if (!user) {
@@ -55,13 +71,14 @@ export default function CurrentlyWatching({ user, onAuthRequired }) {
       {items.length === 0 ? (
         <div className="empty"><div className="emoji">🍿</div><p>Nothing in progress yet.</p></div>
       ) : (
-        <div className="grid">
+        <div className="grid" ref={gridRef}>
           {items.map((i) => (
-            <div key={keyOf(i)} className="card" onClick={() => navigate(href(i))}>
+            <div key={keyOf(i)} data-flip={keyOf(i)} className={'card' + (leaving.has(keyOf(i)) ? ' leaving' : '')} onClick={() => navigate(href(i))}>
               <div className="card-poster">
                 {i.poster ? <img src={i.poster} alt={i.title} /> : null}
                 {i.score ? <span className="card-score"><Icon.star width="10" height="10" />{Number(i.score).toFixed(1)}</span> : null}
                 <button className="card-fav on" onClick={(e) => { e.stopPropagation(); setConfirm(i) }} aria-label="Remove"><Icon.close width="15" height="15" /></button>
+                <button className="card-fav card-done" onClick={(e) => { e.stopPropagation(); doWatched(i) }} aria-label="Mark as watched" title="Mark as watched"><Icon.check width="15" height="15" /></button>
                 <div className="pcard-badge" style={{ left: 8, bottom: 8 }}>{meta(i)}</div>
               </div>
               <div className="card-title">{i.title}</div>

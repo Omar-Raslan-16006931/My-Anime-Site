@@ -2,10 +2,10 @@
    Loaded after index.css / fusion.css, before buttons.css. */
 
 /* ---------- Top bar ---------- */
-.brand { color: #e5484d; font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
+.brand { color: var(--y-ac); font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
 /* Solid black everywhere (phones always). On the home page on PC it sits
    see-through over the banner and turns solid once you scroll. */
-.topbar, .topbar.scrolled { background: #0d0c0b; transition: background 0.3s ease, border-color 0.3s ease; }
+.topbar, .topbar.scrolled { background: var(--y-bg); transition: background 0.3s ease, border-color 0.3s ease; }
 @media (min-width: 880px) {
   /* No background or border on the bar itself (that edge was the thin line);
      a taller soft shade behind it keeps the links readable, with no hard edge. */
@@ -94,7 +94,7 @@
   .topbar .topbar-search svg { color: var(--text); }
   .topbar .topbar-search input { opacity: 0; pointer-events: none; transition: opacity 0.2s; }
   .topbar .topbar-search:hover { background: rgba(255, 255, 255, 0.08); }
-  .topbar .topbar-search:focus-within, .topbar .topbar-search.has-text { flex-basis: 240px; padding-right: 12px; cursor: text; background: #0d0c0b; border-color: var(--border2); }
+  .topbar .topbar-search:focus-within, .topbar .topbar-search.has-text { flex-basis: 240px; padding-right: 12px; cursor: text; background: var(--y-bg); border-color: var(--border2); }
   .topbar .topbar-search:focus-within input, .topbar .topbar-search.has-text input { opacity: 1; pointer-events: auto; }
 }
 
@@ -113,7 +113,7 @@ button.nav-link { background: none; border: 0; cursor: pointer; font-family: inh
 button.dock-item { background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer; }
 
 /* Billboard eyebrow ("FEATURED TODAY") in the brand red. */
-.hero-brand { color: #e5484d; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; }
+.hero-brand { color: var(--y-ac); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; }
 
 /* ---------- Categories panel (animated drop-down) ---------- */
 .cat-scrim {
@@ -127,7 +127,7 @@ button.dock-item { background: none; border: 0; padding: 0; font-family: inherit
   position: fixed; z-index: 125; left: 0; right: 0;
   top: calc(var(--topbar-h) + env(safe-area-inset-top));
   padding: 20px clamp(16px, 4vw, 60px) 26px;
-  background: #0d0c0b;
+  background: var(--y-bg);
   border-bottom: 1px solid var(--border);
   clip-path: inset(0 0 100% 0);
   transform: translateY(-14px);
@@ -150,7 +150,7 @@ button.dock-item { background: none; border: 0; padding: 0; font-family: inherit
 }
 .cat-menu-item::before {
   content: ''; position: absolute; left: 4px; top: 50%; width: 3px; height: 0;
-  border-radius: 2px; background: #e5484d; transition: height 0.2s ease, margin-top 0.2s ease;
+  border-radius: 2px; background: var(--y-ac); transition: height 0.2s ease, margin-top 0.2s ease;
 }
 .cat-menu-item:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); }
 .cat-menu-item:hover::before { height: 16px; margin-top: -8px; }
@@ -211,9 +211,9 @@ button.dock-item { background: none; border: 0; padding: 0; font-family: inherit
 .wcard-over small, .wcard-below small { display: block; margin-top: 3px; font-size: 11.5px; font-weight: 500; color: #cfc9bd; }
 .wcard-below { display: none; }
 .wcard-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, 0.25); }
-.wcard-progress span { display: block; height: 100%; background: #e5484d; }
+.wcard-progress span { display: block; height: 100%; background: var(--y-ac); }
 @media (hover: hover) { .wcard:hover .wcard-art img { filter: brightness(1.12); } }
-.wcard:focus-visible .wcard-art { outline: 2px solid #e5484d; outline-offset: 2px; }
+.wcard:focus-visible .wcard-art { outline: 2px solid var(--y-ac); outline-offset: 2px; }
 
 /* ---------- Category tiles ---------- */
 .cat-tile {
@@ -373,7 +373,7 @@ button.dock-item { background: none; border: 0; padding: 0; font-family: inherit
 .ae-ep.cur .ae-pl { opacity: 1; }
 .ae-pl span { width: 36px; height: 36px; border-radius: 50%; background: var(--text); color: var(--ink); display: grid; place-items: center; }
 .ae-pb { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,0.16); }
-.ae-pb i { display: block; height: 100%; background: #e5484d; }
+.ae-pb i { display: block; height: 100%; background: var(--y-ac); }
 .ae-ep.done:not(.cur) .ae-pb i { background: #46c46b; }
 .ae-body { min-width: 0; flex: 1; }
 .ae-title { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.4; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -381,13 +381,13 @@ button.dock-item { background: none; border: 0; padding: 0; font-family: inherit
 .ae-n { color: var(--text3); font-weight: 600; margin-right: 10px; font-variant-numeric: tabular-nums; }
 .ae-num { display: none; }
 .ae-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 7px; font-size: 12.5px; color: var(--text3); }
-.ae-cont { color: #e5484d; font-weight: 700; }
+.ae-cont { color: var(--y-ac); font-weight: 700; }
 .ae-ok { color: #46c46b; font-weight: 600; }
 /* Watched check: a small badge in the thumbnail corner. */
 .ae-check { position: absolute; z-index: 2; top: 7px; left: 7px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; padding: 0; border: 1.5px solid rgba(255,255,255,0.7); background: rgba(0,0,0,0.45); color: transparent; backdrop-filter: blur(4px); opacity: 0; transform: scale(0.85); transition: opacity 0.18s, transform 0.18s, background 0.18s, border-color 0.18s, color 0.18s; }
 .ae-ep:hover .ae-check { opacity: 1; transform: none; }
 .ae-check:hover { color: #fff; }
-.ae-check.on { opacity: 1; transform: none; background: #46c46b; border-color: #46c46b; color: #0d0c0b; }
+.ae-check.on { opacity: 1; transform: none; background: #46c46b; border-color: #46c46b; color: var(--y-bg); }
 @media (hover: none) { .ae-check { opacity: 1; transform: none; } }
 
 @media (max-width: 720px) {
@@ -425,13 +425,13 @@ button.dock-item { background: none; border: 0; padding: 0; font-family: inherit
    opaque with no backdrop filter. */
 html::before {
   content: ''; position: fixed; top: 0; left: 0; right: 0; z-index: 2147483000; pointer-events: none;
-  height: env(safe-area-inset-top, 0px); background: #0d0c0b;
+  height: env(safe-area-inset-top, 0px); background: var(--y-bg);
 }
 .topbar, .topbar.scrolled, .topbar.over-hero {
   -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
 }
 @media (max-width: 879px) {
-  .topbar, .topbar.scrolled, .topbar.over-hero { background: #0d0c0b !important; border-bottom-color: rgba(255,255,255,0.06) !important; transition: none !important; }
+  .topbar, .topbar.scrolled, .topbar.over-hero { background: var(--y-bg) !important; border-bottom-color: rgba(255,255,255,0.06) !important; transition: none !important; }
   .topbar::before { display: none !important; }
 }
 

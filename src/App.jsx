@@ -1,23 +1,29 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { weekSchedule } from './lib/schedule'
 import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom'
+import { profileActions, useProfiles, profileKeyOf } from './lib/profiles'
 import { supabase } from './supabase'
 import Navbar from './components/Navbar'
 import AuthModal from './components/AuthModal'
 import Toasts from './components/Toasts'
 import Home from './pages/Home'
 import Anime from './pages/Anime'
-import Watchlist from './pages/Watchlist'
-import Profile from './pages/Profile'
+import Me from './pages/Me'
 import AnimeDetail from './pages/AnimeDetail'
-import CurrentlyWatching from './pages/CurrentlyWatching'
 import Movies from './pages/Movies'
 import TVShows from './pages/TVShows'
 import MovieDetail from './pages/MovieDetail'
 import TVDetail from './pages/TVDetail'
 import Search from './pages/Search'
-import Recommend from './pages/Recommend'
 import Downloads from './pages/Downloads'
 import Category from './pages/Category'
+import Simulcast from './pages/Simulcast'
+import Profiles from './pages/Profiles'
+import Welcome from './pages/Welcome'
+import SurpriseOverlay from './components/SurpriseOverlay'
+import { PreviewBar } from './components/ThemePreview'
+import ProfileGreeting from './components/ProfileGreeting'
+import PageStack from './components/PageStack'
 import { initVault, subscribeVault, vaultLocked } from './lib/vault'
 import { useSyncExternalStore } from 'react'
 
@@ -39,12 +45,16 @@ export default function App() {
   const [profile, setProfile] = useState(null)
   const [showAuth, setShowAuth] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [routeLoading, setRouteLoading] = useState(false)
 
   const lastUserIdRef = useRef(null)
   const initializedRef = useRef(false)
 
   const location = useLocation()
+  const profSnap = useProfiles()
+  const dataKey = profileKeyOf(profSnap) // switching profile remounts the pages so each shows its own data
+
+  // Pull (or push) this account's "Who's watching?" profiles whenever the signed-in user changes.
+  useEffect(() => { profileActions.sync(user?.id || null) }, [user?.id])
 
   const fetchProfile = useCallback(async (id) => {
     if (!id) {
@@ -102,7 +112,6 @@ export default function App() {
         if (nextUserId && nextUserId !== prevUserId) {
           lastUserIdRef.current = nextUserId
           setUser(nextUser)
-          setLoading(true)
           await fetchProfile(nextUserId)
         }
         return
@@ -124,66 +133,65 @@ export default function App() {
   // (Removed: swipe-between-tabs gesture. On phones it fired by accident while
   // scrolling carousels/pages and caused random page jumps.)
 
-  // Forced 0.5s loading state on every route change so pages don't snap in.
-  // Also reset scroll to the top so a new page never opens mid-scroll.
-  useEffect(() => {
-    window.scrollTo(0, 0)
-    setRouteLoading(true)
-    const t = setTimeout(() => setRouteLoading(false), 500)
-    return () => clearTimeout(t)
-  }, [location.pathname])
-
   const handleAuthRequired = useCallback(() => setShowAuth(true), [])
 
   // Load this account's Private history setting (and auto-unlock if this
   // device already has the key).
   useEffect(() => { initVault(user?.id) }, [user?.id])
+  // Warm the airing schedule so Home / Simulcast already have it.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const d = new Date(); d.setHours(0, 0, 0, 0)
+      weekSchedule(d, 10, 7).catch(() => {})
+    }, 600)
+    return () => clearTimeout(t)
+  }, [])
 
-  if (loading) {
-    return (
+  // The welcome overlay is a sibling of the loading switch, so it stays mounted across it: on screen
+  // from the very first frame, with neither the boot spinner nor placeholders showing before it.
+  return (
+    <>
+    {loading ? (
       <div className="app-boot">
         <span className="spinner" />
       </div>
-    )
-  }
-
-  return (
+    ) : (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Navbar user={user} profile={profile} onAuthClick={() => setShowAuth(true)} />
+      <Navbar user={user} profile={profile} />
       <VaultBanner />
 
-      {routeLoading && (
-        <div key={'rl-' + location.pathname} className="route-loader"><span className="spinner lg" /></div>
-      )}
-
-      <div key={location.pathname} className="route-anim">
-        <Routes location={location}>
+      <PageStack key={dataKey} location={location} render={(loc) => (
+        <Routes location={loc}>
           <Route path="/" element={<Home user={user} onAuthRequired={handleAuthRequired} />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/recommend" element={<Recommend user={user} onAuthRequired={handleAuthRequired} />} />
+          <Route path="/search" element={<Search user={user} onAuthRequired={handleAuthRequired} />} />
+          <Route path="/me" element={<Me user={user} profile={profile} setProfile={setProfile} onAuthRequired={handleAuthRequired} onAuthClick={() => setShowAuth(true)} />} />
+          <Route path="/recommend" element={<Navigate to="/search?ai=1" replace />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/category/:name" element={<Category />} />
+          <Route path="/browse" element={<Navigate to={{ pathname: '/search', search: location.search }} replace />} />
+          <Route path="/simulcast" element={<Simulcast />} />
+          <Route path="/profiles" element={<Profiles user={user} profile={profile} />} />
+          <Route path="/welcome" element={<Welcome user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/anime" element={<Anime />} />
           <Route path="/movies" element={<Movies />} />
           <Route path="/tv" element={<TVShows />} />
           <Route path="/movie/:id" element={<MovieDetail user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/tv/:id" element={<TVDetail user={user} onAuthRequired={handleAuthRequired} />} />
-          <Route path="/watchlist" element={<Watchlist user={user} onAuthRequired={handleAuthRequired} />} />
+          <Route path="/watchlist" element={<Navigate to="/me?s=list" replace />} />
           <Route path="/anime/:id" element={<AnimeDetail user={user} onAuthRequired={handleAuthRequired} />} />
-          <Route
-            path="/profile"
-            element={user ? <Profile user={user} profile={profile} setProfile={setProfile} /> : <Navigate to="/" replace />}
-          />
-          <Route
-            path="/currently-watching"
-            element={user ? <CurrentlyWatching user={user} onAuthRequired={handleAuthRequired} /> : <Navigate to="/" replace />}
-          />
+          <Route path="/profile" element={<Navigate to="/me?s=account" replace />} />
+          <Route path="/currently-watching" element={<Navigate to="/me" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </div>
+      )} />
 
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+      <SurpriseOverlay />
+      <PreviewBar />
       <Toasts />
     </div>
+    )}
+    <ProfileGreeting profile={profile} />
+    </>
   )
 }

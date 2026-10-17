@@ -9,7 +9,12 @@ import { normalizeGenres } from '../lib/categories'
 import { recordRecent } from '../lib/progress'
 import { animeDetails, animeEpisodes, isAdultAnime } from '../lib/anime'
 import { toast } from '../lib/toast'
+import WatchedButton from '../components/WatchedButton'
+import { fromAnime } from '../lib/watched'
 import DownloadLinks from '../components/DownloadLinks'
+import Collapse from '../components/Collapse'
+import PlayerEpisodes from '../components/PlayerEpisodes'
+import MoreLikeThis from '../components/MoreLikeThis'
 
 async function upsertWatching(user, d, epNum) {
   if (!user || !d) return
@@ -87,7 +92,6 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   const [loading, setLoading] = useState(true)
   const [epLoading, setEpLoading] = useState(false)
   const [loadError, setLoadError] = useState('')
-  const [tab, setTab] = useState('episodes')
   const [playingEp, setPlayingEp] = useState(null)
   const [opSaga, setOpSaga] = useState(0)
   const [opPage, setOpPage] = useState(0)
@@ -185,7 +189,6 @@ export default function AnimeDetail({ user, onAuthRequired }) {
     return { num, ep: episodesByNum.get(num) || null }
   })
   const milestoneTitle = (n) => (malId === 21 ? OP_MILESTONES[n] : null)
-  const isMilestone = (n) => (malId === 21 ? !!OP_MILESTONES[n] : n === 1 || n % 100 === 0)
 
   const markSeen = async (epNum) => {
     if (!user) return onAuthRequired?.()
@@ -239,7 +242,6 @@ export default function AnimeDetail({ user, onAuthRequired }) {
   }
 
   const selectSaga = (i) => { setOpSaga(i); setOpPage(0) }
-  const changeOpPage = (d) => setOpPage((p) => Math.max(0, Math.min(sagaPageCount - 1, p + d)))
   const jumpToEp = (n) => {
     const num = parseInt(n, 10)
     if (!num || num < 1) return
@@ -253,7 +255,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
     return (
       <div className="page">
         <button className="icon-btn detail-back" onClick={() => navigate(-1)}><Icon.back width="18" height="18" /></button>
-        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on AniWave.</p>
+        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on Yoru.</p>
           <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => navigate('/anime')}>Browse anime</button>
         </div>
       </div>
@@ -305,15 +307,16 @@ export default function AnimeDetail({ user, onAuthRequired }) {
             <p className="tvh-desc" onClick={() => setSynOpen(true)} title="Read full description">{details.synopsis}</p>
           )}
 
+          <div className="tvh-actions">
           <button className="tvh-play" onClick={() => play(lastWatched || 1)}>
             <Icon.play width="16" height="16" /> {resumeLabel}
           </button>
 
           <div className="tvh-shortcuts">
             {lastWatched && (!totalEps || lastWatched < totalEps) && (
-              <button className="tvh-sc" onClick={() => play(lastWatched + 1)}>
+              <button title="Next ep" className="tvh-sc" onClick={() => play(lastWatched + 1)}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 5v14l10-7z" fill="currentColor" stroke="none" /><path d="M19 5v14" /></svg>
-                <span>Next episode</span>
+                <span className="tvh-lbl">Next ep</span>
               </button>
             )}
             <button className={'tvh-sc' + (inWatchlist ? ' on' : '')} onClick={toggleWatchlist} aria-pressed={inWatchlist}>
@@ -322,16 +325,18 @@ export default function AnimeDetail({ user, onAuthRequired }) {
                 : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
               <span>{inWatchlist ? 'In My List' : 'My List'}</span>
             </button>
-            <button className={'tvh-sc' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
+            <WatchedButton user={user} onAuthRequired={onAuthRequired} build={() => (details ? fromAnime(details, malId) : null)} />
+            <button title="Download" className={'tvh-sc' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
               <Icon.download width="20" height="20" />
-              <span>Download</span>
+              <span className="tvh-lbl">Download</span>
             </button>
-            <button className="tvh-sc" onClick={share}>
+            <button title="Share" className="tvh-sc" onClick={share}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3" /><path d="m7 8 5-5 5 5" /><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
-              <span>Share</span>
+              <span className="tvh-lbl">Share</span>
             </button>
           </div>
-          {showDl && <div className="tvh-dl"><DownloadLinks title={title} /></div>}
+          </div>
+          <Collapse open={showDl}><div className="tvh-dl"><DownloadLinks title={title} /></div></Collapse>
         </div>
       </section>
 
@@ -436,8 +441,26 @@ export default function AnimeDetail({ user, onAuthRequired }) {
           poster={poster}
           altTitles={[details.title, ...(details.title_synonyms || [])].filter((t) => t && t !== title)}
           hasNext={!totalEps || playingEp < totalEps}
+          watched={!!episodeProgress[Number(playingEp)]?.seen}
+          onToggleWatched={() => toggleSeen(playingEp, !!episodeProgress[Number(playingEp)]?.seen)}
+          aside={(
+            <PlayerEpisodes
+              heading="Episodes"
+              current={playingEp}
+              onPick={(n) => play(n)}
+              items={opRows.map(({ num, ep }) => ({
+                num: Number(num),
+                title: milestoneTitle(num) || ep?.title || `Episode ${num}`,
+                thumb: ep?.images?.jpg?.image_url || poster,
+                meta: [ep?.aired ? fmtDate(ep.aired) : null, ep?.filler ? 'Filler' : null].filter(Boolean).join(' · '),
+                seen: !!episodeProgress[Number(num)]?.seen,
+              }))}
+            />
+          )}
         />
       )}
+
+      <MoreLikeThis kind="anime" id={malId} genres={genreNames} />
 
       {synOpen && (
         <div className="modal" onClick={() => setSynOpen(false)}>

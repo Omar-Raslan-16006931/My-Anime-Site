@@ -11,7 +11,7 @@
 import { supabase } from '../supabase'
 
 export const PRIVATE_TABLES = [
-  'watchlist', 'currently_watching', 'currently_watching_tmdb', 'anime_episode_progress', 'tv_episode_progress',
+  'watchlist', 'watched', 'currently_watching', 'currently_watching_tmdb', 'anime_episode_progress', 'tv_episode_progress',
 ]
 const VAULT = 'private_vault'
 const ITERATIONS = 600000
