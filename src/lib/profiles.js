@@ -36,6 +36,10 @@ export const hueFor = (name) => {
   return n
 }
 
+// Bold avatar colour for a profile hue (same everywhere a profile is drawn).
+export const vivid = (h = 0) => `linear-gradient(145deg, oklch(0.74 0.15 ${h}), oklch(0.56 0.17 ${(h + 40) % 360}))`
+export const HUES = [20, 55, 95, 150, 200, 255, 305, 340]
+
 export const profileActions = {
   // Make sure there's always one profile (named after the account) to pick.
   ensure(name) {
@@ -63,6 +67,16 @@ export const profileActions = {
     if (!nm) return
     list = list.map((p) => (p.id === id ? { ...p, name: nm } : p))
     commit()
+  },
+  update(id, patch) {
+    const nm = String(patch.name ?? '').trim().slice(0, 18)
+    list = list.map((p) => (p.id === id ? { ...p, ...(nm ? { name: nm } : {}), ...(patch.hue != null ? { hue: patch.hue } : {}), ...(patch.kids != null ? { kids: !!patch.kids } : {}) } : p))
+    commit()
+  },
+  add2(name, kids, hue) {
+    const p = this.add(name, kids)
+    if (p && hue != null) this.update(p.id, { hue })
+    return p
   },
   max: MAX,
 }

@@ -47,9 +47,6 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
 
   // Previews for the overview (first 12 of each).
   const [lookOpen, setLookOpen] = useState(false)
-  const [adding, setAdding] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [newKids, setNewKids] = useState(false)
   const [cw, setCw] = useState(null)
   const [list, setList] = useState(null)
   useEffect(() => {
@@ -109,11 +106,6 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
   }
 
   /* ---------------- Overview ---------------- */
-  const create = (e) => {
-    e.preventDefault()
-    const p = profileActions.add(newName, newKids)
-    if (p) { setNewName(''); setNewKids(false); setAdding(false) }
-  }
 
   return (
     <div className="me-page acc">
@@ -134,8 +126,9 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
           <div className="acc-btns">
             {user && <button type="button" className="acc-info" onClick={() => pick('account')}>Account info</button>}
             {profiles.length < profileActions.max && (
-              <button type="button" className={'acc-info icon' + (adding ? ' on' : '')} onClick={() => setAdding((v) => !v)} aria-expanded={adding} aria-label="Add profile" title="Add profile">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+              <button type="button" className="acc-info" onClick={() => navigate('/profiles?manage=1')}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6" /></svg>
+                Add profile
               </button>
             )}
           </div>
@@ -146,13 +139,6 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
           </button>
         )}
       </header>
-      {adding && (
-        <form className="acc-add" onSubmit={create}>
-          <input autoFocus maxLength={18} placeholder="New profile name" value={newName} onChange={(e) => setNewName(e.target.value)} aria-label="New profile name" />
-          <label><input type="checkbox" checked={newKids} onChange={(e) => setNewKids(e.target.checked)} /> Kids</label>
-          <button type="submit" className="btn btn-primary btn-sm" disabled={!newName.trim()}>Add</button>
-        </form>
-      )}
 
       {!user ? (
         <div className="acc-cta">

@@ -1250,3 +1250,87 @@ h1, h2, h3 { text-wrap: balance; }
 .ai-card-body { padding: 0 16px 16px; animation: yoPageIn 0.4s var(--y-ease) backwards; }
 .embed-page .page { padding: 0; max-width: none !important; margin: 0; animation: none; }
 .embed-page .page > h1.section-title:first-child { display: none; }
+
+/* ============ "Who's watching?" v2 ============ */
+.y-who-hint { margin: 0; color: var(--y-t3); font-size: 15px; animation: yoSwap 0.5s var(--y-ease) backwards; }
+.y-who-title { animation: yoSwap 0.55s var(--y-ease) backwards; }
+@keyframes yoSwap { from { opacity: 0; transform: translateY(10px); filter: blur(4px); } }
+.y-who-p { animation: yoTileIn 0.7s var(--y-spring) calc(var(--i, 0) * 80ms + 120ms) backwards; transition: opacity 0.45s var(--y-ease), filter 0.45s var(--y-ease), scale 0.35s var(--y-spring); }
+@keyframes yoTileIn { from { opacity: 0; transform: translateY(26px) scale(0.8); } }
+.y-who-p .tile { overflow: visible; color: #fff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25); box-shadow: 0 18px 40px -14px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.16); }
+.y-who-p .tile .ini { transition: opacity 0.3s, transform 0.4s var(--y-spring); }
+.y-who-p .sub { min-height: 15px; font-size: 12px; font-weight: 600; color: var(--y-t4); margin-top: -8px; }
+.y-who-p.cur .sub { color: var(--y-ac); }
+/* manage mode: pen overlay + red bin so it's obvious what each tile does */
+.y-who-p .edit { position: absolute; inset: 0; border-radius: inherit; display: grid; place-items: center; background: rgba(0, 0, 0, 0.42); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); animation: yoFadeIn 0.3s ease both; }
+.y-who-p .edit svg { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5)); transform: scale(1.35); }
+@keyframes yoFadeIn { from { opacity: 0; } }
+.y-who-p .rm { top: -10px; right: -10px; width: 36px; height: 36px; background: #e5484d; color: #fff; border: 3px solid var(--y-bg); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5); animation: yoPopBadge 0.45s var(--y-spring) backwards; transition: transform 0.25s var(--y-spring), background 0.2s; z-index: 2; }
+.y-who-p .rm:hover { background: #ff5a5f; transform: scale(1.12); }
+.y-who-p .rm:active { transform: scale(0.9); }
+@keyframes yoPopBadge { from { opacity: 0; transform: scale(0.3) rotate(-30deg); } }
+.y-who-p.wob { animation: yoWob 0.5s ease-in-out infinite; animation-delay: calc(var(--i, 0) * -90ms); }
+.y-who-p.wob .tile { cursor: pointer; }
+/* picking: chosen tile grows, the rest fade away, whole page lifts out */
+.y-who-row.picking .y-who-p:not(.picked) { opacity: 0; filter: blur(8px); scale: 0.85; pointer-events: none; }
+.y-who-p.picked .tile { transform: scale(1.18); box-shadow: 0 0 0 4px var(--y-bg), 0 0 0 6px var(--y-tx), 0 40px 80px rgba(0, 0, 0, 0.6); }
+.y-who.leaving-page .y-who-head, .y-who.leaving-page .y-who-foot, .y-who.leaving-page .y-who-note { opacity: 0; transition: opacity 0.4s var(--y-ease); }
+.y-who-p.leaving { animation: yoLeave 0.42s var(--y-ease) forwards; }
+@keyframes yoLeave { to { opacity: 0; transform: scale(0.5) translateY(10px); filter: blur(6px); } }
+.y-who-p.add .tile { border-radius: 34px; animation: yoPulseRing 2.4s ease-in-out infinite; }
+@keyframes yoPulseRing { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.0); } 50% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.06); } }
+.y-who-p.add .nm { color: var(--y-t2); }
+.y-who-manage { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 24px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.22); background: rgba(255, 255, 255, 0.06); color: var(--y-tx); font: 600 14px var(--y-font); cursor: pointer; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.y-who-manage:hover { background: rgba(255, 255, 255, 0.14); }
+.y-who-manage.on { background: var(--y-tx); color: var(--y-bg); border-color: var(--y-tx); }
+/* edit / new / remove sheets */
+.y-who-scrim { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.55); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); animation: yoFadeIn 0.3s ease both; }
+.y-who-sheet { width: min(420px, 100%); display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 24px 22px 20px; border-radius: 28px; background: var(--y-s1); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.08); animation: yoSheetUp 0.5s var(--y-spring) both; text-align: center; }
+@keyframes yoSheetUp { from { opacity: 0; transform: translateY(60px) scale(0.94); } }
+@media (min-width: 700px) { .y-who-scrim { align-items: center; } }
+.y-who-sheet h2 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+.y-who-sheet p { margin: -6px 0 0; font-size: 13.5px; color: var(--y-t3); line-height: 1.45; }
+.y-who-prev { width: 92px; height: 92px; border-radius: 24px; display: grid; place-items: center; font: 700 40px var(--y-font); color: #fff; box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.18); transition: background 0.4s var(--y-ease); }
+.y-who-prev.sm { width: 64px; height: 64px; border-radius: 18px; font-size: 28px; }
+.y-who-sheet input[type='text'], .y-who-sheet input:not([type]) { width: 100%; height: 48px; padding: 0 16px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.06); color: var(--y-tx); font: 500 16px var(--y-font); text-align: center; outline: none; }
+.y-who-sheet input:focus { border-color: var(--y-ac); }
+.y-who-hues { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.y-who-hues button { width: 30px; height: 30px; border-radius: 50%; border: 0; cursor: pointer; padding: 0; transition: transform 0.3s var(--y-spring), box-shadow 0.25s; }
+.y-who-hues button:hover { transform: scale(1.15); }
+.y-who-hues button.on { transform: scale(1.18); box-shadow: 0 0 0 3px var(--y-s1), 0 0 0 5px var(--y-tx); }
+.y-who-switch { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); font-size: 14px; font-weight: 600; cursor: pointer; position: relative; }
+.y-who-switch input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+.y-who-switch i { width: 44px; height: 26px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); position: relative; transition: background 0.3s var(--y-ease); flex: none; }
+.y-who-switch i::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 0.35s var(--y-spring); }
+.y-who-switch input:checked + i { background: var(--y-ac); }
+.y-who-switch input:checked + i::after { transform: translateX(18px); }
+.y-who-sheet-btns { display: flex; gap: 10px; width: 100%; margin-top: 4px; }
+.y-who-sheet-btns .btn { flex: 1; height: 46px; border-radius: 999px; }
+.y-who-danger { background: #e5484d; color: #fff; }
+.y-who-danger:hover { background: #ff5a5f; }
+@media (prefers-reduced-motion: reduce) { .y-who-p, .y-who-p.wob, .y-who-p.add .tile { animation: none; } }
+
+/* ============ Smooth navigation ============ */
+/* A slim progress line replaces the old full-screen flash between pages. */
+.route-bar { position: fixed; top: 0; left: 0; right: 0; height: 2.5px; z-index: 300; transform-origin: left; background: linear-gradient(90deg, var(--y-ac), color-mix(in srgb, var(--y-ac) 50%, #fff)); box-shadow: 0 0 10px var(--y-ac); animation: yoRouteBar 0.65s var(--y-ease) forwards; pointer-events: none; }
+@keyframes yoRouteBar { 0% { transform: scaleX(0); opacity: 1; } 55% { transform: scaleX(0.82); opacity: 1; } 100% { transform: scaleX(1); opacity: 0; } }
+.route-anim { animation: routeIn 0.5s var(--y-ease) both; }
+/* Page content eases up in sequence (fixed modals are excluded so they never jump). */
+.route-anim .page > *:not(.modal):not([role='dialog']):not(.y-who-scrim),
+.route-anim .y-page > *:not(.modal):not([role='dialog']) { animation: yoPageIn 0.65s var(--y-ease) backwards; }
+.route-anim .page > *:nth-child(2), .route-anim .y-page > *:nth-child(2) { animation-delay: 0.05s; }
+.route-anim .page > *:nth-child(3), .route-anim .y-page > *:nth-child(3) { animation-delay: 0.1s; }
+.route-anim .page > *:nth-child(4), .route-anim .y-page > *:nth-child(4) { animation-delay: 0.15s; }
+.route-anim .page > *:nth-child(n+5), .route-anim .y-page > *:nth-child(n+5) { animation-delay: 0.2s; }
+.page, .y-page { animation: none; }
+/* Button micro-interactions: lift on hover, settle on press, ring on keyboard focus. */
+@media (hover: hover) {
+  :where(.btn, .y-btn, .y-chip, .sf-chip, .fu-seg-btn, .icon-btn, .y-circle):hover { translate: 0 -1px; }
+}
+:where(.btn, .y-btn, .y-chip, .sf-chip, .fu-seg-btn, .icon-btn, .y-circle) { transition: background-color 0.28s var(--y-ease), color 0.28s var(--y-ease), border-color 0.28s var(--y-ease), box-shadow 0.35s var(--y-ease), opacity 0.28s var(--y-ease), scale 0.4s var(--y-spring), translate 0.35s var(--y-ease); }
+:where(.btn-primary, .y-btn.ac):hover { box-shadow: 0 8px 22px -8px color-mix(in srgb, var(--y-ac) 80%, transparent); }
+.sf-chip.on, .y-chip.on, .fu-seg-btn.on { animation: yoChipOn 0.45s var(--y-spring); }
+@keyframes yoChipOn { 0% { scale: 0.92; } 100% { scale: 1; } }
+@media (prefers-reduced-motion: reduce) { .route-bar { display: none; } .route-anim, .route-anim .page > *, .route-anim .y-page > * { animation: none !important; } }
+.y-who.managing .y-who-p .tile .ini { opacity: 0; transform: scale(0.6); }
+.y-who-p .edit { background: rgba(0, 0, 0, 0.38); -webkit-backdrop-filter: none; backdrop-filter: none; }

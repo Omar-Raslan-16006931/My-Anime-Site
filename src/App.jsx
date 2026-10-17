@@ -130,7 +130,7 @@ export default function App() {
   useEffect(() => {
     window.scrollTo(0, 0)
     setRouteLoading(true)
-    const t = setTimeout(() => setRouteLoading(false), 500)
+    const t = setTimeout(() => setRouteLoading(false), 650)
     return () => clearTimeout(t)
   }, [location.pathname])
 
@@ -154,7 +154,7 @@ export default function App() {
       <VaultBanner />
 
       {routeLoading && (
-        <div key={'rl-' + location.pathname} className="route-loader"><span className="spinner lg" /></div>
+        <div key={'rl-' + location.pathname} className="route-bar" />
       )}
 
       <div key={location.pathname} className="route-anim">

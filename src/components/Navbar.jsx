@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { glow } from '../lib/theme'
-import { useProfiles, profileActions } from '../lib/profiles'
+import { useProfiles, profileActions, vivid } from '../lib/profiles'
 import { openSurprise } from '../lib/surprise'
 
 // Brand wordmark (rendered upper-case with an accent dot).
@@ -134,7 +133,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
           </Link>
         )}
         <Link to="/me" className={'y-me-wrap top' + (onMe ? ' on' : '')} aria-label="Your profile, list and settings">
-          <span className="y-me" style={{ background: glow(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
+          <span className="y-me" style={{ background: vivid(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
         </Link>
       </header>
 
@@ -148,7 +147,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
           </NavLink>
         ))}
         <NavLink to="/me" aria-label="Your profile" aria-current={onMe ? 'page' : undefined} className={'ydock-item ydock-you' + (onMe ? ' on' : '')}>
-          <span className="y-me" style={{ background: glow(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
+          <span className="y-me" style={{ background: vivid(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
           <span className="ydock-label">You</span>
         </NavLink>
       </nav>
