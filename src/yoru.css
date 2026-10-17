@@ -1476,3 +1476,12 @@ html.tp-on body { padding-bottom: 170px; }
 @keyframes greetTile { 0% { transform: scale(0.5); opacity: 0; } 24% { transform: scale(1.06); opacity: 1; } 38%, 66% { transform: scale(1); } 100% { transform: scale(1.5); opacity: 0; } }
 @keyframes greetName { 0%, 16% { opacity: 0; transform: translateY(10px); } 36%, 66% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
 @media (prefers-reduced-motion: reduce) { .greet, .greet-tile, .greet-name, .acc-avatar, .y-me, .y-who-prev { animation-duration: 0.01s; } }
+
+/* Dialogs sit higher: centred on the screen instead of hugging the bottom edge */
+.y-who-scrim { align-items: center; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
+.y-who-sheet { margin-bottom: 6vh; }
+@media (max-height: 700px) { .y-who-sheet { margin-bottom: 0; } }
+/* the browser's yellow autofill tint never replaces our field colour */
+.y-who-sheet input:-webkit-autofill, .y-ob-prof input:-webkit-autofill, .auth-field input:-webkit-autofill {
+  -webkit-text-fill-color: var(--y-tx); caret-color: var(--y-tx); box-shadow: 0 0 0 100px #2a2a2c inset; transition: background-color 9999s ease-out;
+}

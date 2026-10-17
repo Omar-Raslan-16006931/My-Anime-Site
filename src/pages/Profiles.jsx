@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useProfiles, profileActions, vivid, HUES } from '../lib/profiles'
 import { usePosterWall } from '../lib/wall'
+import { useFlip } from '../lib/flip'
 
 const Pen = ({ s = 22 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></svg>
 const Trash = ({ s = 16 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" /></svg>
@@ -20,6 +21,8 @@ export default function Profiles({ user, profile }) {
   const [picked, setPicked] = useState(null)
   const [flash, setFlash] = useState(null) // tile that was just edited/created
   const timer = useRef(0)
+  const rowRef = useRef(null)
+  useFlip(rowRef, profiles) // neighbours glide into the gap when a profile is removed or added
 
   const account = profile?.username || user?.email?.split('@')[0] || ''
   useEffect(() => { profileActions.ensure(account || 'Me') }, [account])
@@ -73,9 +76,9 @@ export default function Profiles({ user, profile }) {
         <p key={manage ? 'mh' : 'wh'} className="y-who-hint">{manage ? 'Tap a profile to edit it, or the red bin to remove it.' : 'Pick a profile to continue.'}</p>
       </div>
 
-      <div className={'y-who-row' + (picked ? ' picking' : '')}>
+      <div ref={rowRef} className={'y-who-row' + (picked ? ' picking' : '')}>
         {profiles.map((p, i) => (
-          <div key={p.id} role="button" tabIndex={0} style={{ '--i': i }}
+          <div key={p.id} data-flip={p.id} role="button" tabIndex={0} style={{ '--i': i }}
             className={'y-who-p' + (manage ? ' wob' : '') + (active?.id === p.id ? ' cur' : '') + (picked === p.id ? ' picked' : '') + (leaving === p.id ? ' leaving' : '') + (flash === p.id ? ' flash' : '')}
             onClick={() => choose(p)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(p) } }}>
             <span className="tile" key={`${p.hue}-${p.name}`} style={{ background: vivid(p.hue ?? 0) }}>
@@ -90,7 +93,7 @@ export default function Profiles({ user, profile }) {
           </div>
         ))}
         {canAdd && (
-          <button type="button" className="y-who-p add" style={{ '--i': profiles.length }} onClick={openNew}>
+          <button type="button" data-flip="add" className="y-who-p add" style={{ '--i': profiles.length }} onClick={openNew}>
             <span className="tile"><Plus /></span>
             <span className="nm">Add profile</span>
             <span className="sub">{profileActions.max - profiles.length} left</span>
