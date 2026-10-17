@@ -1931,3 +1931,43 @@ body { transition: none; }
   .page:has(.y-browse-embed) > .search-form { grid-column: 2; grid-row: 1; max-width: 620px; height: 44px; }
   .ai-card { padding: 8px 14px; min-height: 0; }
 }
+
+/* ============================================================
+   Explore redesign: AI picks + Anime / Movies / TV cards
+   Calm surface cards, a soft tint per category, posters fanned off the bottom-right edge.
+   ============================================================ */
+.ai-card { border-radius: 20px !important; margin: 4px 0 14px !important; background: radial-gradient(70% 220% at 0% 50%, color-mix(in srgb, var(--y-ac) 20%, transparent), transparent 70%), var(--y-s1) !important; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07) !important; padding: 0 !important; }
+.ai-card-head { padding: 12px 16px !important; gap: 14px !important; min-height: 64px; transition: background 0.25s; }
+.ai-card-head:hover { background: rgba(255, 255, 255, 0.03); }
+.ai-card-ico { width: 40px !important; height: 40px !important; border-radius: 50% !important; background: var(--y-ac) !important; color: var(--y-onac) !important; }
+.ai-card-txt b { font-size: 15.5px !important; letter-spacing: -0.01em; }
+.ai-card-txt small { font-size: 13px !important; }
+.ai-card-caret { width: 32px; height: 32px; padding: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.07); box-sizing: border-box; }
+
+.y-bg-grid { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 14px !important; }
+.y-bg-tile[class*='bg-'] {
+  position: relative; isolation: isolate; overflow: hidden; display: flex !important; flex-direction: column; justify-content: flex-end; align-items: flex-start; text-align: left;
+  height: 156px !important; padding: 22px 24px !important; border: 0 !important; border-radius: 22px !important;
+  background: radial-gradient(85% 130% at 100% 100%, oklch(0.55 0.15 var(--h) / 0.32), transparent 68%), var(--y-s1) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07) !important; transition: transform 0.35s var(--y-out), box-shadow 0.3s;
+}
+.y-bg-tile[class*='bg-']::after { background: none !important; }
+.y-bg-tile[class*='bg-']:hover { transform: translateY(-3px); }
+.y-bg-tile[class*='bg-'].on { box-shadow: inset 0 0 0 2px var(--y-ac) !important; background: radial-gradient(85% 130% at 100% 100%, oklch(0.6 0.17 var(--h) / 0.42), transparent 68%), var(--y-s1) !important; }
+.y-bg-tile[class*='bg-'] .y-bg-name { font-size: 30px !important; font-weight: 750; letter-spacing: -0.03em; line-height: 1; position: relative; z-index: 2; }
+.y-bg-tile[class*='bg-'] .y-bg-blurb { font-size: 12.5px !important; margin-top: 7px !important; max-width: 46%; color: var(--y-t2); line-height: 1.35; text-align: left; position: relative; z-index: 2; }
+.y-bg-tile[class*='bg-'].on .y-bg-name::after { content: ''; display: inline-block; width: 8px; height: 8px; margin-left: 10px; border-radius: 50%; background: var(--y-ac); vertical-align: middle; }
+
+.y-bg-fan { position: absolute !important; right: 22px !important; top: auto !important; bottom: -26px !important; height: 124% !important; width: 56% !important; transform: none !important; z-index: 1; pointer-events: none; }
+.y-bg-fan img { inset: auto calc(var(--i) * 76px) 0 auto !important; height: 100% !important; width: auto !important; border-radius: 12px !important; rotate: calc((var(--i) - 1) * -6deg) !important; transform-origin: 50% 100%; box-shadow: 0 14px 30px -8px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.12) !important; }
+.y-bg-tile:hover .y-bg-fan img, .y-bg-tile.on .y-bg-fan img { transform: translateY(-8px) !important; }
+.y-bg-glyph { right: 24px !important; top: auto !important; bottom: 20px; transform: none !important; }
+
+@media (max-width: 879px) {
+  .y-bg-grid { gap: 8px !important; }
+  .y-bg-tile[class*='bg-'] { height: 112px !important; padding: 12px !important; border-radius: 16px !important; }
+  .y-bg-tile[class*='bg-'] .y-bg-name { font-size: 18px !important; }
+  .y-bg-tile[class*='bg-'] .y-bg-blurb { display: none; }
+  .y-bg-fan { right: 8px !important; bottom: -14px !important; height: 70% !important; width: 80% !important; }
+  .y-bg-fan img { inset: auto calc(var(--i) * 22px) 0 auto !important; border-radius: 6px !important; }
+}
