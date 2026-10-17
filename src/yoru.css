@@ -1627,3 +1627,4 @@ html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after { transit
 @media (prefers-reduced-motion: reduce) { .tp-bar, .tp-bar.out { animation-duration: 0.01s; } }
 .tp-handle .tp-swap { position: static; top: auto; left: auto; width: auto; height: auto; margin: 8px 0 0; background: none; display: grid; }
 .tp-handle .tp-swap em { margin-top: 0; }
+.greet.cont .greet-tile { transform-origin: center; animation: none; }

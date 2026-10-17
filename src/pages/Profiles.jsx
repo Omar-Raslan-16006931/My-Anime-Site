@@ -40,11 +40,14 @@ export default function Profiles({ user, profile }) {
     if (picked) return
     // The chosen tile glides to the exact spot (and size) the welcome screen uses, while everything else fades out.
     const tile = e?.currentTarget?.querySelector('.tile')
+    let look = null
     if (tile) {
       const r = tile.getBoundingClientRect()
       const dx = window.innerWidth / 2 - (r.left + r.width / 2)
       const dy = (window.innerHeight - 172) / 2 + 62 - (r.top + r.height / 2)
       const sc = 124 / r.width
+      const cs = getComputedStyle(tile)
+      look = { w: r.width, radius: cs.borderTopLeftRadius, font: cs.fontSize }
       requestAnimationFrame(() => {
         tile.style.transition = 'transform 0.9s cubic-bezier(0.65, 0, 0.35, 1), box-shadow 0.6s'
         tile.style.transform = `translate(${dx}px, ${dy}px) scale(${sc})`
@@ -53,7 +56,7 @@ export default function Profiles({ user, profile }) {
     setPicked(p.id)
     setWelcome(p.name)
     profileActions.setActive(p.id)
-    timer.current = setTimeout(() => { window.dispatchEvent(new CustomEvent('yoru:greet', { detail: { cont: true } })); navigate('/') }, 1000)
+    timer.current = setTimeout(() => { window.dispatchEvent(new CustomEvent('yoru:greet', { detail: { cont: true, look } })); navigate('/') }, 1000)
   }
   // Dialogs fade and drop away before they unmount.
   const closeDialogs = (after) => {
