@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { weekSchedule } from '../lib/schedule'
+import { weekSchedule, peekWeek } from '../lib/schedule'
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const hhmm = (unix) => new Date(unix * 1000).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -21,9 +21,12 @@ export default function Simulcast() {
 
   useEffect(() => {
     let alive = true
-    setItems(null); setErr(false)
-    // First week shows as soon as it arrives; the second follows (one after the other for AniList's limits).
+    setErr(false)
+    // Last known schedule shows immediately; the fresh one replaces it when it arrives.
     const second = new Date(start); second.setDate(second.getDate() + 7)
+    const p1 = peekWeek(start, 7)
+    const p2 = peekWeek(second, 7)
+    setItems(p1 ? (p2 ? [...p1, ...p2.map((x) => ({ ...x, day: x.day + 7 }))] : p1) : null)
     weekSchedule(start, 10, 7).then(async (a) => {
       if (!alive) return
       if (!a.length) { setErr(true); setItems([]); return }

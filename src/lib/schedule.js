@@ -32,7 +32,27 @@ function mapItem(s) {
 }
 
 const cache = new Map()
-const fresh = (k, ms) => { const c = cache.get(k); return c && Date.now() - c.at < ms ? c.data : null }
+const LS = 'yoru.sched.'
+// Memory first, then localStorage, so a returning visitor sees the last schedule instantly.
+const load = (k) => {
+  const m = cache.get(k)
+  if (m) return m
+  try {
+    const raw = localStorage.getItem(LS + k)
+    if (raw) { const c = JSON.parse(raw); cache.set(k, c); return c }
+  } catch { /* ignore */ }
+  return null
+}
+const save = (k, data) => {
+  const c = { at: Date.now(), data }
+  cache.set(k, c)
+  try { localStorage.setItem(LS + k, JSON.stringify(c)) } catch { /* ignore */ }
+}
+const fresh = (k, ms) => { const c = load(k); return c && Date.now() - c.at < ms ? c.data : null }
+
+// Last known result of weekSchedule/nextSimulcast (any age) — render now, refresh after.
+export const peekWeek = (start, span = 7) => load('week:' + start.getTime() + ':' + span)?.data || null
+export const peekNext = () => load('next')?.data || null
 
 // Monday 00:00 (local) of the week containing `d`.
 export function weekStartOf(d = new Date()) {
@@ -78,7 +98,7 @@ export async function weekSchedule(start = weekStartOf(), perDay = 10, span = 7)
     out.push(...all.filter((x) => x.day === day).sort((a, b) => b.popularity - a.popularity).slice(0, perDay))
   }
   out.sort((a, b) => a.airingAt - b.airingAt)
-  if (out.length) cache.set(key, { at: Date.now(), data: out })
+  if (out.length) save(key, out)
   return out
 }
 
@@ -91,6 +111,6 @@ export async function nextSimulcast() {
   const d = await anilist(q, { a: now }).catch(() => null)
   const items = (d?.Page?.airingSchedules || []).map(mapItem).filter(Boolean)
   const pick = items.find((x) => x.popularity >= 8000 && x.banner) || items.find((x) => x.popularity >= 4000) || items[0] || null
-  if (pick) cache.set('next', { at: Date.now(), data: pick })
+  if (pick) save('next', pick)
   return pick
 }

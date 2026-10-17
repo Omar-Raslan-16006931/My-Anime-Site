@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon from './Icons'
-import { nextSimulcast } from '../lib/schedule'
+import { nextSimulcast, peekNext } from '../lib/schedule'
 import { animeByGenre } from '../lib/anime'
 import { openSurprise } from '../lib/surprise'
 import { toast } from '../lib/toast'
@@ -16,7 +16,10 @@ const readRem = () => { try { return JSON.parse(localStorage.getItem(REM_KEY) ||
 // episode airs (only while Yoru is open).
 // ---------------------------------------------------------------------------
 export function NextSimulcast() {
-  const [it, setIt] = useState(undefined)
+  const [it, setIt] = useState(() => {
+    const c = peekNext()
+    return c && c.airingAt * 1000 > Date.now() ? c : undefined
+  })
   const [now, setNow] = useState(Date.now())
   const [reminded, setReminded] = useState(false)
   const fired = useRef(false)

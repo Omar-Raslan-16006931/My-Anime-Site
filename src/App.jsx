@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { weekSchedule } from './lib/schedule'
 import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom'
 import { profileActions, useProfiles, profileKeyOf } from './lib/profiles'
 import { supabase } from './supabase'
@@ -137,6 +138,14 @@ export default function App() {
   // Load this account's Private history setting (and auto-unlock if this
   // device already has the key).
   useEffect(() => { initVault(user?.id) }, [user?.id])
+  // Warm the airing schedule so Home / Simulcast already have it.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const d = new Date(); d.setHours(0, 0, 0, 0)
+      weekSchedule(d, 10, 7).catch(() => {})
+    }, 600)
+    return () => clearTimeout(t)
+  }, [])
 
   // The welcome overlay is a sibling of the loading switch, so it stays mounted across it: on screen
   // from the very first frame, with neither the boot spinner nor placeholders showing before it.
