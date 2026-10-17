@@ -2009,3 +2009,29 @@ body { transition: none; }
   .y-bg-tile[class*='bg-'] .y-bg-blurb { display: none; }
   .y-bg-fan { inset: 0 !important; width: 100% !important; height: 100% !important; }
 }
+
+/* ---- Explore v4: three poster-fan strips stacked on the left, categories on the right ---- */
+.y-bg-tile[class*='bg-']::after { background: linear-gradient(90deg, rgba(0, 0, 0, 0.4), transparent 60%) !important; }
+.y-bg-tile[class*='bg-'] .y-bg-name { color: var(--y-tx); }
+.y-bg-fan { inset: auto !important; right: 16px !important; bottom: -18px !important; top: auto !important; width: 52% !important; height: 128% !important; z-index: 1 !important; }
+.y-bg-fan img { inset: auto calc(var(--i) * 58px) 0 auto !important; width: auto !important; height: 100% !important; border-radius: 10px !important; rotate: calc((var(--i) - 1) * -6deg) !important; box-shadow: 0 12px 26px -8px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.14) !important; }
+.y-bg-fan img:not(:first-child) { display: block; }
+.y-bg-tile:hover .y-bg-fan img, .y-bg-tile.on .y-bg-fan img { transform: translateY(-6px) !important; }
+.y-bg-tile[class*='bg-'] { background: radial-gradient(85% 160% at 100% 100%, oklch(0.55 0.15 var(--h) / 0.34), transparent 70%), var(--y-s1) !important; }
+.y-bg-tile[class*='bg-'].on { background: radial-gradient(85% 160% at 100% 100%, oklch(0.6 0.17 var(--h) / 0.45), transparent 70%), var(--y-s1) !important; }
+
+@media (min-width: 880px) {
+  .y-browse { display: grid; grid-template-columns: minmax(360px, 5fr) minmax(0, 7fr); column-gap: 22px; align-items: start; }
+  .y-browse > * { grid-column: 1 / -1; }
+  .y-browse > .y-bg-grid { grid-column: 1; grid-row: 1; max-width: none; display: flex !important; flex-direction: column; gap: 10px !important; }
+  .y-browse > .y-gen-grid { grid-column: 2; grid-row: 1; align-self: stretch; align-content: start; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
+  .y-bg-tile[class*='bg-'] { height: 96px !important; padding: 16px 20px !important; border-radius: 18px !important; width: 100%; }
+  .y-bg-tile[class*='bg-'] .y-bg-name { font-size: 26px !important; }
+  .y-bg-tile[class*='bg-'] .y-bg-blurb { font-size: 12px !important; margin-top: 5px !important; max-width: 52%; }
+}
+
+@media (max-width: 879px) {
+  .y-bg-tile[class*='bg-'] { height: 112px !important; }
+  .y-bg-fan { right: 8px !important; bottom: -12px !important; width: 84% !important; height: 70% !important; }
+  .y-bg-fan img { inset: auto calc(var(--i) * 22px) 0 auto !important; border-radius: 6px !important; }
+}
