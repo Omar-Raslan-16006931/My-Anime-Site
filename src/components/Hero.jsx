@@ -47,7 +47,13 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
   }, [count, interval])
   useEffect(() => { restart(); return () => clearInterval(timer.current) }, [restart])
 
-  const go = (i) => { setIdx(((i % count) + count) % count); restart() }
+  const dirRef = useRef(1)
+  const go = (i) => {
+    const next = ((i % count) + count) % count
+    if (next !== idx) { let d = next - idx; if (Math.abs(d) > count / 2) d -= Math.sign(d) * count; dirRef.current = d >= 0 ? 1 : -1 }
+    setIdx(next); restart()
+  }
+  const pause = () => clearInterval(timer.current)
 
   // Parallax (PC): the art drifts at 45% of the scroll speed, the text fades.
   useEffect(() => {
@@ -90,39 +96,16 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
     <span className="y-hero-score"><span className="y-star"><Icon.star width="13" height="13" /></span>{Number(cur.score).toFixed(1)}</span>
   ) : null
 
-  /* ---------------- Phone: coverflow ---------------- */
+  /* ---------------- Phone: draggable coverflow ---------------- */
   if (phone) {
     return (
-      <div className="y-hero-m" ref={root} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className="y-hero-m" ref={root}>
         {list.map((s, i) => (s.backdrop || s.poster) && (
           <img key={'bg' + (s.href || i)} src={s.backdrop || s.poster} alt="" aria-hidden="true" className={'y-hero-m-bg' + (i === idx ? ' on' : '')} loading={i === 0 ? 'eager' : 'lazy'} decoding="async" />
         ))}
         <div className="y-hero-m-shade" />
-        <div className="y-flow" aria-hidden={false}>
-          {list.map((s, i) => {
-            let o = (i - idx + count) % count
-            if (o > count / 2) o -= count
-            const far = Math.abs(o) > 1
-            return (
-              <button
-                key={s.href || i}
-                type="button"
-                className={'y-flow-card' + (i === idx ? ' on' : '')}
-                style={{
-                  transform: `translateX(${o * 60}%) translateZ(${-Math.abs(o) * 200}px) rotateY(${-o * 32}deg)`,
-                  zIndex: 10 - Math.abs(o),
-                  opacity: far ? 0 : 1,
-                }}
-                onClick={() => (i === idx ? navigate(s.href) : go(i))}
-                aria-label={i === idx ? `Open ${s.title}` : `Show ${s.title}`}
-                tabIndex={far ? -1 : 0}
-              >
-                {s.poster || s.backdrop ? <img src={s.poster || s.backdrop} alt="" draggable="false" /> : <span>{s.title}</span>}
-              </button>
-            )
-          })}
-        </div>
-        <div className="y-hero-m-info" key={cur.href || idx}>
+        <Coverflow list={list} idx={idx} go={go} pause={pause} navigate={navigate} />
+        <div className="y-hero-m-info" key={cur.href || idx} style={{ '--dir': dirRef.current }}>
           <div className="y-hero-m-title">{cur.title}</div>
           <div className="y-hero-m-meta">
             {cur.score ? <><span className="y-star"><Icon.star width="13" height="13" /></span>{Number(cur.score).toFixed(1)} · </> : null}
@@ -181,6 +164,87 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
               </button>
             ))}
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// 3D poster coverflow that follows your finger: drag, flick for momentum, release to settle on a card.
+const STEP = 126 // px of finger travel per card
+function Coverflow({ list, idx, go, pause, navigate }) {
+  const count = list.length
+  const [drag, setDrag] = useState(0) // in cards; > 0 means dragged to the right
+  const [dragging, setDragging] = useState(false)
+  const st = useRef(null)
+  const blockClick = useRef(false)
+
+  const down = (e) => {
+    if (count < 2 || (e.pointerType === 'mouse' && e.button !== 0)) return
+    st.current = { x: e.clientX, y: e.clientY, lx: e.clientX, lt: performance.now(), v: 0, mode: null }
+  }
+  const move = (e) => {
+    const s = st.current
+    if (!s) return
+    const dx = e.clientX - s.x
+    const dy = e.clientY - s.y
+    if (!s.mode) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return
+      s.mode = Math.abs(dx) > Math.abs(dy) * 1.15 ? 'x' : 'y'
+      if (s.mode === 'y') { st.current = null; return }
+      e.currentTarget.setPointerCapture?.(e.pointerId)
+      setDragging(true)
+      pause?.()
+    }
+    const now = performance.now()
+    s.v = 0.8 * s.v + 0.2 * ((e.clientX - s.lx) / Math.max(1, now - s.lt)) // px per ms, smoothed
+    s.lx = e.clientX; s.lt = now
+    // rubber-band resistance isn't needed (it wraps), but keep the drag within two cards
+    setDrag(Math.max(-2, Math.min(2, dx / STEP)))
+  }
+  const up = () => {
+    const s = st.current
+    st.current = null
+    if (!s || s.mode !== 'x') return
+    blockClick.current = true
+    setTimeout(() => { blockClick.current = false }, 60)
+    const projected = drag + (s.v * 220) / STEP // where a flick would carry it
+    const target = idx - Math.max(-2, Math.min(2, Math.round(projected)))
+    setDragging(false)
+    setDrag(0)
+    go(target)
+  }
+
+  const pos = idx - drag
+  return (
+    <div className={'y-flow' + (dragging ? ' dragging' : '')} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+      {list.map((s, i) => {
+        let o = (((i - pos) % count) + count) % count
+        if (o > count / 2) o -= count
+        const a = Math.abs(o)
+        const opacity = a <= 1 ? 1 - a * 0.42 : Math.max(0, 0.58 - (a - 1) * 0.58)
+        return (
+          <button
+            key={s.href || i}
+            type="button"
+            className={'y-flow-card' + (i === idx && !dragging ? ' on' : '')}
+            style={{
+              transform: `translateX(${o * 60}%) translateZ(${-Math.min(a, 2.2) * 200}px) rotateY(${-o * 32}deg)`,
+              zIndex: 20 - Math.round(a * 4),
+              opacity,
+              '--d': Math.min(1, a) * 0.45,
+            }}
+            onClick={() => { if (blockClick.current) return; if (i === idx) navigate(s.href); else go(i) }}
+            aria-label={i === idx ? `Open ${s.title}` : `Show ${s.title}`}
+            tabIndex={a > 1.2 ? -1 : 0}
+          >
+            {s.poster || s.backdrop ? <img src={s.poster || s.backdrop} alt="" draggable="false" /> : <span>{s.title}</span>}
+          </button>
+        )
+      })}
+      {count > 1 && (
+        <div className="y-flow-dots" aria-hidden="true">
+          {list.map((s, i) => <i key={s.href || i} className={i === idx ? 'on' : ''} />)}
         </div>
       )}
     </div>

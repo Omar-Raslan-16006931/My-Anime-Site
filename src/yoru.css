@@ -1670,3 +1670,29 @@ body { transition: none; }
 
 .theme-veil { position: fixed; inset: 0; z-index: 9998; pointer-events: none; opacity: 0.9; transition: opacity 1.1s cubic-bezier(0.33, 0, 0.2, 1); }
 .theme-veil.go { opacity: 0; }
+
+/* ===== Slideshow + poster rows: smoother motion ===== */
+/* phone coverflow follows the finger; its easing only applies when letting go */
+.y-flow { touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab; }
+.y-flow.dragging { cursor: grabbing; }
+.y-flow-card { transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform, opacity; }
+.y-flow.dragging .y-flow-card { transition: none; }
+.y-flow-card::after { opacity: var(--d, 0); transition: opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1); }
+.y-flow.dragging .y-flow-card::after { transition: none; }
+.y-flow-card.on::after { opacity: 0; }
+.y-flow-dots { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; gap: 6px; pointer-events: none; z-index: 40; }
+.y-flow-dots i { width: 6px; height: 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.3); transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s ease; }
+.y-flow-dots i.on { width: 22px; background: var(--y-tx); }
+/* background: slow push-in while a card is selected, softer cross-fade */
+.y-hero-m-bg { transition: opacity 1.1s ease, transform 7s ease-out; transform: scale(1.04); }
+.y-hero-m-bg.on { transform: scale(1.12); }
+/* title / buttons slide in from the swipe direction */
+.y-hero-m-info { animation: yoInfoIn 0.65s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+@keyframes yoInfoIn { from { opacity: 0; transform: translateX(calc(var(--dir, 1) * 22px)); filter: blur(3px); } }
+/* desktop slideshow: slower, softer cross-fade and a gentler push-in */
+.y-hero-img { transition: opacity 1.6s cubic-bezier(0.4, 0, 0.2, 1), transform 9s cubic-bezier(0.25, 0.1, 0.25, 1); }
+/* poster rows: native momentum on touch, grab-to-drag with coasting on mouse */
+.row-track { scroll-behavior: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+@media (hover: hover) and (pointer: fine) { .row-track { cursor: grab; } .row-track.grabbing { cursor: grabbing; user-select: none; } .row-track.grabbing * { pointer-events: none; } }
+.row-track img { -webkit-user-drag: none; user-drag: none; }
+@media (prefers-reduced-motion: reduce) { .y-flow-card, .y-hero-m-bg, .y-hero-img { transition-duration: 0.01s; } .y-hero-m-info { animation: none; } }
