@@ -126,11 +126,6 @@ export default function App() {
   // (Removed: swipe-between-tabs gesture. On phones it fired by accident while
   // scrolling carousels/pages and caused random page jumps.)
 
-  // Reset scroll to the top so a new page never opens mid-scroll.
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [location.pathname])
-
   const handleAuthRequired = useCallback(() => setShowAuth(true), [])
 
   // Load this account's Private history setting (and auto-unlock if this

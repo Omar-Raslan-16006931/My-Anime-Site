@@ -1701,23 +1701,7 @@ body { transition: none; }
 .collapse { grid-template-columns: minmax(0, 1fr); }
 .collapse-in { min-width: 0; }
 
-/* ===== Page transitions (Netflix-style) =====
-   Tabs crossfade; a title rises up over the page; going back, it drops away. */
-.pg-wrap { position: relative; overflow-x: clip; }
-.route-anim.pg { animation: none; }
-.route-anim.pg-out { position: fixed; left: 0; right: 0; pointer-events: none; }
-/* tabs: quick crossfade, nothing moves */
-.route-anim.pg-in.fade { animation: pgFadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1) backwards; }
-.route-anim.pg-out.fade { z-index: 0; animation: pgFadeOut 0.18s cubic-bezier(0.4, 0, 1, 1) forwards; }
-/* opening a title: the page underneath dims a touch while the title rises over it */
-.route-anim.pg-in.up { position: relative; z-index: 2; animation: pgRise 0.42s cubic-bezier(0.2, 0.9, 0.25, 1) backwards; }
-.route-anim.pg-out.up { z-index: 0; animation: pgDim 0.32s ease forwards; }
-/* closing a title: it drops away over the page that fades back */
-.route-anim.pg-out.down { z-index: 2; animation: pgDrop 0.3s cubic-bezier(0.4, 0, 1, 1) forwards; }
-.route-anim.pg-in.down { animation: pgFadeIn 0.3s ease backwards; }
-@keyframes pgFadeIn { from { opacity: 0; } }
-@keyframes pgFadeOut { to { opacity: 0; } }
-@keyframes pgRise { from { opacity: 0; translate: 0 70px; } 40% { opacity: 1; } }
-@keyframes pgDim { to { opacity: 0; } }
-@keyframes pgDrop { to { opacity: 0; translate: 0 90px; } }
-@media (prefers-reduced-motion: reduce) { .route-anim.pg-in, .route-anim.pg-out { animation-duration: 0.01s !important; } }
+/* ===== Instant page switches: kept tab pages are hidden in place (not display:none, so nothing
+   inside replays its entrance animation when the page is shown again). No transitions. ===== */
+.route-anim { animation: none !important; }
+.kp-off { position: absolute; top: 0; left: 0; right: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; contain: strict; }

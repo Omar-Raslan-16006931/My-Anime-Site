@@ -1,50 +1,38 @@
-import { useLayoutEffect, useRef, useState } from 'react'
-import { useNavigationType } from 'react-router-dom'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 
-// Netflix-style page transitions:
-//  • Between tabs: a quick crossfade, nothing moves.
-//  • Opening a title: the title page rises up from the bottom like a sheet over the fading page.
-//  • Going back from a title: the title page drops away and the page underneath fades back.
-// The page you leave stays pinned where it was (no jump to the top). Interruptible.
-const isTitle = (p) => /^\/(anime|movie|tv)\/[^/]+/.test(p)
-const OUT_MS = 320
+// Instant page switches. The four tab pages stay mounted once visited (hidden, not unmounted), so
+// going back to one is just showing it again: no reload, no placeholders, no animation, and it comes
+// back at the scroll position you left it. Other pages (titles, categories…) render normally.
+// Each kept page renders with its own last location, so a hidden page never reacts to another URL.
+const TABS = ['/', '/simulcast', '/search', '/me']
 
-let uid = 0
 export default function PageStack({ location, render }) {
-  const navType = useNavigationType()
-  const [stack, setStack] = useState(() => [{ id: ++uid, loc: location, path: location.pathname, state: 'still' }])
-  const dir = useRef('fade')
-  const timer = useRef(0)
+  const path = location.pathname
+  const tab = TABS.includes(path) ? path : null
+  const kept = useRef(new Map())
+  if (tab) kept.current.set(tab, location)
 
+  const scrolls = useRef({})
+  const shown = useRef(path)
   useLayoutEffect(() => {
-    const cur = stack.find((s) => s.state !== 'out')
-    if (cur && cur.path === location.pathname) return
-    const from = cur ? cur.path : '/'
-    // up = a title opens over the page; down = a title closes back to what was under it; fade = tabs
-    dir.current = isTitle(location.pathname) && !(isTitle(from) && navType === 'POP') ? 'up' : isTitle(from) ? 'down' : 'fade'
-    const scroll = window.scrollY
-    clearTimeout(timer.current)
-    setStack([
-      ...(cur ? [{ ...cur, state: 'out', scroll, dir: dir.current }] : []),
-      { id: ++uid, loc: location, path: location.pathname, state: 'in', dir: dir.current },
-    ])
-    timer.current = setTimeout(() => setStack((s) => s.filter((p) => p.state !== 'out')), OUT_MS + 40)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname])
+    if (shown.current === path) return
+    shown.current = path
+    window.scrollTo(0, tab ? scrolls.current[path] || 0 : 0)
+  }, [path, tab])
+  useEffect(() => {
+    const on = () => { scrolls.current[shown.current] = window.scrollY }
+    window.addEventListener('scroll', on, { passive: true })
+    return () => window.removeEventListener('scroll', on)
+  }, [])
 
   return (
-    <div className="pg-wrap">
-      {stack.map((s) => (
-        <div
-          key={s.id}
-          className={'route-anim pg pg-' + s.state + (s.dir ? ' ' + s.dir : '')}
-          style={s.state === 'out' ? { top: -s.scroll } : undefined}
-          aria-hidden={s.state === 'out' || undefined}
-          inert={s.state === 'out' ? '' : undefined}
-        >
-          {render(s.state === 'out' ? s.loc : location)}
+    <>
+      {[...kept.current].map(([p, loc]) => (
+        <div key={p} className={'route-anim' + (p === tab ? '' : ' kp-off')} aria-hidden={p === tab ? undefined : true}>
+          {render(loc)}
         </div>
       ))}
-    </div>
+      {!tab && <div key={path} className="route-anim">{render(location)}</div>}
+    </>
   )
 }
