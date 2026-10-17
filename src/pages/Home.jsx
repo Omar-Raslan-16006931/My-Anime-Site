@@ -16,7 +16,8 @@ import { markWatched } from '../lib/watched'
 import { toast } from '../lib/toast'
 import { PRIORITY_CATEGORIES, normalizeGenres, categoryPath } from '../lib/categories'
 
-const backdrop = (path) => (path ? `https://image.tmdb.org/t/p/original${path}` : null)
+// w1280 is plenty for a full-width billboard; `original` is often 4K and several MB.
+const backdrop = (path) => (path ? `https://image.tmdb.org/t/p/w1280${path}` : null)
 const IMG = 'https://image.tmdb.org/t/p/w500'
 
 // Nothing rated below this is featured on the billboard.
@@ -70,6 +71,13 @@ const readHidden = () => { try { return new Set(JSON.parse(localStorage.getItem(
 
 // Home rows survive leaving and coming back; they reload only on app open or a full page reload.
 const homeCache = {}
+// The last billboard is kept on the device, so the slideshow shows instantly on the next app open.
+// Fresh picks are fetched quietly in the background and shown the time after (never swapped mid-view).
+const HERO_KEY = 'yoru:hero'
+const readHero = () => { try { const v = JSON.parse(localStorage.getItem(HERO_KEY) || 'null'); return v && Date.now() - v.at < 7 * 864e5 && v.list?.length ? v.list : null } catch { return null } }
+const saveHero = (list) => { try { localStorage.setItem(HERO_KEY, JSON.stringify({ at: Date.now(), list })) } catch { /* ignore */ } }
+if (!homeCache.heroList) { const h = readHero(); if (h) { homeCache.heroList = h; homeCache.heroFromDevice = true } }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 // Account data (Continue watching, My List) survives page switches, so coming back to Home shows it
 // at once and refreshes quietly, instead of the row popping in again every time.
 const acctCache = { uid: null, watching: null, list: null }
@@ -170,17 +178,18 @@ export default function Home({ user, onAuthRequired }) {
       const hdBackdrop = async (a) => {
         try {
           const names = [a.title_english, a.title].filter(Boolean)
-          for (const n of names) {
-            const r = await searchTV(n)
+          // Both name lookups at once; first good match wins.
+          const found = await Promise.all(names.map(async (n) => {
+            const r = await searchTV(n).catch(() => null)
             const hit = (r?.results || []).find((x) => x.backdrop_path && (norm(x.name) === norm(n) || norm(x.original_name) === norm(n) || (norm(n).length > 6 && norm(x.name).includes(norm(n)))))
-            if (hit) return backdrop(hit.backdrop_path)
-          }
-        } catch { /* keep the banner */ }
-        return null
+            return hit ? backdrop(hit.backdrop_path) : null
+          }))
+          return found.find(Boolean) || null
+        } catch { return null }
       }
       const animePicks = await Promise.all(
         shuffle(pop.filter((a) => a.banner && a.synopsis && a.score >= MIN_FEATURED)).slice(0, 3).map(async (a) => {
-          const hd = await hdBackdrop(a)
+          const hd = await Promise.race([hdBackdrop(a), sleep(800).then(() => null)])
           const h = animeHero(a)
           return hd ? { ...h, backdrop: hd } : h
         })
@@ -190,21 +199,25 @@ export default function Home({ user, onAuthRequired }) {
       let picks = shuffle([...animePicks, mv && movieHero(mv), sh && tvHero(sh)].filter(Boolean))
 
       if (!picks.length) picks = (await animeByMalIds(HERO_FALLBACK)).filter((a) => a.score >= MIN_FEATURED).map(animeHero)
+      saveHero(picks)
+      if (homeCache.heroFromDevice) return // already showing last time's slides; these are for next time
       putHero(picks)
       if (active) setLoading(false)
     })
+    // Rows further down start once the billboard is in (or after 1.5s), so AniList answers the billboard first.
+    const after = Promise.race([pHero.catch(() => {}), sleep(1500)])
 
-    const pTrending = animeList('trending', 50).then((l) => put('trending', setTrending)(l.filter(okA)))
-    const pAiring = animeList('airing', 50).then((l) => put('airing', setAiring)(l.filter(okA)))
-    const pAnimeMovies = animeList('movies', 30).then((l) => put('animeMovies', setAnimeMovies)(l.filter(okA)))
-    const pTop = animeList('top', 20).then((l) => put('topRated', setTopRated)(l.filter(okA)))
-    const pEps = recentlyAiredEpisodes(40).then((eps) => put('recentEps', setRecentEps)(eps.filter((e) => (e.score || 0) >= MIN_HOME)))
+    const pTrending = after.then(() => animeList('trending', 50)).then((l) => put('trending', setTrending)(l.filter(okA)))
+    const pAiring = after.then(() => animeList('airing', 50)).then((l) => put('airing', setAiring)(l.filter(okA)))
+    const pAnimeMovies = after.then(() => animeList('movies', 30)).then((l) => put('animeMovies', setAnimeMovies)(l.filter(okA)))
+    const pTop = after.then(() => animeList('top', 20)).then((l) => put('topRated', setTopRated)(l.filter(okA)))
+    const pEps = after.then(() => recentlyAiredEpisodes(40)).then((eps) => put('recentEps', setRecentEps)(eps.filter((e) => (e.score || 0) >= MIN_HOME)))
     // Real weekly chart: TMDB's trending-this-week (movies + TV), 7+ only.
     const pWeek = Promise.all([getTrendingWeek(1), getTrendingWeek(2)].map((p) => p.catch(() => null))).then((pages) => {
       const all = pages.flatMap((d) => d?.results || []).filter((x) => (x.media_type === 'movie' || x.media_type === 'tv') && x.poster_path && okT(x))
       put('weekTop', setWeekTop)(all.slice(0, 10))
     })
-    const pArt = animeCategoryArt(PRIORITY_CATEGORIES).then(put('catArt', setCatArt))
+    const pArt = after.then(() => animeCategoryArt(PRIORITY_CATEGORIES)).then(put('catArt', setCatArt))
 
     const settle = (p) => p.catch(() => {})
     homeCache.promise = Promise.all([pHero, pTrending, pAiring, pAnimeMovies, pTop, pEps, pWeek, pArt].map(settle)).then(() => {
