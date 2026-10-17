@@ -19,7 +19,7 @@ const Chevron = () => <svg className="acc-go" width="16" height="16" viewBox="0 
 const SECTIONS = [
   { k: 'continue', label: 'Continue watching', user: true },
   { k: 'list', label: 'My List', user: true },
-  { k: 'account', label: 'Account info', user: true, top: true, icon: ico(<><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>) },
+  { k: 'account', label: 'Account settings', user: true, top: true, icon: ico(<><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>) },
   ...(isNative ? [{ k: 'downloads', label: 'Downloads', sub: 'Watch offline', icon: ico(<path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14" />) }] : []),
   { k: 'look', label: 'Appearance', sub: 'Colour theme', icon: ico(<><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 0 0 18z" /></>) },
 ]
@@ -112,7 +112,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
 
       <header className="acc-hero">
         <div className="acc-avatar-wrap">
-          <button type="button" className="acc-avatar" style={{ background: vivid(me?.hue || 0) }} onClick={() => navigate('/profiles')} aria-label="Switch profile">
+          <button type="button" key={`${me?.id}-${me?.hue}-${me?.name}`} className={'acc-avatar' + (profile?.avatar_url ? ' photo' : '')} style={{ background: vivid(me?.hue || 0) }} onClick={() => navigate('/profiles')} aria-label="Switch profile">
             {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}
           </button>
           <button type="button" className="acc-pen" onClick={() => navigate('/profiles?manage=1')} aria-label="Manage profiles" title="Manage profiles">
@@ -123,13 +123,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
           <h1 className="acc-name">{me?.name || 'Guest'}</h1>
           <span className="acc-handle">{user ? `@${account}` : 'Browsing as a guest'}</span>
           <div className="acc-btns">
-            {user && <button type="button" className="acc-info" onClick={() => pick('account')}>Account info</button>}
-            {profiles.length < profileActions.max && (
-              <button type="button" className="acc-info" onClick={() => navigate('/profiles?manage=1')}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6" /></svg>
-                Add profile
-              </button>
-            )}
+            {user && <button type="button" className="acc-info" onClick={() => pick('account')}>Account settings</button>}
           </div>
         </div>
         {user && (
@@ -184,7 +178,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
         )}
         <button type="button" className="acc-item" onClick={() => { previewScheme(scheme); navigate('/') }}>
           <span className="acc-ico">{SECTIONS.find((x) => x.k === 'look').icon}</span>
-          <span className="acc-txt"><b>Appearance</b><small>{scheme} · tap to preview themes across the app</small></span>
+          <span className="acc-txt"><b>Appearance</b><small>{scheme} · preview themes</small></span>
           <Chevron />
         </button>
       </div>

@@ -133,7 +133,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
           </Link>
         )}
         <Link to="/me" className={'y-me-wrap top' + (onMe ? ' on' : '')} aria-label="Your profile, list and settings">
-          <span className="y-me" style={{ background: vivid(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
+          <span className="y-me" key={`${me?.id}-${me?.hue}`} style={{ background: vivid(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
         </Link>
       </header>
 
@@ -147,7 +147,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
           </NavLink>
         ))}
         <NavLink to="/me" aria-label="Your profile" aria-current={onMe ? 'page' : undefined} className={'ydock-item ydock-you' + (onMe ? ' on' : '')}>
-          <span className="y-me" style={{ background: vivid(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
+          <span className="y-me" key={`${me?.id}-${me?.hue}`} style={{ background: vivid(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
           <span className="ydock-label">You</span>
         </NavLink>
       </nav>

@@ -1455,3 +1455,24 @@ html.tp-on body { padding-bottom: 170px; }
 .tp-bar-row { display: flex; gap: 8px; }
 .tp-bar-row button { flex: 1; height: 40px; }
 .tp-bar-dots { display: none; }
+
+/* ---------- Profile icon motion ---------- */
+.acc-info { white-space: nowrap; }
+.acc-avatar.photo { border-radius: 50%; }
+.acc-avatar.photo img { border-radius: 50%; }
+.acc-avatar, .y-me, .y-who-p .tile, .y-who-prev { animation-fillmode: both; }
+.acc-avatar { animation: yoAvatarIn 0.7s var(--y-spring) backwards; }
+.y-me { animation: yoAvatarIn 0.6s var(--y-spring) backwards; }
+.y-who-p .tile { animation: yoAvatarIn 0.6s var(--y-spring) backwards; }
+.y-who-prev { animation: yoAvatarIn 0.5s var(--y-spring) backwards; }
+@keyframes yoAvatarIn { 0% { opacity: 0.2; transform: scale(0.55) rotate(-8deg); filter: blur(4px); } 60% { transform: scale(1.08) rotate(2deg); filter: none; } 100% { opacity: 1; transform: none; } }
+.y-who-p.flash .tile { animation: yoTileFlash 0.9s var(--y-spring); }
+@keyframes yoTileFlash { 0% { transform: scale(0.8) rotate(-6deg); } 45% { transform: scale(1.14) rotate(3deg); box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.18), 0 30px 60px rgba(0, 0, 0, 0.5); } 100% { transform: none; } }
+/* greeting after choosing a profile / opening the app */
+.greet { position: fixed; inset: 0; z-index: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; background: var(--y-bg); pointer-events: none; animation: greetFade 1.7s var(--y-ease) forwards; }
+.greet-tile { width: 124px; height: 124px; border-radius: 32px; display: grid; place-items: center; font: 700 56px var(--y-font); color: #fff; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.25); box-shadow: 0 30px 70px -16px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.18); animation: greetTile 1.7s var(--y-spring) forwards; }
+.greet-name { font: 650 20px var(--y-font); letter-spacing: -0.01em; color: var(--y-t2); animation: greetName 1.7s var(--y-ease) forwards; }
+@keyframes greetFade { 0%, 68% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes greetTile { 0% { transform: scale(0.5); opacity: 0; } 24% { transform: scale(1.06); opacity: 1; } 38%, 66% { transform: scale(1); } 100% { transform: scale(1.5); opacity: 0; } }
+@keyframes greetName { 0%, 16% { opacity: 0; transform: translateY(10px); } 36%, 66% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .greet, .greet-tile, .greet-name, .acc-avatar, .y-me, .y-who-prev { animation-duration: 0.01s; } }

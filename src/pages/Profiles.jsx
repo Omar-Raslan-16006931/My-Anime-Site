@@ -18,6 +18,7 @@ export default function Profiles({ user, profile }) {
   const [del, setDel] = useState(null) // profile awaiting remove confirmation
   const [leaving, setLeaving] = useState(null) // id animating out
   const [picked, setPicked] = useState(null)
+  const [flash, setFlash] = useState(null) // tile that was just edited/created
   const timer = useRef(0)
 
   const account = profile?.username || user?.email?.split('@')[0] || ''
@@ -29,15 +30,18 @@ export default function Profiles({ user, profile }) {
     if (picked) return
     setPicked(p.id)
     profileActions.setActive(p.id)
-    timer.current = setTimeout(() => navigate('/'), 520)
+    timer.current = setTimeout(() => { window.dispatchEvent(new Event('yoru:greet')); navigate('/') }, 460)
   }
   const openNew = () => setSheet({ id: null, name: '', hue: HUES[profiles.length % HUES.length], kids: false })
   const save = (e) => {
     e.preventDefault()
     if (!sheet.name.trim()) return
-    if (sheet.id) profileActions.update(sheet.id, { name: sheet.name, hue: sheet.hue, kids: sheet.kids })
-    else profileActions.add2(sheet.name, sheet.kids, sheet.hue)
+    let id = sheet.id
+    if (id) profileActions.update(id, { name: sheet.name, hue: sheet.hue, kids: sheet.kids })
+    else id = profileActions.add2(sheet.name, sheet.kids, sheet.hue)?.id
     setSheet(null)
+    setFlash(id)
+    setTimeout(() => setFlash(null), 900)
   }
   const confirmRemove = () => {
     const id = del.id
@@ -72,9 +76,9 @@ export default function Profiles({ user, profile }) {
       <div className={'y-who-row' + (picked ? ' picking' : '')}>
         {profiles.map((p, i) => (
           <div key={p.id} role="button" tabIndex={0} style={{ '--i': i }}
-            className={'y-who-p' + (manage ? ' wob' : '') + (active?.id === p.id ? ' cur' : '') + (picked === p.id ? ' picked' : '') + (leaving === p.id ? ' leaving' : '')}
+            className={'y-who-p' + (manage ? ' wob' : '') + (active?.id === p.id ? ' cur' : '') + (picked === p.id ? ' picked' : '') + (leaving === p.id ? ' leaving' : '') + (flash === p.id ? ' flash' : '')}
             onClick={() => choose(p)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(p) } }}>
-            <span className="tile" style={{ background: vivid(p.hue ?? 0) }}>
+            <span className="tile" key={`${p.hue}-${p.name}`} style={{ background: vivid(p.hue ?? 0) }}>
               <span className="ini">{p.name[0].toUpperCase()}</span>
               {manage && <span className="edit" aria-hidden="true"><Pen /></span>}
               {manage && profiles.length > 1 && (
@@ -106,7 +110,7 @@ export default function Profiles({ user, profile }) {
         <div className="y-who-scrim" onClick={() => setSheet(null)}>
           <form className="y-who-sheet" onClick={(e) => e.stopPropagation()} onSubmit={save}>
             <h2>{sheet.id ? 'Edit profile' : 'New profile'}</h2>
-            <div className="y-who-prev" style={{ background: vivid(sheet.hue) }}>{(sheet.name.trim()[0] || '?').toUpperCase()}</div>
+            <div className="y-who-prev" key={sheet.hue} style={{ background: vivid(sheet.hue) }}>{(sheet.name.trim()[0] || '?').toUpperCase()}</div>
             <input autoFocus maxLength={18} placeholder="Profile name" value={sheet.name} onChange={(e) => setSheet({ ...sheet, name: e.target.value })} aria-label="Profile name" />
             <div className="y-who-hues" role="radiogroup" aria-label="Colour">
               {HUES.map((h) => <button key={h} type="button" role="radio" aria-checked={sheet.hue === h} aria-label={`Colour ${h}`} className={sheet.hue === h ? 'on' : ''} style={{ background: vivid(h) }} onClick={() => setSheet({ ...sheet, hue: h })} />)}
