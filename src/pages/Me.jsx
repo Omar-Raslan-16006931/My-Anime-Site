@@ -140,25 +140,34 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
       <div className="acc-glow" style={{ '--h1': `oklch(0.6 0.16 ${me?.hue || 0})` }} aria-hidden="true" />
 
       <header className="acc-hero">
-        <div className="acc-avatar-wrap">
-          <button type="button" key={`${me?.id}-${me?.hue}-${me?.name}`} className={'acc-avatar' + (photo ? ' photo' : '')} style={{ background: vivid(me?.hue || 0) }} onClick={() => navigate('/profiles')} aria-label="Switch profile">
-            {photo ? <img src={photo} alt="" /> : initial}
-          </button>
-          <button type="button" className="acc-pen" onClick={() => navigate('/profiles?manage=1')} aria-label="Manage profiles" title="Manage profiles">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></svg>
-          </button>
-        </div>
-        <div className="acc-id">
-          <h1 className="acc-name">{me?.name || 'Guest'}</h1>
-          <span className="acc-handle">{user ? `@${account}` : 'Browsing as a guest'}</span>
-          <div className="acc-btns">
-            {user && <button type="button" className="acc-info" onClick={() => pick('account')}>Account settings</button>}
+        <div className="acc-hero-row">
+          <div className="acc-avatar-wrap">
+            <button type="button" key={`${me?.id}-${me?.hue}-${me?.name}`} className={'acc-avatar' + (profile?.avatar_url ? ' photo' : '')} style={{ background: vivid(me?.hue || 0) }} onClick={() => navigate('/profiles')} aria-label="Switch profile">
+              {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}
+            </button>
+            <button type="button" className="acc-pen" onClick={() => navigate('/profiles?manage=1')} aria-label="Manage profiles" title="Manage profiles">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></svg>
+            </button>
           </div>
+          <div className="acc-id">
+            <h1 className="acc-name">{me?.name || 'Guest'}</h1>
+            <span className="acc-handle">{user ? `@${account}` : 'Browsing as a guest'}</span>
+            <div className="acc-btns">
+              {user && <button type="button" className="acc-info" onClick={() => pick('account')}>Account settings</button>}
+            </div>
+          </div>
+          {user && (
+            <button type="button" className="acc-out" onClick={() => setConfirmOut(true)} aria-label="Sign out" title="Sign out">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3" /></svg>
+            </button>
+          )}
         </div>
         {user && (
-          <button type="button" className="acc-out" onClick={() => setConfirmOut(true)} aria-label="Sign out" title="Sign out">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3" /></svg>
-          </button>
+          <div className="acc-stats">
+            <button type="button" onClick={() => pick('continue')}><b>{cw ? cw.length : '–'}</b><span>In progress</span></button>
+            <button type="button" onClick={() => pick('list')}><b>{list ? list.length : '–'}</b><span>My List</span></button>
+            <button type="button" onClick={() => pick('watched')}><b>{watched.ready ? watched.items.length : '–'}</b><span>Watched</span></button>
+          </div>
         )}
       </header>
 

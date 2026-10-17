@@ -110,8 +110,9 @@ export default function Navbar({ user, profile }) {
 
   return (
     <>
-      <header ref={barRef} className={'topbar y-top' + (scrolled ? ' scrolled' : '')}>
+      <header ref={barRef} className={'topbar y-top' + (scrolled ? ' scrolled' : '') + (onMe ? ' on-me' : '')}>
         <Link to="/" className="brand y-brand" aria-label={BRAND}>{BRAND}<i>.</i></Link>
+        {onMe && <span className="y-top-title" aria-hidden="true">Profile</span>}
 
         <nav className="y-links" aria-label="Main">
           {NAV.map((n) => (
