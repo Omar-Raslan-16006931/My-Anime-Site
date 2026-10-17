@@ -117,7 +117,7 @@ export default function MovieDetail({ user, onAuthRequired }) {
   if (isAdultTmdbDetails(movie)) {
     return (
       <div className="page">
-        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on AniWave.</p>
+        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on Yoru.</p>
           <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => navigate('/movies')}>Browse movies</button>
         </div>
       </div>

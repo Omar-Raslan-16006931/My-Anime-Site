@@ -171,7 +171,7 @@ export default function TVDetail({ user, onAuthRequired }) {
   if (isAdultTmdbDetails(details)) {
     return (
       <div className="page">
-        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on AniWave.</p>
+        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on Yoru.</p>
           <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => navigate('/tv')}>Browse TV shows</button>
         </div>
       </div>

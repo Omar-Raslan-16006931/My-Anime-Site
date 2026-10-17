@@ -256,7 +256,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
     return (
       <div className="page">
         <button className="icon-btn detail-back" onClick={() => navigate(-1)}><Icon.back width="18" height="18" /></button>
-        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on AniWave.</p>
+        <div className="empty"><div className="emoji">🚫</div><p>This title isn’t available on Yoru.</p>
           <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => navigate('/anime')}>Browse anime</button>
         </div>
       </div>
