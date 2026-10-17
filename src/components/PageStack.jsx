@@ -1,25 +1,27 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useNavigationType } from 'react-router-dom'
 
-// Page transitions: the page you leave fades and slides out (pinned where it was, so it never jumps
-// to the top), while the new page fades and slides in from the side your tab order says it lives on.
-// Interruptible: switching again drops whatever was still leaving and starts straight away.
-const ORDER = ['/', '/simulcast', '/search', '/me']
-const slot = (p) => ORDER.findIndex((o) => (o === '/' ? p === '/' : p === o || p.startsWith(o + '/')))
-const OUT_MS = 240
+// Netflix-style page transitions:
+//  • Between tabs: a quick crossfade, nothing moves.
+//  • Opening a title: the title page rises up from the bottom like a sheet over the fading page.
+//  • Going back from a title: the title page drops away and the page underneath fades back.
+// The page you leave stays pinned where it was (no jump to the top). Interruptible.
+const isTitle = (p) => /^\/(anime|movie|tv)\/[^/]+/.test(p)
+const OUT_MS = 320
 
 let uid = 0
 export default function PageStack({ location, render }) {
   const navType = useNavigationType()
   const [stack, setStack] = useState(() => [{ id: ++uid, loc: location, path: location.pathname, state: 'still' }])
-  const dir = useRef(1)
+  const dir = useRef('fade')
   const timer = useRef(0)
 
   useLayoutEffect(() => {
     const cur = stack.find((s) => s.state !== 'out')
     if (cur && cur.path === location.pathname) return
-    const a = slot(cur ? cur.path : '/'), b = slot(location.pathname)
-    dir.current = a >= 0 && b >= 0 ? (b >= a ? 1 : -1) : navType === 'POP' ? -1 : 1
+    const from = cur ? cur.path : '/'
+    // up = a title opens over the page; down = a title closes back to what was under it; fade = tabs
+    dir.current = isTitle(location.pathname) && !(isTitle(from) && navType === 'POP') ? 'up' : isTitle(from) ? 'down' : 'fade'
     const scroll = window.scrollY
     clearTimeout(timer.current)
     setStack([
@@ -35,7 +37,7 @@ export default function PageStack({ location, render }) {
       {stack.map((s) => (
         <div
           key={s.id}
-          className={'route-anim pg pg-' + s.state + (s.dir < 0 ? ' back' : '')}
+          className={'route-anim pg pg-' + s.state + (s.dir ? ' ' + s.dir : '')}
           style={s.state === 'out' ? { top: -s.scroll } : undefined}
           aria-hidden={s.state === 'out' || undefined}
           inert={s.state === 'out' ? '' : undefined}
