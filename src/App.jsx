@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom'
+import { profileActions } from './lib/profiles'
 import { supabase } from './supabase'
 import Navbar from './components/Navbar'
 import AuthModal from './components/AuthModal'
@@ -48,6 +49,9 @@ export default function App() {
   const initializedRef = useRef(false)
 
   const location = useLocation()
+
+  // Pull (or push) this account's "Who's watching?" profiles whenever the signed-in user changes.
+  useEffect(() => { profileActions.sync(user?.id || null) }, [user?.id])
 
   const fetchProfile = useCallback(async (id) => {
     if (!id) {

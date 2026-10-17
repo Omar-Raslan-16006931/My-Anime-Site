@@ -1840,3 +1840,15 @@ body { transition: none; }
   .y-sim-day { flex: none; width: 52px; }
   .y-sim-day span { white-space: nowrap; }
 }
+
+/* Profile photo editing */
+.y-who-prev.editable { position: relative; border: 0; cursor: pointer; padding: 0; color: #fff; }
+.y-who-prev.editable .cam { position: absolute; right: -6px; bottom: -6px; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--y-tx); color: var(--y-bg); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45); transition: transform 0.25s var(--y-out); }
+.y-who-prev.editable:hover .cam { transform: scale(1.12); }
+.y-who-photo { display: flex; gap: 14px; justify-content: center; margin: -4px 0 2px; }
+.y-who-photo button { background: none; border: 0; padding: 4px 2px; cursor: pointer; font: 600 13px var(--y-font); color: var(--y-t2); }
+.y-who-photo button:hover { color: var(--y-tx); }
+.y-who-photo button.rm { color: var(--y-t4); }
+.y-who-err { margin: 0; font-size: 12px; color: var(--y-t3); text-align: center; }
+.y-who-p .tile { background-size: cover; background-position: center; }
+.greet-tile { background-size: cover; background-position: center; }

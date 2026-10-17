@@ -42,6 +42,8 @@ export default function Navbar({ user, profile, onAuthClick }) {
   const account = profile?.username || user?.email?.split('@')[0] || ''
   useEffect(() => { profileActions.ensure(account || 'Me') }, [account])
   const me = active || profiles[0]
+  // A profile's own photo; the first profile also shows the account photo.
+  const photo = me?.avatar || (me && me === profiles[0] ? profile?.avatar_url : null)
   const initial = (me?.name || account || 'G')[0].toUpperCase()
   const onMe = hit(pathname, '/me')
   const tab = onMe ? DOCK.length : DOCK.findIndex((d) => d.match(pathname))
@@ -139,7 +141,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
           </Link>
         )}
         <Link to="/me" className={'y-me-wrap top' + (onMe ? ' on' : '')} aria-label="Your profile, list and settings">
-          <span className="y-me" key={`${me?.id}-${me?.hue}`} style={{ background: vivid(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
+          <span className="y-me" key={`${me?.id}-${me?.hue}`} style={{ background: vivid(me?.hue || 0) }}>{photo ? <img src={photo} alt="" /> : initial}</span>
         </Link>
       </header>
 
@@ -154,7 +156,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
         ))}
         <NavLink to="/me" aria-label="Your profile" aria-current={onMe ? 'page' : undefined} className={'ydock-item ydock-you' + (onMe ? ' on' : '')}
           onClick={(e) => { if (pathname === '/me' && !window.location.search) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) } }}>
-          <span className="y-me" key={`${me?.id}-${me?.hue}`} style={{ background: vivid(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
+          <span className="y-me" key={`${me?.id}-${me?.hue}`} style={{ background: vivid(me?.hue || 0) }}>{photo ? <img src={photo} alt="" /> : initial}</span>
           <span className="ydock-label">You</span>
         </NavLink>
       </nav>

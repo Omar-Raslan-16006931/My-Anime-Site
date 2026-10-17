@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useProfiles, profileActions, vivid, HUES } from '../lib/profiles'
+import { useProfiles, profileActions, vivid, tileBg, squareImage, HUES } from '../lib/profiles'
 import { usePosterWall } from '../lib/wall'
 import { useFlip } from '../lib/flip'
 
@@ -25,6 +25,8 @@ export default function Profiles({ user, profile }) {
   const [leaving, setLeaving] = useState(null) // id animating out
   const [picked, setPicked] = useState(null)
   const [closing, setClosing] = useState(false)
+  const [photoErr, setPhotoErr] = useState('')
+  const fileRef = useRef(null)
   const timer = useRef(0)
   const rowRef = useRef(null)
   useFlip(rowRef, profiles) // neighbours glide to their new slots when a profile is removed or added
@@ -34,7 +36,7 @@ export default function Profiles({ user, profile }) {
   useEffect(() => { const t = setTimeout(() => setSettled(true), 1700); return () => { clearTimeout(t); clearTimeout(timer.current) } }, [])
 
   const choose = (p, e) => {
-    if (manage) { setSheet({ id: p.id, name: p.name, hue: p.hue ?? 0, kids: !!p.kids }); return }
+    if (manage) { setSheet({ id: p.id, name: p.name, hue: p.hue ?? 0, kids: !!p.kids, avatar: p.avatar || null, blob: undefined }); return }
     if (picked) return
     // Hand the tile to the welcome overlay, which flies it to the centre while this page fades away.
     const tile = e?.currentTarget?.querySelector('.tile')
@@ -74,7 +76,7 @@ export default function Profiles({ user, profile }) {
       els.forEach((el) => { el.style.animation = ''; el.style.transition = ''; el.style.transform = '' })
     }, 760)
   }
-  const openNew = () => setSheet({ id: null, name: '', hue: HUES[profiles.length % HUES.length], kids: false })
+  const openNew = () => setSheet({ id: null, name: '', hue: HUES[profiles.length % HUES.length], kids: false, avatar: null, blob: undefined })
   const save = (e) => {
     e.preventDefault()
     if (!sheet.name.trim()) return
@@ -83,12 +85,26 @@ export default function Profiles({ user, profile }) {
     closeDialogs(() => {
       if (snap.id) {
         profileActions.update(snap.id, { name: snap.name, hue: snap.hue, kids: snap.kids })
+        if (snap.blob !== undefined) profileActions.setAvatar(snap.id, snap.blob)
         setRev((r) => ({ ...r, [snap.id]: (r[snap.id] || 0) + 1 })) // remounts the tile: its single pop-in plays once
       } else {
         const np = profileActions.add(snap.name, snap.kids, snap.hue)
-        if (np) { setFresh(np.id); setTimeout(() => setFresh(null), 900) }
+        if (np) {
+          if (snap.blob) profileActions.setAvatar(np.id, snap.blob)
+          setFresh(np.id); setTimeout(() => setFresh(null), 900)
+        }
       }
     })
+  }
+  const pickPhoto = async (e) => {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f) return
+    try {
+      const blob = await squareImage(f)
+      setSheet((sh) => ({ ...sh, blob, avatar: URL.createObjectURL(blob) }))
+      setPhotoErr('')
+    } catch (ex) { setPhotoErr(ex.message) }
   }
   const confirmRemove = () => {
     const id = del.id
@@ -127,8 +143,8 @@ export default function Profiles({ user, profile }) {
             className={'y-who-p' + (wobbling ? ' wob' : '') + (active?.id === p.id ? ' cur' : '') + (picked === p.id ? ' picked' : '') + (leaving === p.id ? ' leaving' : '') + (fresh === p.id ? ' fresh' : '')}
             onClick={(e) => choose(p, e)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(p, { currentTarget: e.currentTarget }) } }}>
             <span className="wob-wrap">
-              <span className="tile" key={`${p.hue}-${p.name}-${rev[p.id] || 0}`} style={{ background: vivid(p.hue ?? 0) }}>
-                <span className="ini">{p.name[0].toUpperCase()}</span>
+              <span className="tile" key={`${p.hue}-${p.name}-${p.avatar ? 1 : 0}-${rev[p.id] || 0}`} style={{ background: tileBg(p) }}>
+                {!p.avatar && <span className="ini">{p.name[0].toUpperCase()}</span>}
                 <span className="edit" aria-hidden="true"><Pen /></span>
                 {profiles.length > 1 && (
                   <button type="button" className="rm" tabIndex={manage ? 0 : -1} aria-hidden={!manage} aria-label={`Remove ${p.name}`} title="Remove" onClick={(e) => { e.stopPropagation(); if (manage) setDel(p) }}><Trash /></button>
@@ -157,13 +173,22 @@ export default function Profiles({ user, profile }) {
         </button>
         {!user && <Link to="/welcome" className="y-who-new">New to Yoru? Create an account →</Link>}
       </div>
-      <p className="y-who-note">Profiles are saved on this device. Your list and watch history belong to your account.</p>
+      <p className="y-who-note">{user ? 'Profiles are saved to your account, so they follow you to every device.' : 'Profiles are saved on this device. Sign in to keep them across devices.'}</p>
 
       {sheet && (
         <div className={'y-who-scrim' + (closing ? ' closing' : '')} onClick={() => closeDialogs()}>
           <form className="y-who-sheet" onClick={(e) => e.stopPropagation()} onSubmit={save}>
             <h2>{sheet.id ? 'Edit profile' : 'New profile'}</h2>
-            <div className="y-who-prev" key={sheet.hue} style={{ background: vivid(sheet.hue) }}>{(sheet.name.trim()[0] || '?').toUpperCase()}</div>
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickPhoto} />
+            <button type="button" className="y-who-prev editable" key={sheet.hue} style={{ background: tileBg({ avatar: sheet.avatar, hue: sheet.hue }) }} onClick={() => fileRef.current?.click()} aria-label="Change profile photo">
+              {!sheet.avatar && (sheet.name.trim()[0] || '?').toUpperCase()}
+              <span className="cam" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z" /><circle cx="12" cy="13" r="3.4" /></svg></span>
+            </button>
+            <div className="y-who-photo">
+              <button type="button" onClick={() => fileRef.current?.click()}>{sheet.avatar ? 'Change photo' : 'Add photo'}</button>
+              {sheet.avatar && <button type="button" className="rm" onClick={() => setSheet({ ...sheet, avatar: null, blob: null })}>Remove photo</button>}
+            </div>
+            {photoErr && <p className="y-who-err">{photoErr}</p>}
             <input autoFocus maxLength={18} placeholder="Profile name" value={sheet.name} onChange={(e) => setSheet({ ...sheet, name: e.target.value })} aria-label="Profile name" />
             <div className="y-who-hues" role="radiogroup" aria-label="Colour">
               {HUES.map((h) => <button key={h} type="button" role="radio" aria-checked={sheet.hue === h} aria-label={`Colour ${h}`} className={sheet.hue === h ? 'on' : ''} style={{ background: vivid(h) }} onClick={() => setSheet({ ...sheet, hue: h })} />)}
@@ -179,9 +204,9 @@ export default function Profiles({ user, profile }) {
       {del && (
         <div className={'y-who-scrim' + (closing ? ' closing' : '')} onClick={() => closeDialogs()}>
           <div className="y-who-sheet small" onClick={(e) => e.stopPropagation()}>
-            <div className="y-who-prev sm" style={{ background: vivid(del.hue ?? 0) }}>{del.name[0].toUpperCase()}</div>
+            <div className="y-who-prev sm" style={{ background: tileBg(del) }}>{!del.avatar && del.name[0].toUpperCase()}</div>
             <h2>Remove {del.name}?</h2>
-            <p>This profile is removed from this device. Your list and history stay on your account.</p>
+            <p>This profile is removed. Your list and history stay on your account.</p>
             <div className="y-who-sheet-btns">
               <button type="button" className="btn btn-ghost" onClick={() => closeDialogs()}>Keep</button>
               <button type="button" className="btn y-who-danger" onClick={confirmRemove}>Remove</button>

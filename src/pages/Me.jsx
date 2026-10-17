@@ -40,6 +40,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
   const scheme = useScheme()
   const { profiles, active } = useProfiles()
   const me = active || profiles[0]
+  const photo = me?.avatar || (me && me === profiles[0] ? profile?.avatar_url : null)
   const account = profile?.username || user?.email?.split('@')[0] || ''
   const initial = (me?.name || account || 'G')[0].toUpperCase()
   const signIn = onAuthClick || onAuthRequired
@@ -140,8 +141,8 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
 
       <header className="acc-hero">
         <div className="acc-avatar-wrap">
-          <button type="button" key={`${me?.id}-${me?.hue}-${me?.name}`} className={'acc-avatar' + (profile?.avatar_url ? ' photo' : '')} style={{ background: vivid(me?.hue || 0) }} onClick={() => navigate('/profiles')} aria-label="Switch profile">
-            {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}
+          <button type="button" key={`${me?.id}-${me?.hue}-${me?.name}`} className={'acc-avatar' + (photo ? ' photo' : '')} style={{ background: vivid(me?.hue || 0) }} onClick={() => navigate('/profiles')} aria-label="Switch profile">
+            {photo ? <img src={photo} alt="" /> : initial}
           </button>
           <button type="button" className="acc-pen" onClick={() => navigate('/profiles?manage=1')} aria-label="Manage profiles" title="Manage profiles">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></svg>
