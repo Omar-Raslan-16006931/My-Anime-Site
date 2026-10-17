@@ -77,7 +77,6 @@ export default function Watched({ user, onAuthRequired }) {
 
   const total = st.count
   const split = [['anime', 'Anime'], ['movie', 'Movies'], ['tv', 'TV']].filter(([k]) => st.by[k])
-  const topG = st.genres.slice(0, 5)
   return (
     <div className="wd">
       <section className="wd-hero">
@@ -93,20 +92,17 @@ export default function Watched({ user, onAuthRequired }) {
       </section>
 
       <div className="wd-tiles">
-        <div className="wd-tile"><small>Titles finished</small><b><Num n={total} /></b></div>
-        <div className="wd-tile"><small>Episodes &amp; films</small><b><Num n={st.eps} /></b></div>
-        <div className="wd-tile"><small>Average rating</small><b>{st.avg ? <>★ <Num n={st.avg} dec={1} /></> : '—'}</b></div>
-        <div className="wd-tile"><small>This month</small><b><Num n={st.month} /></b></div>
-        {st.genres[0] && <div className="wd-tile wide"><small>Favourite genre</small><b className="txt">{st.genres[0][0]}</b><span>{st.genres[0][1]} {st.genres[0][1] === 1 ? 'title' : 'titles'}</span></div>}
-        {st.longest && st.longest.minutes > 0 && <div className="wd-tile wide"><small>Biggest binge</small><b className="txt">{st.longest.title}</b><span>{fmtDur(st.longest.minutes)}</span></div>}
-        {st.decade && <div className="wd-tile wide"><small>Favourite era</small><b>{st.decade}s</b></div>}
+        <div className="wd-tile"><b><Num n={total} /></b><small>Titles</small></div>
+        <div className="wd-tile"><b><Num n={st.eps} /></b><small>Episodes</small></div>
+        <div className="wd-tile"><b>{st.avg ? <>★<Num n={st.avg} dec={1} /></> : '—'}</b><small>Avg rating</small></div>
+        <div className="wd-tile"><b><Num n={st.month} /></b><small>This month</small></div>
       </div>
 
-      {topG.length > 1 && (
-        <div className="wd-genres">
-          {topG.map(([n, c]) => <span key={n}>{n}<b>{c}</b></span>)}
-        </div>
-      )}
+      <div className="wd-facts">
+        {st.genres[0] && <span><small>Top genre</small>{st.genres[0][0]}<b>{st.genres[0][1]}</b></span>}
+        {st.longest && st.longest.minutes > 0 && <span><small>Binge</small><em>{st.longest.title}</em><b>{fmtDur(st.longest.minutes)}</b></span>}
+        {st.decade && <span><small>Era</small>{st.decade}s</span>}
+      </div>
 
       <div className="wd-bar">
         <h3>Everything you’ve watched</h3>
