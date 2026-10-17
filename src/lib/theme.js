@@ -28,13 +28,21 @@ try {
 
 const listeners = new Set()
 
-// Theme changes cross-fade with the browser's own snapshot transition (smooth and cheap);
-// browsers without it just switch instantly.
+// Theme changes fade in from the old background colour through a cover that lives outside the app,
+// so nothing in the page (slideshows, posters, animations) is ever restyled, re-run or snapshotted.
 function softly(fn) {
-  const d = typeof document !== 'undefined' ? document : null
-  const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-  if (d?.startViewTransition && !reduce) { try { d.startViewTransition(fn); return } catch { /* fall through */ } }
+  if (typeof document === 'undefined') { fn(); return }
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  if (reduce) { fn(); return }
+  document.querySelectorAll('.theme-veil').forEach((n) => n.remove())
+  const veil = document.createElement('div')
+  veil.className = 'theme-veil'
+  veil.style.background = getComputedStyle(document.documentElement).getPropertyValue('--y-bg') || '#141414'
+  document.body.appendChild(veil)
   fn()
+  void veil.offsetWidth
+  requestAnimationFrame(() => veil.classList.add('go'))
+  setTimeout(() => veil.remove(), 800)
 }
 
 export function applyScheme(name = current) {

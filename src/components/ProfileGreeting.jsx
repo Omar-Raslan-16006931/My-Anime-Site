@@ -26,12 +26,11 @@ export default function ProfileGreeting() {
 
   useEffect(() => {
     if (!g) return undefined
-    const t = setTimeout(() => setG(null), g.fly ? 3150 : 2900)
+    const t = setTimeout(() => setG(null), g.fly ? 2700 : 2900)
     return () => clearTimeout(t)
   }, [g])
 
-  // The tile starts exactly where the picked one was, springs inwards (smaller), springs back out bigger
-  // than it started while moving toward the middle, then settles at the middle at its normal size.
+  // FLIP: measure where the tile ends up, start it exactly where the picked tile was, then glide.
   useLayoutEffect(() => {
     const el = tileRef.current
     if (!g?.fly || !el) return undefined
@@ -39,18 +38,17 @@ export default function ProfileGreeting() {
     const end = el.getBoundingClientRect()
     const dx = f.cx - (end.left + end.width / 2)
     const dy = f.cy - (end.top + end.height / 2)
-    const fin = 124 / f.w // final scale (the tile's normal welcome size)
-    const at = (k, sc, ease) => ({ transform: `translate(${(dx * k).toFixed(2)}px, ${(dy * k).toFixed(2)}px) scale(${sc})`, easing: ease })
+    const finalT = el.style.transform
+    el.style.transition = 'none'
+    el.style.transform = `translate(${dx}px, ${dy}px) scale(1)`
     el.style.boxShadow = f.shadow || ''
-    const anim = el.animate([
-      { ...at(1, 1, 'cubic-bezier(0.33, 0, 0.2, 1)'), offset: 0 },                      // where the tap landed
-      { ...at(1, 0.84, 'cubic-bezier(0.34, 1.56, 0.64, 1)'), offset: 0.13 },            // spring inwards
-      { ...at(0.46, 1.2, 'cubic-bezier(0.4, 0, 0.2, 1)'), offset: 0.44 },               // spring out, bigger than before, moving
-      { ...at(0.1, fin * 1.05, 'cubic-bezier(0.3, 0, 0.2, 1)'), offset: 0.8 },          // easing into the middle
-      { ...at(0, fin, 'linear'), offset: 1 },                                          // settled, normal size
-    ], { duration: 1350, fill: 'forwards' })
-    anim.finished.then(() => { el.style.boxShadow = '' }).catch(() => {})
-    return () => anim.cancel()
+    void el.offsetWidth
+    const id = requestAnimationFrame(() => requestAnimationFrame(() => {
+      el.style.transition = 'transform 0.95s cubic-bezier(0.65, 0, 0.35, 1), box-shadow 0.8s ease'
+      el.style.transform = finalT
+      el.style.boxShadow = ''
+    }))
+    return () => cancelAnimationFrame(id)
   }, [g])
 
   if (!g) return null

@@ -1621,7 +1621,6 @@ body { transition: padding-bottom 0.45s var(--y-ease); }
 .tp-bar:has(.tp-keep.ok) .tp-cancel { flex-grow: 0.0001; padding: 0; opacity: 0; }
 .tp-cancel.busy { background: rgba(255, 255, 255, 0.04); }
 /* colours cross-fade when a theme changes */
-html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after { transition: background-color 0.55s ease, color 0.55s ease, border-color 0.55s ease, fill 0.55s ease, stroke 0.55s ease, box-shadow 0.55s ease !important; }
 /* leaving the account page for the theme preview */
 .me-page.to-look { opacity: 0; transform: translateY(-16px) scale(0.975); filter: blur(5px); transition: opacity 0.4s var(--y-ease), transform 0.42s var(--y-ease), filter 0.4s var(--y-ease); pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .tp-bar, .tp-bar.out { animation-duration: 0.01s; } }
@@ -1654,8 +1653,6 @@ html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after { transit
 .y-who-p.picked .nm, .y-who-p.picked .sub { opacity: 0; }
 
 /* theme cross-fade (View Transitions) */
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.45s; animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
-html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after { transition: inherit; }
 
 /* account page → home: a short, light fade (no blur/scale) */
 .me-page.to-look { opacity: 0; transform: translateY(-8px); filter: none; transition: opacity 0.28s ease, transform 0.3s ease; }
@@ -1670,7 +1667,6 @@ html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after { transit
 .tp-bar:has(.tp-keep.ok) .tp-cancel { flex-grow: 1; padding: 0 16px; opacity: 0.35; }
 .tp-bar-row button { transition: transform 0.25s ease, background 0.3s ease, color 0.3s ease, opacity 0.3s ease; }
 body { transition: none; }
-/* v5 timing for the spring flight */
-.greet.fly { animation: gOut 0.65s cubic-bezier(0.4, 0, 0.2, 1) 2.5s forwards; }
-.greet.fly .greet-bg { animation-duration: 0.9s; animation-delay: 0.05s; }
-.greet.fly .greet-name { animation-delay: 0.95s; }
+
+.theme-veil { position: fixed; inset: 0; z-index: 9998; pointer-events: none; opacity: 0.9; transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+.theme-veil.go { opacity: 0; }

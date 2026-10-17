@@ -48,7 +48,7 @@ export default function Profiles({ user, profile }) {
     setPicked(p.id)
     profileActions.setActive(p.id)
     window.dispatchEvent(new CustomEvent('yoru:greet', { detail: { profile: p, fly } }))
-    timer.current = setTimeout(() => navigate('/'), 1400)
+    timer.current = setTimeout(() => navigate('/'), 1000)
   }
   // Dialogs fade and drop away before they unmount.
   const closeDialogs = (after) => {
