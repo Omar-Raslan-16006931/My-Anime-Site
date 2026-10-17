@@ -11,7 +11,8 @@ export default function ProfileGreeting() {
   const [g, setG] = useState(null) // { p, fly? }
   const tileRef = useRef(null)
 
-  useEffect(() => {
+  // Layout effect: the overlay is in place before the first paint, so the page behind never flashes.
+  useLayoutEffect(() => {
     let fresh = false
     try { fresh = !sessionStorage.getItem('yoru:greeted'); sessionStorage.setItem('yoru:greeted', '1') } catch { /* ignore */ }
     if (fresh && active && !/^\/(profiles|welcome)/.test(window.location.pathname)) setG({ p: active })
