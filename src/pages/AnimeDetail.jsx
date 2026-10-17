@@ -13,6 +13,7 @@ import WatchedButton from '../components/WatchedButton'
 import { fromAnime } from '../lib/watched'
 import DownloadLinks from '../components/DownloadLinks'
 import Collapse from '../components/Collapse'
+import MoreLikeThis from '../components/MoreLikeThis'
 
 async function upsertWatching(user, d, epNum) {
   if (!user || !d) return
@@ -308,6 +309,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
             <p className="tvh-desc" onClick={() => setSynOpen(true)} title="Read full description">{details.synopsis}</p>
           )}
 
+          <div className="tvh-actions">
           <button className="tvh-play" onClick={() => play(lastWatched || 1)}>
             <Icon.play width="16" height="16" /> {resumeLabel}
           </button>
@@ -334,6 +336,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3" /><path d="m7 8 5-5 5 5" /><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
               <span>Share</span>
             </button>
+          </div>
           </div>
           <Collapse open={showDl}><div className="tvh-dl"><DownloadLinks title={title} /></div></Collapse>
         </div>
@@ -442,6 +445,8 @@ export default function AnimeDetail({ user, onAuthRequired }) {
           hasNext={!totalEps || playingEp < totalEps}
         />
       )}
+
+      <MoreLikeThis kind="anime" id={malId} genres={genreNames} />
 
       {synOpen && (
         <div className="modal" onClick={() => setSynOpen(false)}>
