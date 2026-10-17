@@ -2565,3 +2565,11 @@ body { transition: none; }
   .ai-sheet .rec-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
   .ai-sheet .rec-why { font-size: 11px; -webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
 }
+
+/* Ask AI: type switcher never wraps or clips ("TV Shows") */
+.ai-sheet .fu-seg-btn { white-space: nowrap; flex: 0 0 auto; }
+.ai-sheet .rec-row { flex-wrap: wrap; }
+.ai-sheet .rec-row .fu-seg { flex: 1 1 auto; justify-content: space-between; }
+.ai-sheet .rec-row .fu-seg .fu-seg-btn { flex: 1 1 auto; text-align: center; padding: 0 8px; }
+@media (min-width: 880px) { .ai-sheet .rec-row .fu-seg { flex: 0 1 auto; } .ai-sheet .rec-row .fu-seg .fu-seg-btn { flex: 0 0 auto; padding: 0 11px; } .ai-sheet .rec-row { flex-wrap: nowrap; } }
+@media (max-width: 879px) { .ai-sheet .rec-go { width: 100%; justify-content: center; } }
