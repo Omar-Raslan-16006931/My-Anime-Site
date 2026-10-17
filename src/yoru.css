@@ -1695,3 +1695,11 @@ body { transition: none; }
 .so-text { font: 600 15px var(--y-font); color: var(--y-t2); letter-spacing: -0.005em; }
 .signout-veil.done .so-spin { opacity: 0; transform: scale(0.6); }
 @media (prefers-reduced-motion: reduce) { .signout-veil, .so-spin { transition-duration: 0.01s; animation-duration: 2s; } }
+
+/* ===== Hero placeholder: ghost posters + stubs in the real layout, one calm pulse ===== */
+.y-ph-bar, .y-ph-card { background: color-mix(in srgb, var(--y-tx) 8%, var(--y-bg)); animation: yoPhPulse 1.6s ease-in-out infinite; }
+.y-ph-bar { border-radius: 8px; max-width: 100%; }
+.y-ph-card { box-shadow: none; cursor: default; transition: none; }
+.y-ph-card::after { display: none; }
+@keyframes yoPhPulse { 0%, 100% { background-color: color-mix(in srgb, var(--y-tx) 7%, var(--y-bg)); } 50% { background-color: color-mix(in srgb, var(--y-tx) 12%, var(--y-bg)); } }
+@media (prefers-reduced-motion: reduce) { .y-ph-bar, .y-ph-card { animation: none; } }

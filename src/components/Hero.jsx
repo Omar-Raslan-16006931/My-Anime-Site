@@ -27,6 +27,46 @@ const Chev = ({ flip }) => (
 //    of 5 progress segments that rotates the picks.
 //  • Phone: blurred backdrop + 3D poster coverflow.
 // items[]: { type, title, backdrop, poster, score, year, genres[], desc, href }
+// Loading placeholder: the same layout as the real hero (ghost posters, title and button stubs), so
+// nothing jumps when the real slides arrive.
+export function HeroPlaceholder() {
+  const phone = useIsPhone()
+  if (phone) {
+    const slot = (o) => ({ transform: `translateX(${o * 60}%) translateZ(${-Math.abs(o) * 200}px) rotateY(${-o * 32}deg)`, opacity: o ? 0.5 : 1, zIndex: 20 - Math.abs(o) * 4 })
+    return (
+      <div className="y-hero-m y-ph" aria-hidden="true">
+        <div className="y-hero-m-shade" />
+        <div className="y-flow">
+          {[-1, 1, 0].map((o) => <div key={o} className="y-flow-card y-ph-card" style={slot(o)} />)}
+        </div>
+        <div className="y-hero-m-info">
+          <div className="y-ph-bar" style={{ width: '58%', height: 20 }} />
+          <div className="y-ph-bar" style={{ width: '36%', height: 12 }} />
+          <div className="y-hero-m-btns">
+            <div className="y-ph-bar" style={{ width: 112, height: 40, borderRadius: 999 }} />
+            <div className="y-ph-bar" style={{ width: 40, height: 40, borderRadius: 999 }} />
+            <div className="y-ph-bar" style={{ width: 40, height: 40, borderRadius: 999 }} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="y-hero y-ph" aria-hidden="true">
+      <div className="y-hero-text">
+        <div className="y-ph-bar" style={{ width: 160, height: 12 }} />
+        <div className="y-ph-bar" style={{ width: 'min(520px, 60%)', height: 52, borderRadius: 14 }} />
+        <div className="y-ph-bar" style={{ width: 200, height: 14 }} />
+        <div className="y-ph-bar" style={{ width: 'min(480px, 55%)', height: 44 }} />
+        <div className="y-hero-actions">
+          <div className="y-ph-bar" style={{ width: 120, height: 48, borderRadius: 16 }} />
+          <div className="y-ph-bar" style={{ width: 150, height: 48, borderRadius: 16 }} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Hero({ item, items, onPlay, isInList, onToggleList, interval = ROTATE }) {
   const navigate = useNavigate()
   const phone = useIsPhone()

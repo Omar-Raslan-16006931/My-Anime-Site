@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import Hero from '../components/Hero'
+import Hero, { HeroPlaceholder } from '../components/Hero'
 import Row from '../components/Row'
 import MediaCard from '../components/MediaCard'
 import WideCard from '../components/WideCard'
@@ -288,7 +288,7 @@ export default function Home({ user, onAuthRequired }) {
   return (
     <div className="y-home">
       {loading ? (
-        <div className="y-skel y-hero-skel" />
+        <HeroPlaceholder />
       ) : (
         <Hero items={heroList} onPlay={(h) => navigate(h.href)} isInList={isInList} onToggleList={toggleList} />
       )}
