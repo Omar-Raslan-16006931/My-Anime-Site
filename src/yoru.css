@@ -2194,3 +2194,39 @@ body { transition: none; }
   .y-me { width: 36px; height: 36px; border-radius: 50%; }
 }
 @media (min-width: 880px) and (prefers-reduced-motion: reduce) { .topbar.y-top, .y-link, .y-surprise { animation: none !important; } }
+
+/* ---- PC player page v2: everything fits in one screen — no scrolling ---- */
+@media (min-width: 880px) {
+  .player-modal.has-aside:not(.lights-off) .player-card { --pw: min(100%, calc((100dvh - 318px) * 16 / 9)); }
+  .player-modal.has-aside .player-main { padding: 0 28px 14px !important; overflow-y: auto; align-items: center; justify-content: center; gap: 0; }
+  .player-modal.has-aside .player-main > * { width: var(--pw); max-width: 100%; flex: none; }
+  .player-modal.has-aside .player-main .modal-head { padding: 14px 0 12px !important; }
+  .player-modal.has-aside .player-main .modal-head .ttl { font-size: 19px; }
+  .player-modal.has-aside .player-main .player-frame { max-height: none !important; width: var(--pw); }
+  .player-modal.has-aside .player-main .player-tools { padding: 8px 0 8px !important; justify-content: flex-end; }
+  .player-modal.has-aside .player-main .modal-body { max-width: var(--pw) !important; padding: 0 !important; display: flex; flex-direction: column; gap: 10px; }
+
+  /* row 1: previous / next */
+  .player-modal.has-aside .pc-nav { gap: 10px; justify-content: flex-start; order: 1; }
+  .player-modal.has-aside .pc-nav .btn { height: 38px; padding: 0 18px; font-size: 13.5px; flex: none; border-radius: 999px; }
+  .player-modal.has-aside .pc-nav > span:empty { display: none; }
+  /* row 2: settings as a compact wrap of equal-height chips */
+  .player-modal.has-aside .pc-list { order: 2; display: flex; flex-wrap: wrap; gap: 8px; padding: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important; }
+  .player-modal.has-aside .pc-row { display: inline-flex !important; align-items: center; gap: 10px; height: 40px; min-height: 0 !important; padding: 0 6px 0 14px !important; margin: 0; width: auto; border: 0 !important; border-radius: 12px; background: rgba(255, 255, 255, 0.06) !important; flex: none; }
+  .player-modal.has-aside .pc-row .pc-k { flex-direction: row; align-items: center; gap: 0; font-size: 12.5px; font-weight: 600; color: var(--y-t3); white-space: nowrap; flex-shrink: 0 !important; }
+  .player-modal.has-aside .pc-row .pc-k small { display: none; }
+  .player-modal.has-aside .pc-source .pc-k { display: flex !important; }
+  .player-modal.has-aside .pc-row .select-min { height: 30px; max-width: 190px; border-radius: 9px; margin: 0 !important; }
+  .player-modal.has-aside .pc-row .seg { margin: 0; }
+  .player-modal.has-aside .pc-toggle { padding-right: 12px !important; cursor: pointer; }
+  .player-modal.has-aside .pc-toggle .switch-track { margin-left: 4px; }
+  .player-modal.has-aside .pc-row .pc-try { height: 30px; padding: 0 12px; border-radius: 9px; font-size: 12.5px; }
+  .player-modal.has-aside .pc-row .pc-v { display: inline-flex; align-items: center; gap: 4px; }
+  .player-modal.has-aside .pc-row .pc-icon { width: 30px; height: 30px; }
+  .player-modal.has-aside .pc-offset { min-width: 62px; }
+  /* row 3: extras, then hints */
+  .player-modal.has-aside .pc-more { order: 3; padding: 0 !important; gap: 4px 18px; }
+  .player-modal.has-aside .pc-hint { order: 4; padding: 0; font-size: 12px; }
+
+  .pe-season { height: 34px !important; border-radius: 999px !important; padding: 0 14px !important; background-color: rgba(255, 255, 255, 0.08) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; outline: none !important; box-shadow: none !important; font-size: 13px; font-weight: 600; }
+}
