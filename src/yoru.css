@@ -2573,3 +2573,19 @@ body { transition: none; }
 .ai-sheet .rec-row .fu-seg .fu-seg-btn { flex: 1 1 auto; text-align: center; padding: 0 8px; }
 @media (min-width: 880px) { .ai-sheet .rec-row .fu-seg { flex: 0 1 auto; } .ai-sheet .rec-row .fu-seg .fu-seg-btn { flex: 0 0 auto; padding: 0 11px; } .ai-sheet .rec-row { flex-wrap: nowrap; } }
 @media (max-width: 879px) { .ai-sheet .rec-go { width: 100%; justify-content: center; } }
+
+/* ---- Ask AI popup on phones: near full-screen, smaller type, fewer lines ---- */
+@media (max-width: 879px) {
+  .ai-scrim { padding: 8px !important; }
+  .ai-sheet { width: 100% !important; max-height: calc(100dvh - 16px) !important; height: calc(100dvh - 16px); padding: 14px 14px 12px !important; border-radius: 22px !important; gap: 8px !important; }
+  .ai-sheet-head h2 { font-size: 17px; }
+  .ai-sheet-head p { font-size: 11.5px; }
+  .ai-sheet .rec-input { font-size: 13px; padding: 8px 11px; }
+  .ai-sheet .rec-check, .ai-sheet .rec-signin { font-size: 11px; }
+  .ai-sheet .rec-ideas .sf-chip { height: 26px; font-size: 11.5px; }
+  .ai-sheet .rec-by { font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ai-sheet .rec-grid { gap: 8px 7px !important; }
+  .ai-sheet .rec-item .card-title, .ai-sheet .rec-item h3, .ai-sheet .rec-item b { font-size: 11.5px !important; min-height: 0 !important; -webkit-line-clamp: 1; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+  .ai-sheet .rec-why { font-size: 10.5px !important; line-height: 1.3 !important; -webkit-line-clamp: 2 !important; margin-top: 2px; }
+  .ai-sheet .card-sub, .ai-sheet .card-meta { font-size: 10.5px !important; }
+}
