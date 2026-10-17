@@ -1795,3 +1795,6 @@ body { transition: none; }
 .wd-bar h3 { font-size: 16px; }
 .wd-chip { padding: 5px 12px; font-size: 12.5px; }
 @media (min-width: 880px) { .wd-split { width: 280px; } }
+
+/* Detail pages: back button a little higher (just under the top bar). */
+@media (max-width: 879px) { .fu-back { top: calc(env(safe-area-inset-top) + var(--topbar-h) + 2px); } }
