@@ -9,10 +9,14 @@ create table if not exists public.user_profiles (
   hue        integer not null default 0,
   kids       boolean not null default false,
   avatar_url text,
+  pin_hash   text,
   position   integer not null default 0,
   created_at timestamptz not null default now(),
   primary key (user_id, id)
 );
+
+-- (re-run safe for installs that already created the table without the PIN column)
+alter table public.user_profiles add column if not exists pin_hash text;
 
 alter table public.user_profiles enable row level security;
 

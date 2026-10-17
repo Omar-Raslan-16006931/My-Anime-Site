@@ -73,6 +73,8 @@ const homeCache = {}
 // Account data (Continue watching, My List) survives page switches, so coming back to Home shows it
 // at once and refreshes quietly, instead of the row popping in again every time.
 const acctCache = { uid: null, watching: null, list: null }
+// Another profile has its own list and history: drop what was cached for the previous one.
+if (typeof window !== 'undefined') window.addEventListener('yoru:profile-data', () => { acctCache.uid = null; acctCache.watching = null; acctCache.list = null })
 
 export default function Home({ user, onAuthRequired }) {
   const navigate = useNavigate()

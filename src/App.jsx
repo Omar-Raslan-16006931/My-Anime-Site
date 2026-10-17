@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom'
-import { profileActions } from './lib/profiles'
+import { profileActions, useProfiles, profileKeyOf } from './lib/profiles'
 import { supabase } from './supabase'
 import Navbar from './components/Navbar'
 import AuthModal from './components/AuthModal'
@@ -49,6 +49,8 @@ export default function App() {
   const initializedRef = useRef(false)
 
   const location = useLocation()
+  const profSnap = useProfiles()
+  const dataKey = profileKeyOf(profSnap) // switching profile remounts the pages so each shows its own data
 
   // Pull (or push) this account's "Who's watching?" profiles whenever the signed-in user changes.
   useEffect(() => { profileActions.sync(user?.id || null) }, [user?.id])
@@ -149,7 +151,7 @@ export default function App() {
       <Navbar user={user} profile={profile} onAuthClick={() => setShowAuth(true)} />
       <VaultBanner />
 
-      <PageStack location={location} render={(loc) => (
+      <PageStack key={dataKey} location={location} render={(loc) => (
         <Routes location={loc}>
           <Route path="/" element={<Home user={user} onAuthRequired={handleAuthRequired} />} />
           <Route path="/search" element={<Search user={user} onAuthRequired={handleAuthRequired} />} />

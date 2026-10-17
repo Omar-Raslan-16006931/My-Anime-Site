@@ -29,14 +29,15 @@ const commit = () => {
   try { if (activeId) localStorage.setItem(ACTIVE, activeId); else localStorage.removeItem(ACTIVE) } catch { /* ignore */ }
   snap = { profiles: list, active: list.find((p) => p.id === activeId) || null }
   subs.forEach((s) => s())
+  announce()
   push()
 }
 
 // ── Account sync ────────────────────────────────────────────────────────────
 let uid = null
 let pushTimer = 0
-const toRow = (p, i) => ({ user_id: uid, id: p.id, name: p.name, hue: p.hue ?? 0, kids: !!p.kids, avatar_url: p.avatar || null, position: i })
-const fromRow = (r) => ({ id: r.id, name: r.name, hue: r.hue ?? 0, kids: !!r.kids, ...(r.avatar_url ? { avatar: r.avatar_url } : {}) })
+const toRow = (p, i) => ({ user_id: uid, id: p.id, name: p.name, hue: p.hue ?? 0, kids: !!p.kids, avatar_url: p.avatar || null, pin_hash: p.pin || null, position: i })
+const fromRow = (r) => ({ id: r.id, name: r.name, hue: r.hue ?? 0, kids: !!r.kids, ...(r.avatar_url ? { avatar: r.avatar_url } : {}), ...(r.pin_hash ? { pin: r.pin_hash } : {}) })
 
 async function pushNow() {
   if (!uid) return
@@ -52,11 +53,25 @@ async function pushNow() {
 }
 const push = () => { if (!uid) return; clearTimeout(pushTimer); pushTimer = setTimeout(pushNow, 400) }
 
+// Which slice of the account's data (My List, Continue watching, Watched…) the active profile sees.
+// The first profile owns everything saved before profiles had their own data ('main').
+export const profileKeyOf = (sn) => {
+  const a = sn?.active
+  return a && sn.profiles[0] && a.id !== sn.profiles[0].id ? a.id : 'main'
+}
+export const profileKey = () => profileKeyOf(snap)
+let lastKey = 'main'
+const announce = () => {
+  const k = profileKey()
+  if (k !== lastKey) { lastKey = k; try { window.dispatchEvent(new CustomEvent('yoru:profile-data')) } catch { /* ignore */ } }
+}
+
 const commitLocal = () => {
   try { localStorage.setItem(KEY, JSON.stringify(list)) } catch { /* ignore */ }
   try { if (activeId) localStorage.setItem(ACTIVE, activeId); else localStorage.removeItem(ACTIVE) } catch { /* ignore */ }
   snap = { profiles: list, active: list.find((p) => p.id === activeId) || null }
   subs.forEach((s) => s())
+  announce()
 }
 
 const subscribe = (cb) => { subs.add(cb); return () => subs.delete(cb) }
@@ -71,6 +86,17 @@ export const hueFor = (name) => {
 // Bold avatar colour for a profile hue (same everywhere a profile is drawn).
 export const vivid = (h = 0) => `linear-gradient(145deg, oklch(0.74 0.15 ${h}), oklch(0.56 0.17 ${(h + 40) % 360}))`
 export const HUES = [20, 55, 95, 150, 200, 255, 305, 340]
+
+// Delete a removed profile's list / history / watched rows.
+async function wipeProfileData(id) {
+  if (!uid) return
+  try {
+    const { udb } = await import('./udb')
+    for (const t of ['watchlist', 'watched', 'currently_watching', 'currently_watching_tmdb', 'anime_episode_progress', 'tv_episode_progress']) {
+      await udb.from(t).delete().eq('user_id', uid).eq('profile_id', id)
+    }
+  } catch { /* best effort */ }
+}
 
 // Centre-crop an image file to a 320px square JPEG blob (small, fast to upload).
 export function squareImage(file, size = 320) {
@@ -95,6 +121,17 @@ const blobToDataUrl = (b) => new Promise((res) => { const r = new FileReader(); 
 
 // CSS background for a profile tile: its photo, or the coloured gradient.
 export const tileBg = (p) => (p?.avatar ? `center / cover no-repeat url("${p.avatar}"), ${vivid(p.hue ?? 0)}` : vivid(p?.hue ?? 0))
+
+// ── PIN lock ────────────────────────────────────────────────────────────────
+// A 4–6 digit code that gates opening a profile in the app. It is a privacy lock between
+// people sharing a device or account, not encryption: the account itself can still read its data.
+const hashPin = async (id, pin) => {
+  const enc = new TextEncoder()
+  const base = await crypto.subtle.importKey('raw', enc.encode(String(pin)), 'PBKDF2', false, ['deriveBits'])
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: enc.encode('yoru-pin:' + id), iterations: 100000, hash: 'SHA-256' }, base, 256)
+  return btoa(String.fromCharCode(...new Uint8Array(bits)))
+}
+export const hasPin = (p) => !!p?.pin
 
 export const profileActions = {
   // Sign in / out: pull this account's profiles (or push the ones made before sync existed).
@@ -137,6 +174,21 @@ export const profileActions = {
     }
     return this.add(name, kids, hue)
   },
+  async setPin(id, pin) {
+    const h = pin ? await hashPin(id, pin) : null
+    list = list.map((p) => {
+      if (p.id !== id) return p
+      const { pin: _x, ...rest } = p
+      void _x
+      return h ? { ...rest, pin: h } : rest
+    })
+    commit()
+  },
+  async checkPin(id, pin) {
+    const p = list.find((x) => x.id === id)
+    if (!p?.pin) return true
+    return (await hashPin(id, pin)) === p.pin
+  },
   // Set (blob) or clear (null) a profile's photo. Signed in → uploaded to the avatars bucket; otherwise kept on this device.
   async setAvatar(id, blob) {
     const cur = list.find((p) => p.id === id)
@@ -170,7 +222,8 @@ export const profileActions = {
     return p
   },
   remove(id) {
-    if (list.length <= 1) return
+    if (list.length <= 1 || list[0]?.id === id) return // the first profile owns the account's original data
+    wipeProfileData(id)
     list = list.filter((p) => p.id !== id)
     if (activeId === id) activeId = null
     commit()

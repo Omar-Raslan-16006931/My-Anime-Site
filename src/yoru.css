@@ -897,7 +897,7 @@ a:focus-visible, button:focus-visible { outline-color: var(--y-ac); }
    No class flips and no timers: the bar is exactly as solid as you have scrolled, so it can't flicker. */
 .topbar.y-top, .topbar.y-top.over-hero { --tb: 1; background: transparent !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; isolation: isolate; transition: none; }
 .topbar.y-top::before {
-  content: ''; display: block !important; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: var(--tb);
+  content: ''; display: block !important; position: absolute; inset: 0; height: auto; z-index: -1; pointer-events: none; opacity: var(--tb); /* height:auto — home.css gives ::before height:150%, which made the solid bar 108px and hid page tops */
   background: color-mix(in srgb, var(--y-bg) 86%, transparent); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
   transition: none;
 }
@@ -1852,3 +1852,16 @@ body { transition: none; }
 .y-who-err { margin: 0; font-size: 12px; color: var(--y-t3); text-align: center; }
 .y-who-p .tile { background-size: cover; background-position: center; }
 .greet-tile { background-size: cover; background-position: center; }
+
+/* PIN lock */
+.y-who-p .nm em.lock { background: rgba(255, 255, 255, 0.14); color: var(--y-t2); }
+.y-who-pin { height: 48px; padding: 0 16px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.06); color: var(--y-tx); font: 600 15px var(--y-font); letter-spacing: 0.04em; outline: none; width: 100%; }
+.y-who-pin:focus { border-color: var(--y-ac); }
+.y-who-sheet.pin { text-align: center; align-items: center; }
+.y-pin-dots { display: flex; gap: 14px; justify-content: center; margin: 6px 0 10px; }
+.y-pin-dots i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.4); transition: background 0.15s, transform 0.2s var(--y-out); }
+.y-pin-dots i.on { background: var(--y-tx); border-color: var(--y-tx); transform: scale(1.1); }
+.y-pin-dots.bad { animation: yoShake 0.4s; }
+.y-pin-dots.bad i { border-color: var(--y-ac); background: var(--y-ac); }
+.y-pin-input { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; }
+@keyframes yoShake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-9px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(4px); } }

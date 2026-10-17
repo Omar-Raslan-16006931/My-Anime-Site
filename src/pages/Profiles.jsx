@@ -1,12 +1,49 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useProfiles, profileActions, vivid, tileBg, squareImage, HUES } from '../lib/profiles'
+import { useProfiles, profileActions, hasPin, vivid, tileBg, squareImage, HUES } from '../lib/profiles'
 import { usePosterWall } from '../lib/wall'
 import { useFlip } from '../lib/flip'
 
 const Pen = ({ s = 22 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></svg>
 const Trash = ({ s = 16 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" /></svg>
 const Plus = ({ s = 44 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+
+// Asks for a profile's PIN. Five wrong tries lock the keypad for 30 seconds.
+function PinDialog({ ask, onCancel, onOk }) {
+  const { p } = ask
+  const [v, setV] = useState('')
+  const [bad, setBad] = useState(false)
+  const [fails, setFails] = useState(0)
+  const [until, setUntil] = useState(0)
+  const [, tick] = useState(0)
+  const inputRef = useRef(null)
+  const locked = until > Date.now()
+  useEffect(() => { inputRef.current?.focus() }, [])
+  useEffect(() => { if (!locked) return undefined; const t = setInterval(() => tick((n) => n + 1), 500); return () => clearInterval(t) }, [locked])
+  const change = async (raw) => {
+    if (locked) return
+    const d = raw.replace(/\D/g, '').slice(0, 4)
+    setV(d); setBad(false)
+    if (d.length < 4) return
+    if (await profileActions.checkPin(p.id, d)) { onOk(); return }
+    const n = fails + 1
+    setFails(n); setBad(true)
+    if (n >= 5) { setUntil(Date.now() + 30000); setFails(0) }
+    setTimeout(() => { setV(''); setBad(false); inputRef.current?.focus() }, 450)
+  }
+  return (
+    <div className="y-who-scrim" onClick={onCancel}>
+      <div className="y-who-sheet small pin" onClick={(e) => { e.stopPropagation(); inputRef.current?.focus() }}>
+        <div className="y-who-prev sm" style={{ background: tileBg(p) }}>{!p.avatar && p.name[0].toUpperCase()}</div>
+        <h2>{p.name}</h2>
+        <p>{locked ? `Too many tries. Wait ${Math.ceil((until - Date.now()) / 1000)}s.` : 'Enter your PIN'}</p>
+        <div className={'y-pin-dots' + (bad ? ' bad' : '')} aria-hidden="true">{[0, 1, 2, 3].map((i) => <i key={i} className={i < v.length ? 'on' : ''} />)}</div>
+        <input ref={inputRef} className="y-pin-input" inputMode="numeric" pattern="[0-9]*" autoComplete="off" value={v} disabled={locked} onChange={(e) => change(e.target.value)} aria-label="PIN" />
+        <div className="y-who-sheet-btns"><button type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</button></div>
+      </div>
+    </div>
+  )
+}
 
 // "Who's watching?" — pick a profile, or manage (edit / remove / add) the ones on this device.
 export default function Profiles({ user, profile }) {
@@ -26,6 +63,7 @@ export default function Profiles({ user, profile }) {
   const [picked, setPicked] = useState(null)
   const [closing, setClosing] = useState(false)
   const [photoErr, setPhotoErr] = useState('')
+  const [pinAsk, setPinAsk] = useState(null) // { p, fly } waiting for the PIN
   const fileRef = useRef(null)
   const timer = useRef(0)
   const rowRef = useRef(null)
@@ -35,8 +73,14 @@ export default function Profiles({ user, profile }) {
   useEffect(() => { profileActions.ensure(account || 'Me') }, [account])
   useEffect(() => { const t = setTimeout(() => setSettled(true), 1700); return () => { clearTimeout(t); clearTimeout(timer.current) } }, [])
 
+  const startPick = (p, fly) => {
+    setPicked(p.id)
+    profileActions.setActive(p.id)
+    window.dispatchEvent(new CustomEvent('yoru:greet', { detail: { profile: p, fly } }))
+    timer.current = setTimeout(() => navigate('/'), 1000)
+  }
   const choose = (p, e) => {
-    if (manage) { setSheet({ id: p.id, name: p.name, hue: p.hue ?? 0, kids: !!p.kids, avatar: p.avatar || null, blob: undefined }); return }
+    if (manage) { setSheet({ id: p.id, name: p.name, hue: p.hue ?? 0, kids: !!p.kids, avatar: p.avatar || null, blob: undefined, hadPin: hasPin(p), pinOn: hasPin(p), pin: '' }); return }
     if (picked) return
     // Hand the tile to the welcome overlay, which flies it to the centre while this page fades away.
     const tile = e?.currentTarget?.querySelector('.tile')
@@ -46,10 +90,8 @@ export default function Profiles({ user, profile }) {
       const cs = getComputedStyle(tile)
       fly = { cx: r.left + r.width / 2, cy: r.top + r.height / 2, w: tile.offsetWidth, radius: cs.borderTopLeftRadius, font: cs.fontSize, shadow: cs.boxShadow }
     }
-    setPicked(p.id)
-    profileActions.setActive(p.id)
-    window.dispatchEvent(new CustomEvent('yoru:greet', { detail: { profile: p, fly } }))
-    timer.current = setTimeout(() => navigate('/'), 1000)
+    if (hasPin(p)) { setPinAsk({ p, fly }); return }
+    startPick(p, fly)
   }
   // Dialogs fade and drop away before they unmount.
   const closeDialogs = (after) => {
@@ -76,21 +118,26 @@ export default function Profiles({ user, profile }) {
       els.forEach((el) => { el.style.animation = ''; el.style.transition = ''; el.style.transform = '' })
     }, 760)
   }
-  const openNew = () => setSheet({ id: null, name: '', hue: HUES[profiles.length % HUES.length], kids: false, avatar: null, blob: undefined })
+  const openNew = () => setSheet({ id: null, name: '', hue: HUES[profiles.length % HUES.length], kids: false, avatar: null, blob: undefined, hadPin: false, pinOn: false, pin: '' })
   const save = (e) => {
     e.preventDefault()
     if (!sheet.name.trim()) return
+    if (sheet.pinOn && !sheet.hadPin && sheet.pin.length !== 4) { setPhotoErr('Choose a 4-digit PIN, or turn the lock off.'); return }
+    setPhotoErr('')
     const snap = sheet
     // Apply once, after the dialog has faded, so the tile animates exactly one time.
     closeDialogs(() => {
       if (snap.id) {
         profileActions.update(snap.id, { name: snap.name, hue: snap.hue, kids: snap.kids })
         if (snap.blob !== undefined) profileActions.setAvatar(snap.id, snap.blob)
+        if (!snap.pinOn && snap.hadPin) profileActions.setPin(snap.id, null)
+        else if (snap.pinOn && snap.pin.length === 4) profileActions.setPin(snap.id, snap.pin)
         setRev((r) => ({ ...r, [snap.id]: (r[snap.id] || 0) + 1 })) // remounts the tile: its single pop-in plays once
       } else {
         const np = profileActions.add(snap.name, snap.kids, snap.hue)
         if (np) {
           if (snap.blob) profileActions.setAvatar(np.id, snap.blob)
+          if (snap.pinOn && snap.pin.length === 4) profileActions.setPin(np.id, snap.pin)
           setFresh(np.id); setTimeout(() => setFresh(null), 900)
         }
       }
@@ -146,11 +193,11 @@ export default function Profiles({ user, profile }) {
               <span className="tile" key={`${p.hue}-${p.name}-${p.avatar ? 1 : 0}-${rev[p.id] || 0}`} style={{ background: tileBg(p) }}>
                 {!p.avatar && <span className="ini">{p.name[0].toUpperCase()}</span>}
                 <span className="edit" aria-hidden="true"><Pen /></span>
-                {profiles.length > 1 && (
+                {profiles.length > 1 && i > 0 && (
                   <button type="button" className="rm" tabIndex={manage ? 0 : -1} aria-hidden={!manage} aria-label={`Remove ${p.name}`} title="Remove" onClick={(e) => { e.stopPropagation(); if (manage) setDel(p) }}><Trash /></button>
                 )}
               </span>
-              <span className="nm">{p.name}{p.kids && <em>Kids</em>}</span>
+              <span className="nm">{p.name}{p.kids && <em>Kids</em>}{hasPin(p) && <em className="lock">PIN</em>}</span>
               <span className="sub"><b className="s-now">Watching now</b><b className="s-edit">Edit</b></span>
             </span>
           </div>
@@ -193,6 +240,12 @@ export default function Profiles({ user, profile }) {
             <div className="y-who-hues" role="radiogroup" aria-label="Colour">
               {HUES.map((h) => <button key={h} type="button" role="radio" aria-checked={sheet.hue === h} aria-label={`Colour ${h}`} className={sheet.hue === h ? 'on' : ''} style={{ background: vivid(h) }} onClick={() => setSheet({ ...sheet, hue: h })} />)}
             </div>
+            <label className="y-who-switch"><span>PIN lock</span><input type="checkbox" checked={sheet.pinOn} onChange={(e) => setSheet({ ...sheet, pinOn: e.target.checked, pin: '' })} /><i /></label>
+            {sheet.pinOn && (
+              <input className="y-who-pin" inputMode="numeric" pattern="[0-9]*" maxLength={4} autoComplete="off" value={sheet.pin}
+                placeholder={sheet.hadPin ? 'Enter a new PIN to change it (4 digits)' : 'Choose a 4-digit PIN'}
+                onChange={(e) => setSheet({ ...sheet, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })} aria-label="PIN" />
+            )}
             <label className="y-who-switch"><span>Kids profile</span><input type="checkbox" checked={sheet.kids} onChange={(e) => setSheet({ ...sheet, kids: e.target.checked })} /><i /></label>
             <div className="y-who-sheet-btns">
               <button type="button" className="btn btn-ghost" onClick={() => closeDialogs()}>Cancel</button>
@@ -201,12 +254,13 @@ export default function Profiles({ user, profile }) {
           </form>
         </div>
       )}
+      {pinAsk && <PinDialog ask={pinAsk} onCancel={() => setPinAsk(null)} onOk={() => { const a = pinAsk; setPinAsk(null); startPick(a.p, a.fly) }} />}
       {del && (
         <div className={'y-who-scrim' + (closing ? ' closing' : '')} onClick={() => closeDialogs()}>
           <div className="y-who-sheet small" onClick={(e) => e.stopPropagation()}>
             <div className="y-who-prev sm" style={{ background: tileBg(del) }}>{!del.avatar && del.name[0].toUpperCase()}</div>
             <h2>Remove {del.name}?</h2>
-            <p>This profile is removed. Your list and history stay on your account.</p>
+            <p>This profile and its list, history and watched titles will be deleted.</p>
             <div className="y-who-sheet-btns">
               <button type="button" className="btn btn-ghost" onClick={() => closeDialogs()}>Keep</button>
               <button type="button" className="btn y-who-danger" onClick={confirmRemove}>Remove</button>
