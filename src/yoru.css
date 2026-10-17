@@ -1628,3 +1628,11 @@ html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after { transit
 .tp-handle .tp-swap { position: static; top: auto; left: auto; width: auto; height: auto; margin: 8px 0 0; background: none; display: grid; }
 .tp-handle .tp-swap em { margin-top: 0; }
 .greet.cont .greet-tile { transform-origin: center; animation: none; }
+/* row headings never wrap onto a second line */
+.y-row .row-head h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; max-width: 100%; }
+.y-row .row-head .row-tools { flex: none; }
+/* "Continue watching for <name>": the lead text stays whole, only the name shortens (…) to fit one line */
+.y-cw .row-head h2 { display: flex; gap: 0.3em; align-items: baseline; min-width: 0; flex: 1 1 auto; overflow: hidden; }
+.y-cw .row-head h2 .rt-lead { flex: none; }
+.y-cw .row-head h2 .rt-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.y-cw .row-head { gap: 10px; }

@@ -295,7 +295,7 @@ export default function Home({ user, onAuthRequired }) {
 
       <div className="y-home-body">
         {visibleWatching.length > 0 && (
-          <Row title={`Continue watching for ${me?.name || 'you'}`} wide onMore={() => navigate('/me')} className="y-cw">
+          <Row title={<><span className="rt-lead">Continue watching for</span><span className="rt-name">{(me?.name || 'you').trim() || 'you'}</span></>} wide onMore={() => navigate('/me')} className="y-cw">
             {visibleWatching.map((i) => <ContinueCard key={watchKey(i)} item={wideWatch(i)} onRemove={() => hideWatch(i)} />)}
           </Row>
         )}
