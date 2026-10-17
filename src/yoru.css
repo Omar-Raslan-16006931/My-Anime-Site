@@ -1971,3 +1971,41 @@ body { transition: none; }
   .y-bg-fan { right: 8px !important; bottom: -14px !important; height: 70% !important; width: 80% !important; }
   .y-bg-fan img { inset: auto calc(var(--i) * 22px) 0 auto !important; border-radius: 6px !important; }
 }
+
+/* ---- Explore v3: AI picks is a small pill; the three categories are tall poster cards ---- */
+.ai-card { width: fit-content; max-width: 100%; border-radius: 999px !important; margin: 2px 0 16px !important; background: color-mix(in srgb, var(--y-ac) 14%, var(--y-s1)) !important; transition: border-radius 0.35s var(--y-ease); }
+.ai-card.open { width: 100%; border-radius: 22px !important; }
+.ai-card-head { min-height: 0 !important; height: 42px; padding: 0 8px 0 6px !important; gap: 10px !important; }
+.ai-card.open .ai-card-head { height: 52px; padding: 0 12px 0 10px !important; }
+.ai-card-ico { width: 30px !important; height: 30px !important; }
+.ai-card-ico svg { width: 16px; height: 16px; }
+.ai-card-txt { flex: none !important; }
+.ai-card-txt b { font-size: 14px !important; }
+.ai-card-txt small { display: none; }
+.ai-card.open .ai-card-txt small { display: block; }
+.ai-card-caret { width: 26px !important; height: 26px !important; padding: 6px !important; margin-left: 2px; }
+.ai-card.open .ai-card-head { width: 100%; }
+.ai-card.open .ai-card-txt { flex: 1 !important; }
+
+.y-bg-grid { max-width: 1040px; gap: 16px !important; }
+.y-bg-tile[class*='bg-'] { height: 320px !important; padding: 20px 22px !important; border-radius: 24px !important; background: var(--y-s1) !important; box-shadow: none !important; justify-content: flex-end; }
+.y-bg-tile[class*='bg-']::after { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(0deg, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.45) 38%, transparent 70%) !important; }
+.y-bg-tile[class*='bg-']::before { content: ''; position: absolute; inset: 0; border-radius: inherit; z-index: 3; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); transition: box-shadow 0.25s; }
+.y-bg-tile[class*='bg-'].on { background: var(--y-s1) !important; box-shadow: none !important; }
+.y-bg-tile[class*='bg-'].on::before { box-shadow: inset 0 0 0 3px var(--y-ac); }
+.y-bg-tile[class*='bg-'] .y-bg-name { font-size: 32px !important; color: #fff; }
+.y-bg-tile[class*='bg-'] .y-bg-name::after { display: none !important; }
+.y-bg-tile[class*='bg-'] .y-bg-blurb { max-width: 100%; font-size: 13px !important; color: rgba(255, 255, 255, 0.72); }
+.y-bg-fan { inset: 0 !important; right: 0 !important; bottom: 0 !important; width: 100% !important; height: 100% !important; z-index: 0 !important; }
+.y-bg-fan img { inset: 0 !important; width: 100% !important; height: 100% !important; rotate: none !important; border-radius: 0 !important; box-shadow: none !important; transition: transform 0.6s var(--y-out) !important; }
+.y-bg-fan img:not(:first-child) { display: none; }
+.y-bg-tile:hover .y-bg-fan img, .y-bg-tile.on .y-bg-fan img { transform: scale(1.05) !important; }
+.y-bg-glyph { top: 20px !important; bottom: auto !important; right: 20px !important; }
+
+@media (max-width: 879px) {
+  .y-bg-grid { max-width: none; gap: 8px !important; }
+  .y-bg-tile[class*='bg-'] { height: 190px !important; padding: 12px !important; border-radius: 18px !important; }
+  .y-bg-tile[class*='bg-'] .y-bg-name { font-size: 17px !important; }
+  .y-bg-tile[class*='bg-'] .y-bg-blurb { display: none; }
+  .y-bg-fan { inset: 0 !important; width: 100% !important; height: 100% !important; }
+}
