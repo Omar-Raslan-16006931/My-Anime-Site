@@ -162,19 +162,25 @@ export default function Profiles({ user, profile }) {
     })
   }
 
-  const row1 = [...wall.posters, ...wall.posters]
-  const row2 = [...wall.banners, ...wall.banners, ...wall.banners]
+  const spin = (a, n) => (a.length ? [...a.slice(n % a.length), ...a.slice(0, n % a.length)] : a)
+  const rowsDef = [
+    { kind: 'p', src: wall.posters, off: 0, t: 70, rev: false },
+    { kind: 'b', src: wall.banners, off: 0, t: 90, rev: true },
+    { kind: 'p', src: wall.posters, off: 9, t: 80, rev: false },
+    { kind: 'b', src: wall.banners, off: 6, t: 100, rev: true },
+    { kind: 'p', src: wall.posters, off: 17, t: 75, rev: false },
+    { kind: 'b', src: wall.banners, off: 12, t: 85, rev: true },
+  ].map((r) => ({ ...r, list: (() => { const s = spin(r.src, r.off); return r.kind === 'p' ? [...s, ...s] : [...s, ...s, ...s] })() }))
   const canAdd = profiles.length < profileActions.max
 
   return (
     <div className={'y-who' + (manage ? ' managing' : '') + (picked ? ' leaving-page' : '') + (settled ? ' settled' : '')}>
       <div className="y-who-wall" aria-hidden="true">
-        <div className="y-wall-row" style={{ animation: 'yoMarq 70s linear infinite' }}>
-          {row1.map((s, i) => <span key={i} className="p"><img src={s} alt="" /></span>)}
-        </div>
-        <div className="y-wall-row" style={{ animation: 'yoMarq 90s linear infinite reverse' }}>
-          {row2.map((s, i) => <span key={i} className="b"><img src={s} alt="" /></span>)}
-        </div>
+        {rowsDef.map((r, ri) => (
+          <div key={ri} className="y-wall-row" style={{ animation: `yoMarq ${r.t}s linear infinite${r.rev ? ' reverse' : ''}` }}>
+            {r.list.map((s, i) => <span key={i} className={r.kind}><img src={s} alt="" /></span>)}
+          </div>
+        ))}
       </div>
       <div className="y-who-fade" />
       <Link to="/" className="y-who-logo y-brand">Yoru<i>.</i></Link>
