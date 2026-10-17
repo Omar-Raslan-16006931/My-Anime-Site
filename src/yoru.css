@@ -1674,3 +1674,14 @@ body { transition: none; }
 .y-ph-card::after { display: none; }
 @keyframes yoPhPulse { 0%, 100% { background-color: color-mix(in srgb, var(--y-tx) 7%, var(--y-bg)); } 50% { background-color: color-mix(in srgb, var(--y-tx) 12%, var(--y-bg)); } }
 @media (prefers-reduced-motion: reduce) { .y-ph-bar, .y-ph-card { animation: none; } }
+
+/* ===== Page switches: one quick fade of the whole page =====
+   The old stack (wrapper + page + every section sliding in with staggers) restarted from nothing on
+   every tap, so switching fast made content flash and jump. Now: a single short fade that starts
+   partly visible, so rapid taps never blink. */
+@keyframes yoRouteFade { from { opacity: 0.3; } to { opacity: 1; } }
+.route-anim { animation: yoRouteFade 0.22s ease-out both; }
+.route-anim .page, .route-anim .y-home, .route-anim .y-home-body > *,
+.route-anim .page > *:not(.modal):not([role='dialog']):not(.y-who-scrim),
+.route-anim .y-page > *:not(.modal):not([role='dialog']) { animation: none; }
+@media (prefers-reduced-motion: reduce) { .route-anim { animation: none; } }
