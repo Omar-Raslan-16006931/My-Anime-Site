@@ -1734,3 +1734,40 @@ body { transition: none; }
 .y-bg-tile[class*='bg-']::after { background: linear-gradient(0deg, rgba(0, 0, 0, 0.6), transparent 55%); z-index: 1; }
 .y-bg-tile > .y-bg-name, .y-bg-tile > .y-bg-blurb { z-index: 2; }
 @media (max-width: 879px) { .y-bg-fan { right: 8px; top: 8px; height: 52%; } .y-bg-fan img { border-radius: 5px; inset: 0 calc(var(--i) * 14px) auto auto; } }
+
+/* ===== Watched: stats + grid ===== */
+.card-done { left: 8px; right: auto; top: 8px; }
+.card-done.seen { background: var(--y-ac); color: var(--y-onac, #fff); }
+.wd { display: flex; flex-direction: column; gap: 16px; }
+.wd-hero { border-radius: 22px; padding: 20px; display: flex; flex-direction: column; gap: 18px; background: radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--y-ac) 42%, transparent), transparent 62%), var(--y-s1); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); }
+.wd-hero-main { display: flex; flex-direction: column; gap: 4px; }
+.wd-hero-main small, .wd-tile small { font: 600 11.5px var(--y-font); letter-spacing: 0.04em; text-transform: uppercase; color: var(--y-t3); }
+.wd-big { font-weight: 800; font-size: clamp(44px, 12vw, 64px); letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.wd-big i { font-style: normal; font-size: 0.4em; font-weight: 700; margin-left: 8px; color: var(--y-t2); letter-spacing: -0.01em; }
+.wd-hero-main span { font-size: 14px; color: var(--y-t2); }
+.wd-hero-main strong { color: var(--y-tx); }
+.wd-split-bar { display: flex; gap: 3px; height: 10px; border-radius: 99px; overflow: hidden; }
+.wd-split-bar i { display: block; min-width: 8px; border-radius: 99px; }
+.k-anime { background: oklch(0.72 0.17 355); } .k-movie { background: oklch(0.78 0.15 70); } .k-tv { background: oklch(0.7 0.14 245); }
+.wd-split-key { display: flex; gap: 16px; margin-top: 10px; font-size: 13px; color: var(--y-t2); flex-wrap: wrap; }
+.wd-split-key span { display: inline-flex; align-items: center; gap: 6px; }
+.wd-split-key i { width: 8px; height: 8px; border-radius: 50%; }
+.wd-split-key b { color: var(--y-tx); }
+.wd-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.wd-tile { border-radius: 18px; padding: 14px 16px; background: var(--y-s1); display: flex; flex-direction: column; gap: 4px; min-width: 0; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.wd-tile b { font-weight: 750; font-size: 26px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.wd-tile b.txt { font-size: 18px; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wd-tile span { font-size: 12.5px; color: var(--y-t3); }
+.wd-tile.wide { grid-column: span 2; }
+.wd-genres { display: flex; gap: 8px; flex-wrap: wrap; }
+.wd-genres span { display: inline-flex; gap: 8px; align-items: center; padding: 7px 12px; border-radius: 99px; background: var(--y-s1); font-size: 13px; font-weight: 600; }
+.wd-genres b { color: var(--y-ac); font-weight: 700; }
+.wd-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+.wd-bar h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+.wd-chips { display: flex; gap: 6px; }
+.wd-chip { border: 0; cursor: pointer; padding: 7px 14px; border-radius: 99px; background: var(--y-s1); color: var(--y-t2); font: 600 13px var(--y-font); }
+.wd-chip.on { background: var(--y-tx); color: var(--y-bg); }
+.wd-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 44px 24px; border-radius: 22px; background: var(--y-s1); }
+.wd-empty-ico { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--y-ac) 22%, transparent); color: var(--y-ac); margin-bottom: 6px; }
+.wd-empty p { color: var(--y-t3); font-size: 14px; max-width: 320px; }
+@media (min-width: 880px) { .wd-hero { flex-direction: row; align-items: center; justify-content: space-between; } .wd-split { width: 320px; } .wd-tiles { grid-template-columns: repeat(4, 1fr); } .wd-tile.wide { grid-column: span 2; } }

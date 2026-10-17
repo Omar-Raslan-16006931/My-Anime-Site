@@ -7,6 +7,8 @@ import { SCHEMES, SCHEME_NAMES, setScheme, useScheme, previewScheme } from '../l
 import { useProfiles, profileActions } from '../lib/profiles'
 import CurrentlyWatching from './CurrentlyWatching'
 import Watchlist from './Watchlist'
+import Watched from './Watched'
+import { useWatched } from '../lib/watched'
 import Profile from './Profile'
 import Downloads from './Downloads'
 
@@ -19,6 +21,7 @@ const Chevron = () => <svg className="acc-go" width="16" height="16" viewBox="0 
 const SECTIONS = [
   { k: 'continue', label: 'Continue watching', user: true },
   { k: 'list', label: 'My List', user: true },
+  { k: 'watched', label: 'Watched', user: true },
   { k: 'account', label: 'Account settings', user: true, top: true, icon: ico(<><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>) },
   ...(isNative ? [{ k: 'downloads', label: 'Downloads', sub: 'Watch offline', icon: ico(<path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14" />) }] : []),
   { k: 'look', label: 'Appearance', sub: 'Colour theme', icon: ico(<><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 0 0 18z" /></>) },
@@ -41,6 +44,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
   const initial = (me?.name || account || 'G')[0].toUpperCase()
   const signIn = onAuthClick || onAuthRequired
 
+  const watched = useWatched(user)
   const sel = SECTIONS.find((s) => s.k === params.get('s')) || null
   const pick = (k) => setParams(k ? { s: k } : {})
   const [toLook, setToLook] = useState(false)
@@ -98,6 +102,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
       )
     } else if (sel.k === 'continue') body = <CurrentlyWatching user={user} onAuthRequired={onAuthRequired} />
     else if (sel.k === 'list') body = <Watchlist user={user} onAuthRequired={onAuthRequired} />
+    else if (sel.k === 'watched') body = <Watched user={user} onAuthRequired={onAuthRequired} />
     else if (sel.k === 'account') body = <Profile user={user} profile={profile} setProfile={setProfile} />
     else if (sel.k === 'downloads') body = <Downloads />
     else {
@@ -182,6 +187,15 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
 
           <Shelf title="My List" count={list?.length} onMore={() => pick('list')} loading={!list} empty="Tap + on any title to save it here.">
             {(list || []).map((i) => (
+              <Link key={i.id || `${i.media_type}-${i.tmdb_id || i.mal_id}`} to={hrefOf(i)} className="acc-tile">
+                <span className="acc-tile-art">{i.poster && <img src={i.poster} alt="" loading="lazy" />}</span>
+                <b>{i.title}</b>
+              </Link>
+            ))}
+          </Shelf>
+
+          <Shelf title="Watched" count={watched.items?.length} onMore={() => pick('watched')} loading={!watched.ready} empty="Mark a show as watched to see your stats here.">
+            {(watched.items || []).slice(0, 12).map((i) => (
               <Link key={i.id || `${i.media_type}-${i.tmdb_id || i.mal_id}`} to={hrefOf(i)} className="acc-tile">
                 <span className="acc-tile-art">{i.poster && <img src={i.poster} alt="" loading="lazy" />}</span>
                 <b>{i.title}</b>

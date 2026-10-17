@@ -4,6 +4,7 @@ import { udb } from '../lib/udb'
 import Icon from '../components/Icons'
 import { toast } from '../lib/toast'
 import { useFlip } from '../lib/flip'
+import { useWatched, markWatched, removeWatched } from '../lib/watched'
 
 export default function Watchlist({ user, onAuthRequired }) {
   const navigate = useNavigate()
@@ -12,6 +13,7 @@ export default function Watchlist({ user, onAuthRequired }) {
   const [confirm, setConfirm] = useState(null)
   const [leaving, setLeaving] = useState(() => new Set())
   const gridRef = useRef(null)
+  const watched = useWatched(user)
   useFlip(gridRef, watchlist)
 
   useEffect(() => {
@@ -63,6 +65,9 @@ export default function Watchlist({ user, onAuthRequired }) {
                 {i.score ? <span className="card-score"><Icon.star width="10" height="10" />{Number(i.score).toFixed(1)}</span> : null}
                 <span className="card-kind">{kind(i)}</span>
                 <button className="card-fav on" onClick={(e) => { e.stopPropagation(); setConfirm(i) }} aria-label="Remove"><Icon.check width="15" height="15" /></button>
+                <button className={'card-fav card-done' + (watched.has(i) ? ' seen' : '')} onClick={(e) => { e.stopPropagation(); if (watched.has(i)) { removeWatched(user, i); toast('Removed from Watched') } else markWatched(user, i) }} aria-label={watched.has(i) ? 'Watched' : 'Mark as watched'} aria-pressed={watched.has(i)} title={watched.has(i) ? 'Watched' : 'Mark as watched'}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+                </button>
               </div>
               <div className="card-title">{i.title}</div>
               {(i.last_episode || i.season_number) ? (

@@ -6,6 +6,8 @@ import Icon from '../components/Icons'
 import GenreChips from '../components/GenreChips'
 import { recordRecent } from '../lib/progress'
 import { toast } from '../lib/toast'
+import WatchedButton from '../components/WatchedButton'
+import { fromMovie } from '../lib/watched'
 import Row from '../components/Row'
 import MediaCard from '../components/MediaCard'
 import DownloadLinks from '../components/DownloadLinks'
@@ -164,6 +166,7 @@ export default function MovieDetail({ user, onAuthRequired }) {
                 : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
               <span>{inWatchlist ? 'In My List' : 'My List'}</span>
             </button>
+            <WatchedButton user={user} onAuthRequired={onAuthRequired} build={() => (movie ? fromMovie(movie) : null)} />
             <button className={'tvh-sc' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
               <Icon.download width="20" height="20" />
               <span>Download</span>

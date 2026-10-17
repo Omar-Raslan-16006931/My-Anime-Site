@@ -4,6 +4,7 @@ import { udb } from '../lib/udb'
 import Icon from '../components/Icons'
 import { toast } from '../lib/toast'
 import { useFlip } from '../lib/flip'
+import { markWatched } from '../lib/watched'
 
 export default function CurrentlyWatching({ user, onAuthRequired }) {
   const navigate = useNavigate()
@@ -48,6 +49,15 @@ export default function CurrentlyWatching({ user, onAuthRequired }) {
     toast(`Removed “${item.title}”`)
   }
 
+  // Finished it: save to Watched, then take it off Continue watching with the same removal animation.
+  const doWatched = async (item) => {
+    setLeaving((s) => new Set(s).add(keyOf(item)))
+    const wait = new Promise((r) => setTimeout(r, 420))
+    await Promise.all([markWatched(user, item), wait])
+    await udb.from(item.source_table || 'currently_watching').delete().eq('id', item.id).eq('user_id', user.id)
+    setItems((prev) => prev.filter((x) => keyOf(x) !== keyOf(item)))
+  }
+
   if (!user) {
     return <div className="page"><div className="empty"><div className="emoji">🔒</div><p>Sign in to view your list.</p>
       <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={onAuthRequired}>Sign In</button></div></div>
@@ -68,6 +78,7 @@ export default function CurrentlyWatching({ user, onAuthRequired }) {
                 {i.poster ? <img src={i.poster} alt={i.title} /> : null}
                 {i.score ? <span className="card-score"><Icon.star width="10" height="10" />{Number(i.score).toFixed(1)}</span> : null}
                 <button className="card-fav on" onClick={(e) => { e.stopPropagation(); setConfirm(i) }} aria-label="Remove"><Icon.close width="15" height="15" /></button>
+                <button className="card-fav card-done" onClick={(e) => { e.stopPropagation(); doWatched(i) }} aria-label="Mark as watched" title="Mark as watched"><Icon.check width="15" height="15" /></button>
                 <div className="pcard-badge" style={{ left: 8, bottom: 8 }}>{meta(i)}</div>
               </div>
               <div className="card-title">{i.title}</div>

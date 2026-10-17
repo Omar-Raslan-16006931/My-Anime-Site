@@ -12,6 +12,7 @@ import { getPopularMovies, getPopularTV, getTrendingWeek, getTmdbImage, searchTV
 import { recentlyAiredEpisodes } from '../lib/anilist'
 import { animeByMalIds, animeList, animeCategoryArt } from '../lib/anime'
 import { udb } from '../lib/udb'
+import { markWatched } from '../lib/watched'
 import { toast } from '../lib/toast'
 import { PRIORITY_CATEGORIES, normalizeGenres, categoryPath } from '../lib/categories'
 
@@ -271,7 +272,8 @@ export default function Home({ user, onAuthRequired }) {
     meta: [a.type, a.episodes ? `${a.episodes} eps` : null].filter(Boolean).join(' · '), score: a.score, genres: normalizeGenres(a.genres),
     save: { key: `anime:${a.mal_id}`, mal_id: a.mal_id, title: animeTitle(a), poster: a.images?.jpg?.large_image_url || null, score: a.score },
   })
-  const hideWatch = (item) => {
+  const hideWatch = (item, how) => {
+    if (how === 'watched') markWatched(user, item)
     const key = watchKey(item)
     setWatching((prev) => { const n = prev.filter((i) => watchKey(i) !== key); acctCache.watching = n; return n })
     if (user && item.id) udb.from(item.source_table).delete().eq('id', item.id).eq('user_id', user.id).then(({ error }) => { if (error) toast('Could not remove it from your account') })
@@ -280,7 +282,7 @@ export default function Home({ user, onAuthRequired }) {
       try { localStorage.setItem(HIDE_KEY, JSON.stringify([...next])) } catch { /* ignore */ }
       return next
     })
-    toast('Removed from Continue watching')
+    if (how !== 'watched') toast('Removed from Continue watching')
   }
   const wideWatch = (i) => ({
     key: watchKey(i),
@@ -310,7 +312,7 @@ export default function Home({ user, onAuthRequired }) {
         {user && watchReady && (
           <Collapse open={visibleWatching.length > 0} className="y-cw-wrap">
             <Row title={<><span className="rt-lead">Continue watching for</span><span className="rt-name">{(me?.name || 'you').trim() || 'you'}</span></>} wide onMore={() => navigate('/me')} className="y-cw">
-              {shownWatching.map((i) => <ContinueCard key={watchKey(i)} item={wideWatch(i)} onRemove={() => hideWatch(i)} />)}
+              {shownWatching.map((i) => <ContinueCard key={watchKey(i)} item={wideWatch(i)} onRemove={(_, how) => hideWatch(i, how)} />)}
             </Row>
           </Collapse>
         )}
