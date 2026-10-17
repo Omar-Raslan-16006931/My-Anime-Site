@@ -1796,8 +1796,7 @@ body { transition: none; }
 .wd-chip { padding: 5px 12px; font-size: 12.5px; }
 @media (min-width: 880px) { .wd-split { width: 280px; } }
 
-/* Detail pages (phones): the back button lives in the top bar, in place of the logo. */
+/* Detail pages (phones): the back button sits right under the top bar, pinned (exact, whatever the page layout). */
 @media (max-width: 879px) {
-  .topbar.y-top.on-detail .y-brand { visibility: hidden; }
-  .fu-back { position: fixed; z-index: 130; top: calc(env(safe-area-inset-top) + (var(--topbar-h) - var(--ctl)) / 2); left: 12px; background: transparent; box-shadow: none; }
+  .fu-back { position: fixed; z-index: 110; top: calc(env(safe-area-inset-top) + var(--topbar-h) + 1px); left: 12px; }
 }
