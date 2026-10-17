@@ -15,7 +15,7 @@ function PinDialog({ ask, onCancel, onOk }) {
   const [bad, setBad] = useState(false)
   const [ok, setOk] = useState(false)
   const [out, setOut] = useState(false)
-  const leave = (then) => { setOut(true); setTimeout(then, 280) } // play the exit, then unmount
+  const leave = (then) => { setOut(true); setTimeout(then, 340) } // play the exit, then unmount
   const [fails, setFails] = useState(0)
   const [until, setUntil] = useState(0)
   const [, tick] = useState(0)
@@ -104,7 +104,7 @@ export default function Profiles({ user, profile }) {
   // Dialogs fade and drop away before they unmount.
   const closeDialogs = (after) => {
     setClosing(true)
-    timer.current = setTimeout(() => { setSheet(null); setDel(null); setClosing(false); after?.() }, 280)
+    timer.current = setTimeout(() => { setSheet(null); setDel(null); setClosing(false); after?.() }, 340)
   }
   // Entering manage mode starts the wobble; leaving it lets each tile settle back smoothly instead of snapping.
   const toggleManage = () => {
@@ -179,6 +179,8 @@ export default function Profiles({ user, profile }) {
     { kind: 'b', src: wall.banners, off: 12, t: 85, rev: true },
   ].map((r) => ({ ...r, list: (() => { const s = spin(r.src, r.off); return r.kind === 'p' ? [...s, ...s] : [...s, ...s, ...s] })() }))
   const canAdd = profiles.length < profileActions.max
+  // The first profile is the account itself, so it wears the account photo unless it has its own.
+  const shown = profiles.map((p, i) => (i === 0 && !p.avatar && profile?.avatar_url ? { ...p, avatar: profile.avatar_url } : p))
 
   return (
     <div className={'y-who' + (manage ? ' managing' : '') + (picked ? ' leaving-page' : '') + (settled ? ' settled' : '')}>
@@ -199,7 +201,7 @@ export default function Profiles({ user, profile }) {
       </div>
 
       <div ref={rowRef} className={'y-who-row' + (picked ? ' picking' : '')}>
-        {profiles.map((p, i) => (
+        {shown.map((p, i) => (
           <div key={p.id} data-flip={p.id} role="button" tabIndex={0} style={{ '--i': i }}
             className={'y-who-p' + (wobbling ? ' wob' : '') + (active?.id === p.id ? ' cur' : '') + (picked === p.id ? ' picked' : '') + (leaving === p.id ? ' leaving' : '') + (fresh === p.id ? ' fresh' : '')}
             onClick={(e) => choose(p, e)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(p, { currentTarget: e.currentTarget }) } }}>
@@ -207,7 +209,7 @@ export default function Profiles({ user, profile }) {
               <span className="tile" key={`${p.hue}-${p.name}-${p.avatar ? 1 : 0}-${rev[p.id] || 0}`} style={{ background: tileBg(p) }}>
                 {!p.avatar && <span className="ini">{p.name[0].toUpperCase()}</span>}
                 <span className="edit" aria-hidden="true"><Pen /></span>
-                {profiles.length > 1 && i > 0 && (
+                {shown.length > 1 && i > 0 && (
                   <button type="button" className="rm" tabIndex={manage ? 0 : -1} aria-hidden={!manage} aria-label={`Remove ${p.name}`} title="Remove" onClick={(e) => { e.stopPropagation(); if (manage) setDel(p) }}><Trash /></button>
                 )}
               </span>
