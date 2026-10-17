@@ -2523,3 +2523,18 @@ body { transition: none; }
   .acc-tile:hover .acc-tile-art img { transform: scale(1.06); }
   .acc-tile:hover b { color: var(--y-ac); }
 }
+
+/* ---- PC: smaller mood cards + AI picks ---- */
+@media (min-width: 880px) {
+  .y-mood-grid { grid-template-columns: repeat(6, minmax(0, 176px)) !important; justify-content: start; gap: 12px !important; }
+  .y-mood-card, .y-mood-sk { border-radius: 14px !important; }
+  .y-mood-card b, .y-mood-card h3, .y-mood-card .t { font-size: 13.5px !important; }
+  .ai-sheet .rec-grid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)) !important; gap: 12px !important; }
+  .ai-sheet .rec-grid img { border-radius: 12px !important; }
+  .ai-sheet .rec-item h3, .ai-sheet .rec-item b, .ai-sheet .rec-item .card-title { font-size: 13px !important; }
+  .ai-sheet .rec-why { font-size: 12px !important; line-height: 1.4 !important; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+}
+@media (min-width: 880px) {
+  .y-mood-syn { font-size: 11.5px !important; -webkit-line-clamp: 5 !important; }
+  .y-mood-name { padding: 10px 12px !important; }
+}
