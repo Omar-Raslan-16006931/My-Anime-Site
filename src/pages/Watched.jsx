@@ -52,6 +52,39 @@ export function statsOf(items) {
   const month = list.filter((i) => { const d = new Date(i.watched_at); return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() }).length
   return { count: list.length, mins, eps, by, genres, avg: scored.length ? scored.reduce((a, i) => a + Number(i.score), 0) / scored.length : 0, longest, decade: decade && Number(decade[0]), month, trips: mins / 60 / WORLD_TRIP_H }
 }
+
+// Short, random fun facts about the total time. Each has a minimum so small totals only get sensible ones.
+const nf = (n, d = 0) => Number(n).toLocaleString('en', { maximumFractionDigits: d, minimumFractionDigits: d })
+export function funFacts(mins) {
+  const h = mins / 60, d = mins / 1440, secs = mins * 60
+  const f = [
+    [h >= 1, `That’s ${nf(h)} hours of your life ⏱️`],
+    [d >= 1, `${nf(mins)} minutes. Not that anyone’s counting 🧮`],
+    [h >= 44.5, `Enough to fly around the world ${nf(h / 44.5, h / 44.5 >= 10 ? 0 : 1)}× non-stop ✈️`],
+    [h >= 8, `${nf(h / 8, 0)} nights of 8-hour sleep 😴`],
+    [h >= 160, `${nf(h / 160, 1)} full-time work months 💼`],
+    [h >= 40, `${nf(h / 40, 1)} work weeks, overtime not included 🗓️`],
+    [mins >= 110, `${nf(mins / 110, 0)} movies back to back 🎬`],
+    [mins >= 70, `${nf(mins / 3.5, 0)} songs on repeat 🎵`],
+    [h >= 4, `${nf(h / 4, 0)} marathons’ worth of hours 🏃`],
+    [h >= 6, `${nf(h / 6, 0)} novels’ worth of reading time 📚`],
+    [h >= 195.3, `${nf(h / 195.3, 1)} Apollo 11 missions back to back 🚀`],
+    [d >= 27.3, `The Moon circled the Earth ${nf(d / 27.32, 1)}× meanwhile 🌙`],
+    [d >= 1, `The Earth travelled ${nf(secs * 29.78 / 1e6, 1)} million km around the Sun meanwhile 🌍`],
+    [d >= 1, `Your heart beat about ${nf(mins * 72 / 1e6, 1)} million times meanwhile ❤️`],
+    [d >= 5, `You blinked roughly ${nf(mins * 15 / 1e6, 1)} million times meanwhile 👀`],
+    [d >= 3, `${nf(d / 365 * 100, 1)}% of a year 📅`],
+    [d >= 10, `${nf(d / (80 * 365.25) * 100, 2)}% of an 80-year life 🧬`],
+    [h >= 100, `${nf(h / 10000 * 100, 1)}% of the way to 10,000 hours 🎯`],
+    [h >= 300, `Enough time to learn the basics of a new language ${nf(h / 700, 1)}× over 🗣️`],
+    [h >= 74, `${nf(h / 74, 1)}× the entire run of The Office (US) 📎`],
+    [h >= 86.5, `${nf(h / 86.5, 1)}× every episode of Friends ☕`],
+    [h >= 48.6, `${nf(h / 48.6, 1)}× all of Breaking Bad ⚗️`],
+    [h >= 440, `${nf(h / 440, 1)}× all of One Piece so far 🏴‍☠️`],
+    [h >= 7, `${nf(h / 7, 0)} flights from New York to London ✈️`],
+  ]
+  return f.filter(([ok]) => ok).map(([, t]) => t)
+}
 export const fmtDur = (m) => { const d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60); return d ? `${d}d ${h}h` : h ? `${h}h ${Math.round(m % 60)}m` : `${Math.round(m)}m` }
 
 
@@ -129,6 +162,19 @@ export default function Watched({ user, onAuthRequired }) {
   const gridRef = useRef(null)
   useFlip(gridRef, shown)
   const days = useCount(st.mins / 1440, 1100)
+  // A random fun fact each time the page opens; tap it for another.
+  const facts = useMemo(() => funFacts(st.mins), [Math.round(st.mins / 60)]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [pick, setPick] = useState(() => {
+    // Never the same fact as last time the page was opened.
+    let last = -1
+    try { last = Number(localStorage.getItem('yoru:lastfact')) } catch { /* ignore */ }
+    let n = Math.floor(Math.random() * 1000)
+    if (facts.length > 1 && n % facts.length === last % facts.length) n += 1 + Math.floor(Math.random() * (facts.length - 1))
+    return n
+  })
+  useEffect(() => { try { localStorage.setItem('yoru:lastfact', String(pick)) } catch { /* ignore */ } }, [pick])
+  const fact = facts.length ? facts[pick % facts.length] : 'The journey has just begun.'
+  const nextFact = () => setPick((p) => p + 1 + Math.floor(Math.random() * Math.max(1, facts.length - 1)))
   const shownMins = useCount(st.mins, 1100)
 
   const remove = async (i) => {
@@ -163,7 +209,7 @@ export default function Watched({ user, onAuthRequired }) {
         <div className="wd-hero-main">
           <small>Time well spent</small>
           <b className="wd-big">{st.mins >= 1440 ? <><Num n={days} dec={1} /><i>days</i></> : <>{fmtDur(shownMins)}</>}</b>
-          <span>{st.trips >= 0.1 ? <>Enough to fly around the world <strong>{st.trips >= 10 ? Math.round(st.trips) : st.trips.toFixed(1)}×</strong> non-stop ✈️</> : 'The journey has just begun.'}</span>
+          <button type="button" key={fact} className="wd-fact" onClick={nextFact} aria-label="Show another fun fact">{fact}</button>
         </div>
         <div className="wd-split" role="img" aria-label="Split between anime, movies and TV">
           <div className="wd-split-bar">{split.map(([k]) => <i key={k} className={'k-' + k} style={{ flexGrow: st.by[k] }} />)}</div>

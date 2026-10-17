@@ -2496,3 +2496,7 @@ body { transition: none; }
 /* Popular movies / Popular TV shows (Home): posters only, no title or details on the card. */
 .y-notext .row-track .card-over { display: none !important; }
 .y-notext .card-poster::after { display: none !important; }
+
+/* Time well spent: one random fun fact (tap for another) */
+.wd-fact { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; font: 500 12.5px/1.35 var(--y-font); color: var(--y-t2); animation: yoPageIn 0.45s var(--y-ease) backwards; -webkit-tap-highlight-color: transparent; }
+.wd-fact:active { color: var(--y-tx); }
