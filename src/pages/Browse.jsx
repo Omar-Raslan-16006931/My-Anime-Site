@@ -4,7 +4,8 @@ import MediaCard from '../components/MediaCard'
 import { fetchGroup, fetchPage } from '../lib/browse'
 import { animeCategoryArt, animeList } from '../lib/anime'
 import { CATEGORIES, TMDB_MOVIE_GENRE, TMDB_TV_GENRE } from '../lib/categories'
-import { getPopularMovies, getPopularTV, getTmdbImage } from '../lib/tmdb'
+import { getPopularMovies, getPopularTV, getTmdbImage, tmdbFetch } from '../lib/tmdb'
+import { animeArtFromMal } from '../lib/anilist'
 
 const GROUPS = [
   { key: 'Anime', to: '/anime', blurb: 'Simulcasts, classics and everything between.' },
@@ -42,14 +43,22 @@ export default function Browse({ embedded = false }) {
   useEffect(() => {
     let alive = true
     animeCategoryArt(CATEGORIES).then((a) => { if (alive) setArt(a || {}) }).catch(() => {})
-    Promise.all([animeList('trending', 12).catch(() => []), getPopularMovies().catch(() => null), getPopularTV().catch(() => null)]).then(([a, m, t]) => {
-      if (!alive) return
-      const bd = (x) => (x?.backdrop_path ? getTmdbImage(x.backdrop_path, 'w780') : null)
-      setGroupArt({
-        Anime: (a || []).find((x) => x.banner)?.banner || null,
-        Movies: bd((m?.results || []).find((x) => x.backdrop_path)),
-        TV: bd((t?.results || []).find((x) => x.backdrop_path)),
-      })
+    // Fixed, iconic art per group (Demon Slayer, Dune: Part Two, Stranger Things); today's popular
+    // titles only as a fallback if a lookup fails.
+    const bd = (x) => (x?.backdrop_path ? getTmdbImage(x.backdrop_path, 'w1280') : null)
+    Promise.all([
+      animeArtFromMal(38000).catch(() => null),
+      tmdbFetch('/movie/693134').catch(() => null),
+      tmdbFetch('/tv/66732').catch(() => null),
+    ]).then(async ([a, m, t]) => {
+      let anime = a?.banner || null, movies = bd(m), tv = bd(t)
+      if (!anime || !movies || !tv) {
+        const [fa, fm, ft] = await Promise.all([animeList('trending', 12).catch(() => []), getPopularMovies().catch(() => null), getPopularTV().catch(() => null)])
+        anime ||= (fa || []).find((x) => x.banner)?.banner || null
+        movies ||= bd((fm?.results || []).find((x) => x.backdrop_path))
+        tv ||= bd((ft?.results || []).find((x) => x.backdrop_path))
+      }
+      if (alive) setGroupArt({ Anime: anime, Movies: movies, TV: tv })
     })
     return () => { alive = false }
   }, [])
