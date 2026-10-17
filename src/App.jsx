@@ -42,7 +42,6 @@ export default function App() {
   const [profile, setProfile] = useState(null)
   const [showAuth, setShowAuth] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [routeLoading, setRouteLoading] = useState(false)
 
   const lastUserIdRef = useRef(null)
   const initializedRef = useRef(false)
@@ -126,13 +125,9 @@ export default function App() {
   // (Removed: swipe-between-tabs gesture. On phones it fired by accident while
   // scrolling carousels/pages and caused random page jumps.)
 
-  // Forced 0.5s loading state on every route change so pages don't snap in.
-  // Also reset scroll to the top so a new page never opens mid-scroll.
+  // Reset scroll to the top so a new page never opens mid-scroll.
   useEffect(() => {
     window.scrollTo(0, 0)
-    setRouteLoading(true)
-    const t = setTimeout(() => setRouteLoading(false), 650)
-    return () => clearTimeout(t)
   }, [location.pathname])
 
   const handleAuthRequired = useCallback(() => setShowAuth(true), [])
@@ -141,22 +136,18 @@ export default function App() {
   // device already has the key).
   useEffect(() => { initVault(user?.id) }, [user?.id])
 
-  if (loading) {
-    return (
+  // The welcome overlay is a sibling of the loading switch, so it stays mounted across it: on screen
+  // from the very first frame, with neither the boot spinner nor placeholders showing before it.
+  return (
+    <>
+    {loading ? (
       <div className="app-boot">
         <span className="spinner" />
       </div>
-    )
-  }
-
-  return (
+    ) : (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar user={user} profile={profile} onAuthClick={() => setShowAuth(true)} />
       <VaultBanner />
-
-      {routeLoading && (
-        <div key={'rl-' + location.pathname} className="route-bar" />
-      )}
 
       <div key={location.pathname} className="route-anim">
         <Routes location={location}>
@@ -186,8 +177,10 @@ export default function App() {
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
       <SurpriseOverlay />
       <PreviewBar />
-      <ProfileGreeting />
       <Toasts />
     </div>
+    )}
+    <ProfileGreeting />
+    </>
   )
 }

@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import Hero, { HeroPlaceholder } from '../components/Hero'
 import Row from '../components/Row'
+import Collapse from '../components/Collapse'
 import MediaCard from '../components/MediaCard'
 import WideCard from '../components/WideCard'
 import ContinueCard from '../components/ContinueCard'
@@ -68,6 +69,9 @@ const readHidden = () => { try { return new Set(JSON.parse(localStorage.getItem(
 
 // Home rows survive leaving and coming back; they reload only on app open or a full page reload.
 const homeCache = {}
+// Account data (Continue watching, My List) survives page switches, so coming back to Home shows it
+// at once and refreshes quietly, instead of the row popping in again every time.
+const acctCache = { uid: null, watching: null, list: null }
 
 export default function Home({ user, onAuthRequired }) {
   const navigate = useNavigate()
@@ -82,15 +86,17 @@ export default function Home({ user, onAuthRequired }) {
   const [topRated, setTopRated] = useState(homeCache.topRated || [])
   const [movies, setMovies] = useState(homeCache.movies || [])
   const [tv, setTv] = useState(homeCache.tv || [])
-  const [watching, setWatching] = useState([])
+  const [watching, setWatching] = useState(() => (user && acctCache.uid === user.id && acctCache.watching) || [])
+  const [watchReady, setWatchReady] = useState(() => !!(user && acctCache.uid === user.id && acctCache.watching))
+  const lastWatch = useRef([])
   const [catArt, setCatArt] = useState(homeCache.catArt || {})
-  const [listKeys, setListKeys] = useState(() => new Set())
+  const [listKeys, setListKeys] = useState(() => (user && acctCache.uid === user.id && acctCache.list) || new Set())
   const [weekTop, setWeekTop] = useState(homeCache.weekTop || [])
   const [loading, setLoading] = useState(!homeCache.heroList?.length)
 
   // Currently Watching — sourced from the database (not local storage).
   useEffect(() => {
-    if (!user) { setWatching([]); return }
+    if (!user) { setWatching([]); setWatchReady(false); return }
     let active = true
     ;(async () => {
       const [a, t] = await Promise.all([
@@ -104,7 +110,9 @@ export default function Home({ user, onAuthRequired }) {
       ]
         .filter((i) => !i.is_completed)
         .sort((x, y) => new Date(y.updated_at) - new Date(x.updated_at))
-      setWatching(merged)
+      if (acctCache.uid !== user.id) { acctCache.uid = user.id; acctCache.list = null }
+      acctCache.watching = merged
+      setWatching(merged); setWatchReady(true)
     })()
     return () => { active = false }
   }, [user])
@@ -115,7 +123,10 @@ export default function Home({ user, onAuthRequired }) {
     let active = true
     udb.from('watchlist').select('mal_id, tmdb_id, media_type').eq('user_id', user.id).then(({ data }) => {
       if (!active) return
-      setListKeys(new Set((data || []).map((r) => (r.tmdb_id ? `${r.media_type}:${r.tmdb_id}` : `anime:${r.mal_id}`))))
+      const keys = new Set((data || []).map((r) => (r.tmdb_id ? `${r.media_type}:${r.tmdb_id}` : `anime:${r.mal_id}`)))
+      if (acctCache.uid !== user.id) { acctCache.uid = user.id; acctCache.watching = null }
+      acctCache.list = keys
+      setListKeys(keys)
     })
     return () => { active = false }
   }, [user])
@@ -262,7 +273,7 @@ export default function Home({ user, onAuthRequired }) {
   })
   const hideWatch = (item) => {
     const key = watchKey(item)
-    setWatching((prev) => prev.filter((i) => watchKey(i) !== key))
+    setWatching((prev) => { const n = prev.filter((i) => watchKey(i) !== key); acctCache.watching = n; return n })
     if (user && item.id) udb.from(item.source_table).delete().eq('id', item.id).eq('user_id', user.id).then(({ error }) => { if (error) toast('Could not remove it from your account') })
     setHidden((prev) => {
       const next = new Set(prev); next.add(key)
@@ -283,6 +294,8 @@ export default function Home({ user, onAuthRequired }) {
 
   const airingWide = airing.filter((a) => a.banner)
   const visibleWatching = watching.filter((i) => !hidden.has(watchKey(i)))
+  if (visibleWatching.length) lastWatch.current = visibleWatching
+  const shownWatching = visibleWatching.length ? visibleWatching : lastWatch.current
   const fanPosters = trending.slice(0, 3).map((a) => a.images?.jpg?.large_image_url).filter(Boolean)
 
   return (
@@ -294,10 +307,12 @@ export default function Home({ user, onAuthRequired }) {
       )}
 
       <div className="y-home-body">
-        {visibleWatching.length > 0 && (
-          <Row title={<><span className="rt-lead">Continue watching for</span><span className="rt-name">{(me?.name || 'you').trim() || 'you'}</span></>} wide onMore={() => navigate('/me')} className="y-cw">
-            {visibleWatching.map((i) => <ContinueCard key={watchKey(i)} item={wideWatch(i)} onRemove={() => hideWatch(i)} />)}
-          </Row>
+        {user && watchReady && (
+          <Collapse open={visibleWatching.length > 0} className="y-cw-wrap">
+            <Row title={<><span className="rt-lead">Continue watching for</span><span className="rt-name">{(me?.name || 'you').trim() || 'you'}</span></>} wide onMore={() => navigate('/me')} className="y-cw">
+              {shownWatching.map((i) => <ContinueCard key={watchKey(i)} item={wideWatch(i)} onRemove={() => hideWatch(i)} />)}
+            </Row>
+          </Collapse>
         )}
 
         <MoodSection />

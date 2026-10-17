@@ -1685,3 +1685,11 @@ body { transition: none; }
 .route-anim .page > *:not(.modal):not([role='dialog']):not(.y-who-scrim),
 .route-anim .y-page > *:not(.modal):not([role='dialog']) { animation: none; }
 @media (prefers-reduced-motion: reduce) { .route-anim { animation: none; } }
+
+/* Quicker page fade; Continue watching opens/closes by height, so it never pops in. */
+.route-anim { animation-duration: 0.14s; }
+.y-cw-wrap { transition: grid-template-rows 0.5s var(--y-ease), margin-bottom 0.5s var(--y-ease); }
+.y-home-body > .y-cw-wrap:not(.open) { margin-bottom: -34px; }
+@media (max-width: 879px) { .y-home-body > .y-cw-wrap:not(.open) { margin-bottom: -26px; } }
+.y-cw-wrap > .collapse-in { overflow: visible; }
+.y-cw-wrap:not(.open) > .collapse-in { overflow: hidden; }
