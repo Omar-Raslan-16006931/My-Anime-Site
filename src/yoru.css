@@ -2240,3 +2240,30 @@ body { transition: none; }
   .player-modal.has-aside.lights-off .player-main > .player-frame { width: 100% !important; max-height: none !important; }
   .player-modal.has-aside.lights-off .player-card { display: block !important; width: auto !important; height: auto !important; overflow: visible !important; padding: 0 !important; }
 }
+
+/* ---- PC player v4: a strict one-screen layout. The video takes whatever height is left, so nothing can scroll ---- */
+@media (min-width: 880px) {
+  .player-modal.has-aside:not(.lights-off) .player-card .player-main { height: 100dvh; overflow: hidden !important; padding: 0 24px 14px !important; align-items: stretch !important; justify-content: flex-start !important; display: flex; flex-direction: column; min-height: 0; }
+  .player-modal.has-aside:not(.lights-off) .player-card .player-main > * { width: auto !important; max-width: none !important; flex: none; }
+  .player-modal.has-aside:not(.lights-off) .player-card .player-main .modal-head { padding: 12px 0 10px !important; }
+  .player-modal.has-aside:not(.lights-off) .player-card .player-main .modal-head .eyebrow { font-size: 11.5px; }
+  .player-modal.has-aside:not(.lights-off) .player-card .player-main .modal-head .ttl { font-size: 17px; }
+  /* the video: fills all remaining height, 16:9, centred */
+  .player-modal.has-aside:not(.lights-off) .player-card .player-main > .player-frame { flex: 1 1 0 !important; min-height: 0; width: auto !important; max-width: 100% !important; aspect-ratio: 16 / 9; align-self: center; margin: 0 !important; border-radius: 14px; }
+  /* controls: one tight block under the video */
+  .player-modal.has-aside:not(.lights-off) .player-card .player-main .player-tools { padding: 8px 0 0 !important; justify-content: flex-end; }
+  .player-modal.has-aside:not(.lights-off) .player-card .player-main .modal-body.pc { display: flex !important; flex-wrap: wrap; align-items: center; gap: 8px !important; padding: 8px 0 0 !important; }
+  .player-modal.has-aside .modal-body.pc .pc-nav, .player-modal.has-aside .modal-body.pc .pc-list, .player-modal.has-aside .modal-body.pc .pc-more { display: contents !important; }
+  .player-modal.has-aside .modal-body.pc .pc-nav .pc-prev { order: 0; }
+  .player-modal.has-aside .modal-body.pc .pc-list > * { order: 1; }
+  .player-modal.has-aside .modal-body.pc .pc-more > * { order: 2; }
+  .player-modal.has-aside .modal-body.pc .pc-nav .pc-next { order: 9; margin-left: auto !important; }
+  .player-modal.has-aside .modal-body.pc > .pc-hint, .player-modal.has-aside .modal-body.pc > .dl-links, .player-modal.has-aside .modal-body.pc > :not(.pc-nav):not(.pc-list):not(.pc-more) { order: 10; flex: 1 1 100%; }
+  .player-modal.has-aside .pc-nav .btn { height: 36px !important; padding: 0 16px !important; font-size: 13px !important; }
+  .player-modal.has-aside .pc-row { height: 36px !important; border-radius: 11px !important; }
+  .player-modal.has-aside .pc-row .select-min, .player-modal.has-aside .pc-row .pc-try, .player-modal.has-aside .pc-row .pc-icon { height: 28px !important; }
+  .player-modal.has-aside .pc-more .pc-link { height: 36px; padding: 0 12px; border-radius: 11px; background: rgba(255, 255, 255, 0.06); font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; }
+  .player-modal.has-aside .pc-more .pc-link:hover { background: rgba(255, 255, 255, 0.11); }
+  .player-modal.has-aside .player-tools .pc-link { height: 28px; padding: 0 10px; border-radius: 9px; background: rgba(255, 255, 255, 0.06); font-size: 12px; }
+  .player-modal.has-aside .pc-hint { font-size: 11.5px; }
+}
