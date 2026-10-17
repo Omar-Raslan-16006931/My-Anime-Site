@@ -2427,3 +2427,34 @@ body { transition: none; }
 .acc-item:first-child { border-top-left-radius: 17px; border-top-right-radius: 17px; }
 .acc-item:last-child { border-bottom-left-radius: 17px; border-bottom-right-radius: 17px; }
 .acc-item:active, .acc-item:hover { background-clip: padding-box; }
+
+/* ===== Explore (simplified): search · type · genre · results — each control exactly once ===== */
+.xp { display: flex; flex-direction: column; gap: 12px; }
+.xp-title { margin: 0 0 2px !important; }
+.xp-search { display: flex; gap: 8px; align-items: center; }
+.xp-field { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 14px; border-radius: 999px; background: var(--y-s1); color: var(--y-t3); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); transition: box-shadow 0.2s ease; }
+.xp-field:focus-within { box-shadow: inset 0 0 0 1.5px var(--y-ac); }
+.xp-field input { flex: 1; min-width: 0; height: 100%; border: 0 !important; background: none !important; outline: none !important; box-shadow: none !important; padding: 0 !important; color: var(--y-tx); font: 500 15px var(--y-font); -webkit-appearance: none; appearance: none; }
+.xp-field input::-webkit-search-cancel-button { display: none; }
+.xp-x { border: 0; background: rgba(255, 255, 255, 0.1); color: var(--y-t2); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; line-height: 1; cursor: pointer; padding: 0; flex: none; }
+.xp-ai { flex: none; height: 46px; padding: 0 15px 0 13px; border-radius: 999px; border: 0; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; background: color-mix(in srgb, var(--y-ac) 18%, var(--y-s1)); color: var(--y-tx); font: 650 14px var(--y-font); -webkit-tap-highlight-color: transparent; }
+.xp-ai svg { color: var(--y-ac); }
+.xp-types { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--y-s1); align-self: flex-start; max-width: 100%; }
+.xp-type { border: 0; cursor: pointer; height: 34px; padding: 0 16px; border-radius: 999px; background: none; color: var(--y-t2); font: 650 13.5px var(--y-font); transition: background 0.2s ease, color 0.2s ease; -webkit-tap-highlight-color: transparent; }
+.xp-type.on { background: var(--y-tx); color: var(--y-bg); }
+.xp-genres { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--y-pad, 20px)); padding: 0 var(--y-pad, 20px) 2px; overscroll-behavior-x: contain; }
+.xp-genres::-webkit-scrollbar { display: none; }
+.xp-genre { flex: none; border: 0; cursor: pointer; height: 32px; padding: 0 13px; border-radius: 999px; background: none; color: var(--y-t2); font: 600 13px var(--y-font); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); white-space: nowrap; transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; -webkit-tap-highlight-color: transparent; }
+.xp-genre.on { background: color-mix(in srgb, var(--y-ac) 22%, transparent); color: var(--y-tx); box-shadow: inset 0 0 0 1px var(--y-ac); }
+.xp-sec { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.xp-h { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+.xp-msg { padding: 22px 0; color: var(--y-t3); font-size: 14px; }
+.xp-msg button { border: 0; background: none; color: var(--y-ac); font: inherit; font-weight: 650; cursor: pointer; }
+.xp-more { text-align: center; margin: 10px 0 4px; }
+@media (max-width: 879px) { .xp-ai span { display: none; } .xp-ai { width: 46px; padding: 0; justify-content: center; } }
+@media (min-width: 880px) { .xp { max-width: 1280px; } .xp-genres { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; } }
+/* "All": each kind is one swipeable row; pick a type to get the full grid. */
+.xp-row { display: flex !important; gap: 10px !important; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; margin: 0 calc(-1 * var(--y-pad, 20px)); padding: 0 var(--y-pad, 20px) 4px; scroll-padding: 0 var(--y-pad, 20px); }
+.xp-row::-webkit-scrollbar { display: none; }
+.xp-row > * { flex: none; width: 118px; }
+@media (min-width: 880px) { .xp-row { margin: 0; padding: 0 0 4px; } .xp-row > * { width: 158px; } }

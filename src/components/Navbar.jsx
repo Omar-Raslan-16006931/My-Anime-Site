@@ -122,7 +122,7 @@ export default function Navbar({ user, profile }) {
 
         <div className="y-top-right">
           <button type="button" className="y-surprise" onClick={openSurprise}>Surprise me</button>
-          <QuickSearch />
+          {pathname !== '/search' && <QuickSearch />}
         </div>
 
         <button type="button" className="y-top-search y-top-dice" onClick={openSurprise} aria-label="Surprise me" title="Surprise me">
