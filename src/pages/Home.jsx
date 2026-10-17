@@ -368,11 +368,11 @@ export default function Home({ user, onAuthRequired }) {
           {recentEps.map((e) => <MediaCard key={e.malId} item={epCard(e)} />)}
         </Row>
 
-        <Row title="Popular movies" loading={!movies.length} onMore={() => navigate('/movies')}>
+        <Row title="Popular movies" loading={!movies.length} onMore={() => navigate('/movies')} className="y-notext">
           {movies.map((m) => <MediaCard key={m.id} item={movieCard(m)} />)}
         </Row>
 
-        <Row title="Popular TV shows" loading={!tv.length} onMore={() => navigate('/tv')}>
+        <Row title="Popular TV shows" loading={!tv.length} onMore={() => navigate('/tv')} className="y-notext">
           {tv.map((s) => <MediaCard key={s.id} item={tvCard(s)} />)}
         </Row>
 

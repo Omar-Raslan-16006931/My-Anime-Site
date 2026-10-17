@@ -2492,3 +2492,7 @@ body { transition: none; }
 .xp-sec .grid > :nth-child(5) { animation-delay: 0.16s; } .xp-sec .grid > :nth-child(6) { animation-delay: 0.2s; } .xp-sec .grid > :nth-child(n+7) { animation-delay: 0.24s; }
 .xp-sec .grid .y-skel { animation: yoShim 1.3s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .xp-sec .grid > *, .xp-ind { animation: none; transition-duration: 0.01s; } }
+
+/* Popular movies / Popular TV shows (Home): posters only, no title or details on the card. */
+.y-notext .row-track .card-over { display: none !important; }
+.y-notext .card-poster::after { display: none !important; }
