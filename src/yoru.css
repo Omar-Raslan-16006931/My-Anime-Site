@@ -1129,7 +1129,7 @@ h1, h2, h3 { text-wrap: balance; }
 
 /* ---------- "My Yoru" account overview ---------- */
 .acc { position: relative; max-width: 760px; overflow-x: clip; }
-.acc > *:not(.acc-glow) { position: relative; z-index: 1; }
+.acc > *:not(.acc-glow):not(.y-who-scrim) { position: relative; z-index: 1; }
 .acc-glow {
   position: absolute; left: 50%; top: 0; width: min(900px, 160vw); height: 420px; transform: translateX(-50%); pointer-events: none; z-index: 0;
   background: radial-gradient(closest-side, color-mix(in srgb, var(--h1) 34%, transparent), transparent 75%);
@@ -1485,3 +1485,20 @@ html.tp-on body { padding-bottom: 170px; }
 .y-who-sheet input:-webkit-autofill, .y-ob-prof input:-webkit-autofill, .auth-field input:-webkit-autofill {
   -webkit-text-fill-color: var(--y-tx); caret-color: var(--y-tx); box-shadow: 0 0 0 100px #2a2a2c inset; transition: background-color 9999s ease-out;
 }
+
+/* ===== Profile removal: the tile shrinks away, then neighbours glide (see lib/flip.js) ===== */
+.y-who-p.leaving, .y-who-p.wob.leaving { animation: yoLeave 0.44s cubic-bezier(0.4, 0, 0.2, 1) forwards; pointer-events: none; }
+
+/* ===== Welcome greeting: tile and text fade as one ===== */
+.greet { animation: greetFade 2.9s cubic-bezier(0.4, 0, 0.2, 1) forwards; gap: 0; }
+.greet-inner { display: flex; flex-direction: column; align-items: center; gap: 22px; animation: greetInner 2.9s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.greet-tile, .greet-name { animation: none; }
+@keyframes greetFade { 0%, 82% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes greetInner {
+  0% { opacity: 0; transform: translateY(14px) scale(0.92); }
+  20% { opacity: 1; transform: none; }
+  76% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) { .greet, .greet-inner { animation-duration: 0.01s; } }
+.y-who-scrim { z-index: 450; }

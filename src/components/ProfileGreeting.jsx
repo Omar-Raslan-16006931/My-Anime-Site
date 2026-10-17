@@ -27,15 +27,17 @@ export default function ProfileGreeting() {
 
   useEffect(() => {
     if (!show) return undefined
-    const t = setTimeout(() => setShow(null), 1700)
+    const t = setTimeout(() => setShow(null), 2900)
     return () => clearTimeout(t)
   }, [show])
 
   if (!show) return null
   return (
     <div className="greet" key={show.id} aria-hidden="true">
-      <div className="greet-tile" style={{ background: vivid(show.hue ?? 0) }}>{show.name[0].toUpperCase()}</div>
-      <div className="greet-name">Welcome back, {show.name}</div>
+      <div className="greet-inner">
+        <div className="greet-tile" style={{ background: vivid(show.hue ?? 0) }}>{show.name[0].toUpperCase()}</div>
+        <div className="greet-name">Welcome back, {show.name}</div>
+      </div>
     </div>
   )
 }

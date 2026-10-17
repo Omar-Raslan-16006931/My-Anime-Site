@@ -16,9 +16,10 @@ export function useFlip(ref, dep) {
       next.set(k, pos)
       const p = prev.current.get(k)
       if (p && (p.x !== pos.x || p.y !== pos.y) && c.animate) {
+        // `translate` (not `transform`) so it composes with a tile's own animation, e.g. the manage-mode wobble.
         c.animate(
-          [{ transform: `translate(${p.x - pos.x}px, ${p.y - pos.y}px)` }, { transform: 'none' }],
-          { duration: 480, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+          [{ translate: `${p.x - pos.x}px ${p.y - pos.y}px` }, { translate: '0px 0px' }],
+          { duration: 680, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
         )
       }
     }

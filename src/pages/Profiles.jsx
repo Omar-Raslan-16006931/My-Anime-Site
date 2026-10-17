@@ -22,7 +22,7 @@ export default function Profiles({ user, profile }) {
   const [flash, setFlash] = useState(null) // tile that was just edited/created
   const timer = useRef(0)
   const rowRef = useRef(null)
-  useFlip(rowRef, profiles) // neighbours glide into the gap when a profile is removed or added
+  useFlip(rowRef, profiles) // neighbours glide to their new slots when a profile is removed or added
 
   const account = profile?.username || user?.email?.split('@')[0] || ''
   useEffect(() => { profileActions.ensure(account || 'Me') }, [account])
@@ -50,7 +50,7 @@ export default function Profiles({ user, profile }) {
     const id = del.id
     setDel(null)
     setLeaving(id)
-    timer.current = setTimeout(() => { profileActions.remove(id); setLeaving(null) }, 420)
+    timer.current = setTimeout(() => { profileActions.remove(id); setLeaving(null) }, 440)
   }
 
   const row1 = [...wall.posters, ...wall.posters]
