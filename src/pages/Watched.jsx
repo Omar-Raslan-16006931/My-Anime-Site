@@ -10,13 +10,22 @@ const hrefOf = (i) => (i.media_type === 'tv' && i.tmdb_id ? `/tv/${i.tmdb_id}` :
 const kindOf = (i) => (i.media_type === 'tv' ? 'TV' : i.media_type === 'movie' ? 'MOVIE' : 'ANIME')
 const keyOf = (i) => i.id || `${i.media_type}-${i.tmdb_id || i.mal_id}`
 
-// Numbers count up when they appear.
+// Numbers count up when they first appear, and afterwards glide from the value on screen to the new one.
 function useCount(to, ms = 900) {
   const [v, setV] = useState(0)
+  const cur = useRef(0)
   useEffect(() => {
     let raf = 0
+    const from = cur.current
+    if (from === to) return undefined
     const t0 = performance.now()
-    const tick = (t) => { const p = Math.min(1, (t - t0) / ms); setV(to * (1 - Math.pow(1 - p, 3))); if (p < 1) raf = requestAnimationFrame(tick) }
+    const dur = from === 0 ? ms : Math.min(ms, 600)
+    const tick = (t) => {
+      const p = Math.min(1, (t - t0) / dur)
+      cur.current = from + (to - from) * (1 - Math.pow(1 - p, 3))
+      setV(cur.current)
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
   }, [to, ms])
@@ -120,6 +129,7 @@ export default function Watched({ user, onAuthRequired }) {
   const gridRef = useRef(null)
   useFlip(gridRef, shown)
   const days = useCount(st.mins / 1440, 1100)
+  const shownMins = useCount(st.mins, 1100)
 
   const remove = async (i) => {
     setLeaving((s) => new Set(s).add(keyOf(i)))
@@ -152,7 +162,7 @@ export default function Watched({ user, onAuthRequired }) {
       <section className="wd-hero">
         <div className="wd-hero-main">
           <small>Time well spent</small>
-          <b className="wd-big">{st.mins >= 1440 ? <><Num n={days} dec={1} /><i>days</i></> : <>{fmtDur(st.mins)}</>}</b>
+          <b className="wd-big">{st.mins >= 1440 ? <><Num n={days} dec={1} /><i>days</i></> : <>{fmtDur(shownMins)}</>}</b>
           <span>{st.trips >= 0.1 ? <>Enough to fly around the world <strong>{st.trips >= 10 ? Math.round(st.trips) : st.trips.toFixed(1)}×</strong> non-stop ✈️</> : 'The journey has just begun.'}</span>
         </div>
         <div className="wd-split" role="img" aria-label="Split between anime, movies and TV">
