@@ -5,7 +5,7 @@ import { openSurprise } from '../lib/surprise'
 import QuickSearch from './QuickSearch'
 
 // Brand wordmark (rendered upper-case with an accent dot).
-const BRAND = 'Yoru'
+const BRAND = 'FuckTheJews'
 
 // Top-bar links. `match` = path prefixes that keep the link lit on detail
 // pages (e.g. /anime/21 keeps "Anime" selected).
