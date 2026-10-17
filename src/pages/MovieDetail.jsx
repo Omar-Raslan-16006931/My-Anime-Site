@@ -9,6 +9,7 @@ import { toast } from '../lib/toast'
 import Row from '../components/Row'
 import MediaCard from '../components/MediaCard'
 import DownloadLinks from '../components/DownloadLinks'
+import Collapse from '../components/Collapse'
 import { isAdultTmdb, isAdultTmdbDetails } from '../lib/tmdb'
 
 const FACE = 'https://image.tmdb.org/t/p/w185'
@@ -172,7 +173,7 @@ export default function MovieDetail({ user, onAuthRequired }) {
               <span>Share</span>
             </button>
           </div>
-          {showDl && <div className="tvh-dl"><DownloadLinks title={movie.title} /></div>}
+          <Collapse open={showDl}><div className="tvh-dl"><DownloadLinks title={movie.title} /></div></Collapse>
         </div>
       </section>
 

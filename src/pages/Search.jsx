@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import MediaCard from '../components/MediaCard'
 import Browse from './Browse'
 import Recommend from './Recommend'
+import Collapse from '../components/Collapse'
 import Icon from '../components/Icons'
 import { searchAnimeFiltered } from '../lib/anime'
 import { searchMovies, searchTV, discoverMovies, discoverTV, getTmdbImage } from '../lib/tmdb'
@@ -151,7 +152,7 @@ export default function Search({ user, onAuthRequired }) {
               <span className="ai-card-txt"><b>AI picks</b><small>Describe a mood, get a shortlist</small></span>
               <svg className="ai-card-caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
             </button>
-            {aiOpen && <div className="ai-card-body embed-page"><Recommend user={user} onAuthRequired={onAuthRequired} /></div>}
+            <Collapse open={aiOpen}><div className="ai-card-body embed-page"><Recommend user={user} onAuthRequired={onAuthRequired} /></div></Collapse>
           </div>
           <Browse embedded />
         </>

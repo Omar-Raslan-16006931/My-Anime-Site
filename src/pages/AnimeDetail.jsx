@@ -10,6 +10,7 @@ import { recordRecent } from '../lib/progress'
 import { animeDetails, animeEpisodes, isAdultAnime } from '../lib/anime'
 import { toast } from '../lib/toast'
 import DownloadLinks from '../components/DownloadLinks'
+import Collapse from '../components/Collapse'
 
 async function upsertWatching(user, d, epNum) {
   if (!user || !d) return
@@ -331,7 +332,7 @@ export default function AnimeDetail({ user, onAuthRequired }) {
               <span>Share</span>
             </button>
           </div>
-          {showDl && <div className="tvh-dl"><DownloadLinks title={title} /></div>}
+          <Collapse open={showDl}><div className="tvh-dl"><DownloadLinks title={title} /></div></Collapse>
         </div>
       </section>
 

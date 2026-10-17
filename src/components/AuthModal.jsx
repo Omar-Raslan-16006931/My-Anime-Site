@@ -51,11 +51,14 @@ export default function AuthModal({ onClose }) {
   const [done, setDone] = useState(null) // { title, text, go? }
   const [taken, setTaken] = useState(null) // null | true | false
   const t = useRef(0)
+  const [closing, setClosing] = useState(false)
+  // Fade out instead of vanishing.
+  const close = () => { setClosing(true); clearTimeout(t.current); t.current = setTimeout(onClose, 300) }
 
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    const onKey = (e) => { if (e.key === 'Escape') { setClosing(true); t.current = setTimeout(onClose, 300) } }
     document.addEventListener('keydown', onKey)
     return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey); clearTimeout(t.current) }
   }, [onClose])
@@ -73,7 +76,7 @@ export default function AuthModal({ onClose }) {
   }, [username, mode])
 
   const switchMode = (m) => { setMode(m); setError(''); setShow(false) }
-  const finish = (d) => { setDone(d); t.current = setTimeout(() => { onClose(); if (d.go) navigate(d.go) }, d.delay || 1100) }
+  const finish = (d) => { setDone(d); t.current = setTimeout(() => { setClosing(true); t.current = setTimeout(() => { onClose(); if (d.go) navigate(d.go) }, 300) }, d.delay || 1000) }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -117,10 +120,10 @@ export default function AuthModal({ onClose }) {
   const posters = wall.posters.slice(0, 12)
 
   return (
-    <div className="auth" role="dialog" aria-modal="true" aria-label="Sign in">
+    <div className={'auth' + (closing ? ' closing' : '')} role="dialog" aria-modal="true" aria-label="Sign in">
       <div className="auth-wall" aria-hidden="true">{posters.map((p, i) => <span key={i} style={{ '--i': i }}><img src={p} alt="" /></span>)}</div>
       <div className="auth-fade" />
-      <button type="button" className="auth-x" onClick={onClose} aria-label="Close"><Icon.close width="18" height="18" /></button>
+      <button type="button" className="auth-x" onClick={close} aria-label="Close"><Icon.close width="18" height="18" /></button>
 
       <div className="auth-card">
         {done ? (

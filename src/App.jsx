@@ -105,7 +105,6 @@ export default function App() {
         if (nextUserId && nextUserId !== prevUserId) {
           lastUserIdRef.current = nextUserId
           setUser(nextUser)
-          setLoading(true)
           await fetchProfile(nextUserId)
         }
         return

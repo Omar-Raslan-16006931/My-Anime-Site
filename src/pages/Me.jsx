@@ -44,7 +44,9 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
   const sel = SECTIONS.find((s) => s.k === params.get('s')) || null
   const pick = (k) => setParams(k ? { s: k } : {})
   const [confirmOut, setConfirmOut] = useState(false)
-  const logout = async () => { setConfirmOut(false); await supabase.auth.signOut(); navigate('/') }
+  const [outClosing, setOutClosing] = useState(false)
+  const closeOut = (after) => { setOutClosing(true); setTimeout(() => { setConfirmOut(false); setOutClosing(false); after?.() }, 280) }
+  const logout = () => closeOut(async () => { await supabase.auth.signOut(); navigate('/') })
 
   // Previews for the overview (first 12 of each).
   const [cw, setCw] = useState(null)
@@ -184,7 +186,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
         </button>
       </div>
       {confirmOut && (
-        <div className="y-who-scrim" onClick={() => setConfirmOut(false)}>
+        <div className={'y-who-scrim' + (outClosing ? ' closing' : '')} onClick={() => closeOut()}>
           <div className="y-who-sheet small" role="alertdialog" aria-label="Sign out" onClick={(e) => e.stopPropagation()}>
             <div className="y-who-prev sm" style={{ background: 'rgba(255,90,95,0.16)', color: '#ff5a5f', boxShadow: 'none' }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3" /></svg>
@@ -192,7 +194,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
             <h2>Sign out?</h2>
             <p>You’ll need to sign in again to see your list and watch history on this device.</p>
             <div className="y-who-sheet-btns">
-              <button type="button" className="btn btn-ghost" onClick={() => setConfirmOut(false)}>Stay signed in</button>
+              <button type="button" className="btn btn-ghost" onClick={() => closeOut()}>Stay signed in</button>
               <button type="button" className="btn y-who-danger" onClick={logout}>Sign out</button>
             </div>
           </div>

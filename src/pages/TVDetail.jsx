@@ -7,6 +7,7 @@ import GenreChips from '../components/GenreChips'
 import Select from '../components/Select'
 import { recordRecent } from '../lib/progress'
 import DownloadLinks from '../components/DownloadLinks'
+import Collapse from '../components/Collapse'
 import { isAdultTmdbDetails } from '../lib/tmdb'
 import { loadTvSeen, setTvSeen, tvEpKey } from '../lib/tvProgress'
 
@@ -240,7 +241,7 @@ export default function TVDetail({ user, onAuthRequired }) {
               <span>Share</span>
             </button>
           </div>
-          {showDl && <div className="tvh-dl"><DownloadLinks title={details.name} /></div>}
+          <Collapse open={showDl}><div className="tvh-dl"><DownloadLinks title={details.name} /></div></Collapse>
         </div>
       </section>
 

@@ -19,6 +19,7 @@ export default function Profiles({ user, profile }) {
   const [del, setDel] = useState(null) // profile awaiting remove confirmation
   const [leaving, setLeaving] = useState(null) // id animating out
   const [picked, setPicked] = useState(null)
+  const [closing, setClosing] = useState(false)
   const [flash, setFlash] = useState(null) // tile that was just edited/created
   const timer = useRef(0)
   const rowRef = useRef(null)
@@ -35,6 +36,11 @@ export default function Profiles({ user, profile }) {
     profileActions.setActive(p.id)
     timer.current = setTimeout(() => { window.dispatchEvent(new Event('yoru:greet')); navigate('/') }, 460)
   }
+  // Dialogs fade and drop away before they unmount.
+  const closeDialogs = (after) => {
+    setClosing(true)
+    timer.current = setTimeout(() => { setSheet(null); setDel(null); setClosing(false); after?.() }, 280)
+  }
   const openNew = () => setSheet({ id: null, name: '', hue: HUES[profiles.length % HUES.length], kids: false })
   const save = (e) => {
     e.preventDefault()
@@ -42,15 +48,14 @@ export default function Profiles({ user, profile }) {
     let id = sheet.id
     if (id) profileActions.update(id, { name: sheet.name, hue: sheet.hue, kids: sheet.kids })
     else id = profileActions.add2(sheet.name, sheet.kids, sheet.hue)?.id
-    setSheet(null)
-    setFlash(id)
-    setTimeout(() => setFlash(null), 900)
+    closeDialogs(() => { setFlash(id); setTimeout(() => setFlash(null), 900) })
   }
   const confirmRemove = () => {
     const id = del.id
-    setDel(null)
-    setLeaving(id)
-    timer.current = setTimeout(() => { profileActions.remove(id); setLeaving(null) }, 440)
+    closeDialogs(() => {
+      setLeaving(id)
+      timer.current = setTimeout(() => { profileActions.remove(id); setLeaving(null) }, 440)
+    })
   }
 
   const row1 = [...wall.posters, ...wall.posters]
@@ -110,7 +115,7 @@ export default function Profiles({ user, profile }) {
       <p className="y-who-note">Profiles are saved on this device. Your list and watch history belong to your account.</p>
 
       {sheet && (
-        <div className="y-who-scrim" onClick={() => setSheet(null)}>
+        <div className={'y-who-scrim' + (closing ? ' closing' : '')} onClick={() => closeDialogs()}>
           <form className="y-who-sheet" onClick={(e) => e.stopPropagation()} onSubmit={save}>
             <h2>{sheet.id ? 'Edit profile' : 'New profile'}</h2>
             <div className="y-who-prev" key={sheet.hue} style={{ background: vivid(sheet.hue) }}>{(sheet.name.trim()[0] || '?').toUpperCase()}</div>
@@ -120,20 +125,20 @@ export default function Profiles({ user, profile }) {
             </div>
             <label className="y-who-switch"><span>Kids profile</span><input type="checkbox" checked={sheet.kids} onChange={(e) => setSheet({ ...sheet, kids: e.target.checked })} /><i /></label>
             <div className="y-who-sheet-btns">
-              <button type="button" className="btn btn-ghost" onClick={() => setSheet(null)}>Cancel</button>
+              <button type="button" className="btn btn-ghost" onClick={() => closeDialogs()}>Cancel</button>
               <button type="submit" className="btn btn-primary" disabled={!sheet.name.trim()}>{sheet.id ? 'Save' : 'Create'}</button>
             </div>
           </form>
         </div>
       )}
       {del && (
-        <div className="y-who-scrim" onClick={() => setDel(null)}>
+        <div className={'y-who-scrim' + (closing ? ' closing' : '')} onClick={() => closeDialogs()}>
           <div className="y-who-sheet small" onClick={(e) => e.stopPropagation()}>
             <div className="y-who-prev sm" style={{ background: vivid(del.hue ?? 0) }}>{del.name[0].toUpperCase()}</div>
             <h2>Remove {del.name}?</h2>
             <p>This profile is removed from this device. Your list and history stay on your account.</p>
             <div className="y-who-sheet-btns">
-              <button type="button" className="btn btn-ghost" onClick={() => setDel(null)}>Keep</button>
+              <button type="button" className="btn btn-ghost" onClick={() => closeDialogs()}>Keep</button>
               <button type="button" className="btn y-who-danger" onClick={confirmRemove}>Remove</button>
             </div>
           </div>

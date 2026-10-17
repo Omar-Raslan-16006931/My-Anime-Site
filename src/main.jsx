@@ -7,6 +7,7 @@ import './home.css'
 import './buttons.css'
 import './yoru.css'
 import './lib/theme'
+import './lib/imgfade'
 import App from './App.jsx'
 
 // Block iOS Safari's pinch-zoom gesture (it ignores user-scalable=no).
