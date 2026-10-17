@@ -13,6 +13,7 @@ function PinDialog({ ask, onCancel, onOk }) {
   const { p } = ask
   const [v, setV] = useState('')
   const [bad, setBad] = useState(false)
+  const [ok, setOk] = useState(false)
   const [fails, setFails] = useState(0)
   const [until, setUntil] = useState(0)
   const [, tick] = useState(0)
@@ -21,11 +22,11 @@ function PinDialog({ ask, onCancel, onOk }) {
   useEffect(() => { inputRef.current?.focus() }, [])
   useEffect(() => { if (!locked) return undefined; const t = setInterval(() => tick((n) => n + 1), 500); return () => clearInterval(t) }, [locked])
   const change = async (raw) => {
-    if (locked) return
+    if (locked || ok) return
     const d = raw.replace(/\D/g, '').slice(0, 4)
     setV(d); setBad(false)
     if (d.length < 4) return
-    if (await profileActions.checkPin(p.id, d)) { onOk(); return }
+    if (await profileActions.checkPin(p.id, d)) { setOk(true); setTimeout(onOk, 650); return }
     const n = fails + 1
     setFails(n); setBad(true)
     if (n >= 5) { setUntil(Date.now() + 30000); setFails(0) }
@@ -36,8 +37,12 @@ function PinDialog({ ask, onCancel, onOk }) {
       <div className="y-who-sheet small pin" onClick={(e) => { e.stopPropagation(); inputRef.current?.focus() }}>
         <div className="y-who-prev sm" style={{ background: tileBg(p) }}>{!p.avatar && p.name[0].toUpperCase()}</div>
         <h2>{p.name}</h2>
-        <p>{locked ? `Too many tries. Wait ${Math.ceil((until - Date.now()) / 1000)}s.` : 'Enter your PIN'}</p>
-        <div className={'y-pin-dots' + (bad ? ' bad' : '')} aria-hidden="true">{[0, 1, 2, 3].map((i) => <i key={i} className={i < v.length ? 'on' : ''} />)}</div>
+        <p>{ok ? 'Unlocked' : locked ? `Too many tries. Wait ${Math.ceil((until - Date.now()) / 1000)}s.` : 'Enter your PIN'}</p>
+        <div className={'y-pin-dots' + (bad ? ' bad' : '') + (ok ? ' ok' : '')} aria-hidden="true">
+          {ok
+            ? <svg className="y-pin-check" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><circle className="c" cx="12" cy="12" r="10" /><path className="t" d="m7.5 12.5 3 3 6-6.5" /></svg>
+            : [0, 1, 2, 3].map((i) => <i key={i} className={i < v.length ? 'on' : ''} />)}
+        </div>
         <input ref={inputRef} className="y-pin-input" inputMode="numeric" pattern="[0-9]*" autoComplete="off" value={v} disabled={locked} onChange={(e) => change(e.target.value)} aria-label="PIN" />
         <div className="y-who-sheet-btns"><button type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</button></div>
       </div>
