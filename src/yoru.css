@@ -1441,8 +1441,8 @@ html.tp-on body { padding-bottom: 170px; }
 .y-who-scrim.closing, .auth.closing { opacity: 0; pointer-events: none; }
 .y-who-scrim.closing .y-who-sheet { transform: translateY(24px) scale(0.96); transition: transform 0.28s var(--y-ease); }
 /* the entrance animations hold their end state (fill: both), which would pin opacity/transform — so closing uses its own exit keyframes */
-.y-who-scrim.closing, .auth.closing { animation: yoScrimOut 0.34s ease-in forwards !important; }
-.y-who-scrim.closing .y-who-sheet { animation: yoSheetOut 0.34s cubic-bezier(0.4, 0, 0.6, 1) forwards !important; transform-origin: 50% 50%; }
+.y-who-scrim.closing, .auth.closing { animation: yoScrimOut 0.6s ease-in forwards !important; }
+.y-who-scrim.closing .y-who-sheet { animation: yoSheetOut 0.6s cubic-bezier(0.4, 0, 0.6, 1) forwards !important; transform-origin: 50% 50%; }
 @keyframes yoScrimOut { from { opacity: 1; } to { opacity: 0; } }
 /* fade + collapse: the card shrinks toward its centre line while it fades */
 @keyframes yoSheetOut { 0% { opacity: 1; transform: none; filter: blur(0); } 55% { opacity: 0.35; transform: scale(0.97, 0.7); filter: blur(1px); } 100% { opacity: 0; transform: scale(0.9, 0.02); filter: blur(3px); } }

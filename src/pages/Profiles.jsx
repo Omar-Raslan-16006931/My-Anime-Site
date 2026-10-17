@@ -15,7 +15,7 @@ function PinDialog({ ask, onCancel, onOk }) {
   const [bad, setBad] = useState(false)
   const [ok, setOk] = useState(false)
   const [out, setOut] = useState(false)
-  const leave = (then) => { setOut(true); setTimeout(then, 340) } // play the exit, then unmount
+  const leave = (then) => { setOut(true); setTimeout(then, 600) } // play the exit, then unmount
   const [fails, setFails] = useState(0)
   const [until, setUntil] = useState(0)
   const [, tick] = useState(0)
@@ -104,7 +104,7 @@ export default function Profiles({ user, profile }) {
   // Dialogs fade and drop away before they unmount.
   const closeDialogs = (after) => {
     setClosing(true)
-    timer.current = setTimeout(() => { setSheet(null); setDel(null); setClosing(false); after?.() }, 340)
+    timer.current = setTimeout(() => { setSheet(null); setDel(null); setClosing(false); after?.() }, 600)
   }
   // Entering manage mode starts the wobble; leaving it lets each tile settle back smoothly instead of snapping.
   const toggleManage = () => {
