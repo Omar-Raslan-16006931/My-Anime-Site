@@ -15,6 +15,9 @@ export default function Profiles({ user, profile }) {
   const { profiles, active } = useProfiles()
   const wall = usePosterWall()
   const [manage, setManage] = useState(params.get('manage') === '1')
+  const [wobbling, setWobbling] = useState(params.get('manage') === '1')
+  const [fresh, setFresh] = useState(null) // tile that was just created
+  const [settled, setSettled] = useState(false) // initial staggered entrance is over
   const [sheet, setSheet] = useState(null) // { id?, name, hue, kids }
   const [del, setDel] = useState(null) // profile awaiting remove confirmation
   const [leaving, setLeaving] = useState(null) // id animating out
@@ -27,28 +30,49 @@ export default function Profiles({ user, profile }) {
 
   const account = profile?.username || user?.email?.split('@')[0] || ''
   useEffect(() => { profileActions.ensure(account || 'Me') }, [account])
-  useEffect(() => () => clearTimeout(timer.current), [])
+  useEffect(() => { const t = setTimeout(() => setSettled(true), 1700); return () => { clearTimeout(t); clearTimeout(timer.current) } }, [])
 
   const choose = (p) => {
     if (manage) { setSheet({ id: p.id, name: p.name, hue: p.hue ?? 0, kids: !!p.kids }); return }
     if (picked) return
     setPicked(p.id)
     profileActions.setActive(p.id)
-    timer.current = setTimeout(() => { window.dispatchEvent(new Event('yoru:greet')); navigate('/') }, 460)
+    timer.current = setTimeout(() => { window.dispatchEvent(new Event('yoru:greet')); navigate('/') }, 620)
   }
   // Dialogs fade and drop away before they unmount.
   const closeDialogs = (after) => {
     setClosing(true)
     timer.current = setTimeout(() => { setSheet(null); setDel(null); setClosing(false); after?.() }, 280)
   }
+  // Entering manage mode starts the wobble; leaving it lets each tile settle back smoothly instead of snapping.
+  const toggleManage = () => {
+    if (!manage) { setManage(true); setWobbling(true); return }
+    const row = rowRef.current
+    const els = row ? [...row.querySelectorAll('.wob-wrap')] : []
+    els.forEach((el) => { const t = getComputedStyle(el).transform; el.style.animation = 'none'; el.style.transform = t })
+    if (row) void row.offsetWidth
+    els.forEach((el) => { el.style.transition = 'transform 0.7s cubic-bezier(0.34, 1.4, 0.64, 1)'; el.style.transform = 'none' })
+    setManage(false)
+    timer.current = setTimeout(() => {
+      setWobbling(false)
+      els.forEach((el) => { el.style.animation = ''; el.style.transition = ''; el.style.transform = '' })
+    }, 760)
+  }
   const openNew = () => setSheet({ id: null, name: '', hue: HUES[profiles.length % HUES.length], kids: false })
   const save = (e) => {
     e.preventDefault()
     if (!sheet.name.trim()) return
-    let id = sheet.id
-    if (id) profileActions.update(id, { name: sheet.name, hue: sheet.hue, kids: sheet.kids })
-    else id = profileActions.add2(sheet.name, sheet.kids, sheet.hue)?.id
-    closeDialogs(() => { setFlash(id); setTimeout(() => setFlash(null), 900) })
+    const snap = sheet
+    // Apply once, after the dialog has faded, so the tile animates exactly one time.
+    closeDialogs(() => {
+      if (snap.id) {
+        profileActions.update(snap.id, { name: snap.name, hue: snap.hue, kids: snap.kids })
+        setFlash(snap.id); setTimeout(() => setFlash(null), 900)
+      } else {
+        const np = profileActions.add(snap.name, snap.kids, snap.hue)
+        if (np) { setFresh(np.id); setTimeout(() => setFresh(null), 900) }
+      }
+    })
   }
   const confirmRemove = () => {
     const id = del.id
@@ -63,7 +87,7 @@ export default function Profiles({ user, profile }) {
   const canAdd = profiles.length < profileActions.max
 
   return (
-    <div className={'y-who' + (manage ? ' managing' : '') + (picked ? ' leaving-page' : '')}>
+    <div className={'y-who' + (manage ? ' managing' : '') + (picked ? ' leaving-page' : '') + (settled ? ' settled' : '')}>
       <div className="y-who-wall" aria-hidden="true">
         <div className="y-wall-row" style={{ animation: 'yoMarq 70s linear infinite' }}>
           {row1.map((s, i) => <span key={i} className="p"><img src={s} alt="" /></span>)}
@@ -77,38 +101,43 @@ export default function Profiles({ user, profile }) {
 
       <div className="y-who-head">
         <div className="y-eyebrow ac" style={{ fontWeight: 600 }}>{account ? `Signed in as @${account}` : 'This device'}</div>
-        <h1 key={manage ? 'm' : 'w'} className="y-who-title">{manage ? 'Manage profiles' : 'Who’s watching?'}</h1>
-        <p key={manage ? 'mh' : 'wh'} className="y-who-hint">{manage ? 'Tap a profile to edit it, or the red bin to remove it.' : 'Pick a profile to continue.'}</p>
+        <h1 className="y-who-title swap"><span className="a">Who’s watching?</span><span className="b" aria-hidden={!manage}>Manage profiles</span></h1>
+        <p className="y-who-hint swap"><span className="a">Pick a profile to continue.</span><span className="b" aria-hidden={!manage}>Tap a profile to edit it, or the red bin to remove it.</span></p>
       </div>
 
       <div ref={rowRef} className={'y-who-row' + (picked ? ' picking' : '')}>
         {profiles.map((p, i) => (
           <div key={p.id} data-flip={p.id} role="button" tabIndex={0} style={{ '--i': i }}
-            className={'y-who-p' + (manage ? ' wob' : '') + (active?.id === p.id ? ' cur' : '') + (picked === p.id ? ' picked' : '') + (leaving === p.id ? ' leaving' : '') + (flash === p.id ? ' flash' : '')}
+            className={'y-who-p' + (wobbling ? ' wob' : '') + (active?.id === p.id ? ' cur' : '') + (picked === p.id ? ' picked' : '') + (leaving === p.id ? ' leaving' : '') + (flash === p.id ? ' flash' : '') + (fresh === p.id ? ' fresh' : '')}
             onClick={() => choose(p)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(p) } }}>
-            <span className="tile" key={`${p.hue}-${p.name}`} style={{ background: vivid(p.hue ?? 0) }}>
-              <span className="ini">{p.name[0].toUpperCase()}</span>
-              {manage && <span className="edit" aria-hidden="true"><Pen /></span>}
-              {manage && profiles.length > 1 && (
-                <button type="button" className="rm" aria-label={`Remove ${p.name}`} title="Remove" onClick={(e) => { e.stopPropagation(); setDel(p) }}><Trash /></button>
-              )}
+            <span className="wob-wrap">
+              <span className="tile" key={`${p.hue}-${p.name}`} style={{ background: vivid(p.hue ?? 0) }}>
+                <span className="ini">{p.name[0].toUpperCase()}</span>
+                <span className="edit" aria-hidden="true"><Pen /></span>
+                {profiles.length > 1 && (
+                  <button type="button" className="rm" tabIndex={manage ? 0 : -1} aria-hidden={!manage} aria-label={`Remove ${p.name}`} title="Remove" onClick={(e) => { e.stopPropagation(); if (manage) setDel(p) }}><Trash /></button>
+                )}
+              </span>
+              <span className="nm">{p.name}{p.kids && <em>Kids</em>}</span>
+              <span className="sub"><b className="s-now">Watching now</b><b className="s-edit">Edit</b></span>
             </span>
-            <span className="nm">{p.name}{p.kids && <em>Kids</em>}</span>
-            <span className="sub">{manage ? 'Edit' : active?.id === p.id ? 'Watching now' : ''}</span>
           </div>
         ))}
         {canAdd && (
           <button type="button" data-flip="add" className="y-who-p add" style={{ '--i': profiles.length }} onClick={openNew}>
-            <span className="tile"><Plus /></span>
-            <span className="nm">Add profile</span>
-            <span className="sub">{profileActions.max - profiles.length} left</span>
+            <span className="wob-wrap">
+              <span className="tile"><Plus /></span>
+              <span className="nm">Add profile</span>
+              <span className="sub"><b className="s-left">{profileActions.max - profiles.length} left</b></span>
+            </span>
           </button>
         )}
       </div>
 
       <div className="y-who-foot">
-        <button type="button" className={'y-who-manage' + (manage ? ' on' : '')} onClick={() => setManage((v) => !v)}>
-          {manage ? <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10" /></svg>Done</> : <><Pen s={16} />Manage profiles</>}
+        <button type="button" className={'y-who-manage' + (manage ? ' on' : '')} onClick={toggleManage}>
+          <span className="m-a"><Pen s={16} />Manage profiles</span>
+          <span className="m-b" aria-hidden={!manage}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10" /></svg>Done</span>
         </button>
         {!user && <Link to="/welcome" className="y-who-new">New to Yoru? Create an account →</Link>}
       </div>

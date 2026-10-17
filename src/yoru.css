@@ -1523,3 +1523,46 @@ html { scrollbar-gutter: stable; }
 body { transition: padding-bottom 0.45s var(--y-ease); }
 /* skeleton shimmer fades instead of flashing */
 .y-skel, .skel { animation-timing-function: ease-in-out; }
+
+/* ===== Profiles v3: nothing remounts or restarts when manage mode toggles ===== */
+.y-who-p { animation: yoTileIn 0.7s var(--y-spring) calc(var(--i, 0) * 80ms + 120ms) backwards; }
+.y-who-p.fresh { animation-delay: 0s; }
+.y-who-p.wob { animation: yoTileIn 0.7s var(--y-spring) calc(var(--i, 0) * 80ms + 120ms) backwards; } /* same animation as at rest: no restart */
+.wob-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.y-who-p.wob:not(.add):not(.leaving) .wob-wrap { animation: yoWob 0.5s ease-in-out infinite; animation-delay: calc(var(--i, 0) * -90ms); }
+.y-who-p .edit { opacity: 0; animation: none; transition: opacity 0.45s var(--y-ease); pointer-events: none; }
+.y-who.managing .y-who-p .edit { opacity: 1; }
+.y-who-p .rm { opacity: 0; transform: scale(0.3) rotate(-30deg); pointer-events: none; animation: none; transition: transform 0.5s var(--y-spring), opacity 0.35s var(--y-ease), background 0.2s; }
+.y-who.managing .y-who-p .rm { opacity: 1; transform: none; pointer-events: auto; }
+.y-who.managing .y-who-p .rm:hover { transform: scale(1.12); }
+.y-who.managing .y-who-p .rm:active { transform: scale(0.9); }
+.y-who-p .sub { position: relative; display: block; height: 15px; min-height: 15px; width: 100%; text-align: center; }
+.y-who-p .sub b { position: absolute; left: 0; right: 0; top: 0; font-weight: 600; opacity: 0; transition: opacity 0.4s var(--y-ease), transform 0.4s var(--y-ease); transform: translateY(4px); }
+.y-who-p.cur .sub .s-now, .y-who-p.add .sub .s-left { opacity: 1; transform: none; }
+.y-who.managing .y-who-p .sub .s-now { opacity: 0; transform: translateY(-4px); }
+.y-who.managing .y-who-p:not(.add) .sub .s-edit { opacity: 1; transform: none; color: var(--y-t3); }
+.y-who.managing .y-who-p.add .sub .s-left { opacity: 1; }
+.swap { display: grid; justify-items: center; animation: none; }
+.swap > span { grid-area: 1 / 1; transition: opacity 0.5s var(--y-ease), transform 0.55s var(--y-ease), filter 0.5s var(--y-ease); }
+.swap > .b { opacity: 0; transform: translateY(10px); filter: blur(4px); pointer-events: none; }
+.y-who.managing .swap > .a { opacity: 0; transform: translateY(-10px); filter: blur(4px); }
+.y-who.managing .swap > .b { opacity: 1; transform: none; filter: none; }
+.y-who-manage { position: relative; display: inline-grid; min-width: 190px; justify-items: center; }
+.y-who-manage > span { grid-area: 1 / 1; display: inline-flex; align-items: center; gap: 8px; transition: opacity 0.4s var(--y-ease), transform 0.45s var(--y-ease); }
+.y-who-manage .m-b { opacity: 0; transform: translateY(8px); }
+.y-who-manage.on .m-a { opacity: 0; transform: translateY(-8px); }
+.y-who-manage.on .m-b { opacity: 1; transform: none; }
+.y-who-manage { transition: background 0.4s var(--y-ease), color 0.4s var(--y-ease), border-color 0.4s var(--y-ease); }
+.y-who-p.leaving .wob-wrap { animation: none; }
+/* Greeting fades in over the profile page instead of snapping in */
+@keyframes greetFade { 0% { opacity: 0; } 14%, 82% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes greetInner {
+  0%, 10% { opacity: 0; transform: translateY(16px) scale(0.92); }
+  30% { opacity: 1; transform: none; }
+  78% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: scale(1.06); }
+}
+.y-who.leaving-page { transition: opacity 0.5s var(--y-ease) 0.2s; opacity: 0.0; }
+/* once the opening entrance has played it never replays (index changes, class changes, re-renders) */
+.y-who.settled .y-who-p:not(.fresh):not(.leaving), .y-who.settled .y-who-p.wob:not(.fresh):not(.leaving) { animation: none; }
+.y-who-p.fresh, .y-who.settled .y-who-p.fresh { animation: yoTileIn 0.7s var(--y-spring) backwards; }

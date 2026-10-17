@@ -49,10 +49,10 @@ export const profileActions = {
   },
   setActive(id) { activeId = id; commit() },
   clearActive() { activeId = null; commit() },
-  add(name, kids = false) {
+  add(name, kids = false, hue) {
     const nm = String(name || '').trim().slice(0, 18)
     if (!nm || list.length >= MAX) return null
-    const p = { id: 'p-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: nm, hue: hueFor(nm + list.length), kids: !!kids }
+    const p = { id: 'p-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: nm, hue: hue ?? hueFor(nm + list.length), kids: !!kids }
     list = [...list, p]; commit()
     return p
   },
@@ -72,11 +72,6 @@ export const profileActions = {
     const nm = String(patch.name ?? '').trim().slice(0, 18)
     list = list.map((p) => (p.id === id ? { ...p, ...(nm ? { name: nm } : {}), ...(patch.hue != null ? { hue: patch.hue } : {}), ...(patch.kids != null ? { kids: !!patch.kids } : {}) } : p))
     commit()
-  },
-  add2(name, kids, hue) {
-    const p = this.add(name, kids)
-    if (p && hue != null) this.update(p.id, { hue })
-    return p
   },
   max: MAX,
 }
