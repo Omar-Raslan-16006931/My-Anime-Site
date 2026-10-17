@@ -34,6 +34,7 @@ export default function Browse({ embedded = false }) {
   const [loading, setLoading] = useState(true)
   const [more, setMore] = useState(false)
   const [error, setError] = useState(false)
+  const [groupArt, setGroupArt] = useState({})
   const [art, setArt] = useState({})
   const [tick, setTick] = useState(0)
 
@@ -45,10 +46,20 @@ export default function Browse({ embedded = false }) {
     return s
   }, [isGenre, sel])
 
-  // Genre tile art: the top title of each category. (The three big tiles are designed, not photos.)
+  // Tile art: genre tiles get the top title of each category; each big tile gets a fan of that
+  // category's current top posters (gradient + glyph show until they arrive, or if they can't load).
   useEffect(() => {
     let alive = true
     animeCategoryArt(CATEGORIES).then((a) => { if (alive) setArt(a || {}) }).catch(() => {})
+    Promise.all([animeList('trending', 12).catch(() => []), getPopularMovies().catch(() => null), getPopularTV().catch(() => null)]).then(([a, m, t]) => {
+      if (!alive) return
+      const tm = (r) => (r?.results || []).filter((x) => x.poster_path).slice(0, 3).map((x) => getTmdbImage(x.poster_path, 'w342'))
+      setGroupArt({
+        Anime: (a || []).map((x) => x.images?.jpg?.large_image_url).filter(Boolean).slice(0, 3),
+        Movies: tm(m),
+        TV: tm(t),
+      })
+    })
     return () => { alive = false }
   }, [])
 
@@ -93,7 +104,11 @@ export default function Browse({ embedded = false }) {
       <div className="y-bg-grid">
         {GROUPS.map((g) => (
           <button key={g.key} type="button" className={'y-bg-tile bg-' + g.key.toLowerCase() + (sel === g.key ? ' on' : '')} onClick={() => pick(g.key)} aria-pressed={sel === g.key}>
-            <span className="y-bg-glyph" aria-hidden="true">{GLYPH[g.key]}</span>
+            {groupArt[g.key]?.length ? (
+              <span className="y-bg-fan" aria-hidden="true">
+                {groupArt[g.key].map((u, i) => <img key={u} src={u} alt="" loading="lazy" style={{ '--i': i }} />)}
+              </span>
+            ) : <span className="y-bg-glyph" aria-hidden="true">{GLYPH[g.key]}</span>}
             <span className="y-bg-word" aria-hidden="true">{g.key}</span>
             <span className="y-bg-name">{g.key}</span>
             <span className="y-bg-blurb">{g.blurb}</span>

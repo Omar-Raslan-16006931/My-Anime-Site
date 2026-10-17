@@ -1722,3 +1722,15 @@ body { transition: none; }
 .y-bg-tile.on { box-shadow: 0 0 0 1px var(--y-ac), 0 14px 30px -14px oklch(0.6 0.19 var(--h) / 0.7); }
 @media (max-width: 879px) { .y-bg-glyph { width: 34px; height: 34px; right: 9px; top: 9px; } }
 .y-bg-tile[class*="bg-"] .y-bg-word { display: none; }
+
+/* Fan of real posters, top-right of each big tile, clear of the title. */
+.y-bg-fan { position: absolute; right: 14px; top: 14px; height: 56%; width: 60%; z-index: 1; pointer-events: none; }
+.y-bg-fan img {
+  position: absolute; inset: 0 calc(var(--i) * 30px) auto auto; opacity: 1; height: 100%; width: auto; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 10px;
+  box-shadow: 0 10px 22px -6px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.14);
+  rotate: calc(var(--i) * -6deg + 6deg); transform-origin: 50% 100%; z-index: calc(3 - var(--i)); transition: transform 0.5s var(--y-out);
+}
+.y-bg-tile:hover .y-bg-fan img, .y-bg-tile.on .y-bg-fan img { transform: translateY(-4px); }
+.y-bg-tile[class*='bg-']::after { background: linear-gradient(0deg, rgba(0, 0, 0, 0.6), transparent 55%); z-index: 1; }
+.y-bg-tile > .y-bg-name, .y-bg-tile > .y-bg-blurb { z-index: 2; }
+@media (max-width: 879px) { .y-bg-fan { right: 8px; top: 8px; height: 52%; } .y-bg-fan img { border-radius: 5px; inset: 0 calc(var(--i) * 14px) auto auto; } }
