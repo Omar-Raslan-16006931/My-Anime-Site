@@ -83,7 +83,7 @@ export default function AuthModal({ onClose }) {
   }, [username, mode])
 
   const switchMode = (m) => { setMode(m); setError(''); setShow(false) }
-  const finish = (d) => { setDone(d); t.current = setTimeout(() => { setClosing(true); t.current = setTimeout(() => { closeRef.current(); if (d.go) navigate(d.go) }, 300) }, d.delay || 1000) }
+  const finish = (d) => { setDone(d); t.current = setTimeout(() => { setClosing(true); t.current = setTimeout(() => { closeRef.current(); if (d.go) navigate(d.go) }, 300) }, d.delay || 2000) }
 
   const submit = async (e) => {
     e.preventDefault()

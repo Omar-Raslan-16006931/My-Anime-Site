@@ -47,7 +47,26 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
   const [confirmOut, setConfirmOut] = useState(false)
   const [outClosing, setOutClosing] = useState(false)
   const closeOut = (after) => { setOutClosing(true); setTimeout(() => { setConfirmOut(false); setOutClosing(false); after?.() }, 280) }
-  const logout = () => closeOut(async () => { await supabase.auth.signOut(); navigate('/') })
+  // Sign out fades the whole app to a calm cover, signs out and goes Home underneath, then fades back in.
+  const logout = () => closeOut(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+    const veil = document.createElement('div')
+    veil.className = 'signout-veil'
+    veil.innerHTML = '<div class="so-spin"></div><div class="so-text">Signing out…</div>'
+    document.body.appendChild(veil)
+    void veil.offsetWidth
+    veil.classList.add('in')
+    await wait(650)
+    await supabase.auth.signOut()
+    navigate('/')
+    await wait(500)
+    veil.querySelector('.so-text').textContent = 'Signed out'
+    veil.classList.add('done')
+    await wait(900)
+    veil.classList.remove('in')
+    await wait(800)
+    veil.remove()
+  })
 
   // Previews for the overview (first 12 of each).
   const [cw, setCw] = useState(null)

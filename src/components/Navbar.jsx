@@ -36,6 +36,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
   const [dockAway, setDockAway] = useState(false)
   const [q, setQ] = useState('')
   const baseVHRef = useRef(0)
+  const pressing = useRef(false)
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { profiles, active } = useProfiles()
@@ -86,12 +87,21 @@ export default function Navbar({ user, profile, onAuthClick }) {
   // The tab bar tucks away while scrolling down and returns on scroll up.
   useEffect(() => {
     let last = window.scrollY
+    let down = 0 // scroll distance travelled downward since the last upward move
     const onScroll = () => {
       const y = window.scrollY
       setScrolled(y > 40)
       const d = y - last
-      if (Math.abs(d) > 8) { setDockAway(d > 0 && y > 140); last = y }
-      if (y < 60) setDockAway(false)
+      last = y
+      if (y < 80) { down = 0; setDockAway(false); return }
+      if (d > 0) {
+        down += d
+        // Hide only after a deliberate scroll down, and never while a finger is on the bar.
+        if (down > 64 && y > 220 && !pressing.current) setDockAway(true)
+      } else if (d < -4) {
+        down = 0
+        setDockAway(false)
+      }
     }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -138,15 +148,18 @@ export default function Navbar({ user, profile, onAuthClick }) {
       </header>
 
       {/* Phone tab bar: floating pill. The selected tab expands into a white pill with its label. */}
-      <nav className={'ydock' + (kbOpen ? ' hide' : '') + (dockAway ? ' away' : '')} aria-label="Primary" style={{ '--n': DOCK.length + 1 }}>
+      <nav className={'ydock' + (kbOpen ? ' hide' : '') + (dockAway ? ' away' : '')} aria-label="Primary" style={{ '--n': DOCK.length + 1 }}
+        onPointerDown={() => { pressing.current = true }} onPointerUp={() => { pressing.current = false }} onPointerCancel={() => { pressing.current = false }}>
         <span className="ydock-ind" style={{ '--i': Math.max(tab, 0), opacity: tab < 0 ? 0 : undefined }} aria-hidden="true" />
         {DOCK.map((d, i) => (
-          <NavLink key={d.key} to={d.to} aria-label={d.label} aria-current={i === tab ? 'page' : undefined} className={'ydock-item' + (i === tab ? ' on' : '')}>
+          <NavLink key={d.key} to={d.to} aria-label={d.label} aria-current={i === tab ? 'page' : undefined} className={'ydock-item' + (i === tab ? ' on' : '')}
+            onClick={(e) => { if (i === tab && pathname === d.to) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) } }}>
             {d.icon}
             <span className="ydock-label">{d.label}</span>
           </NavLink>
         ))}
-        <NavLink to="/me" aria-label="Your profile" aria-current={onMe ? 'page' : undefined} className={'ydock-item ydock-you' + (onMe ? ' on' : '')}>
+        <NavLink to="/me" aria-label="Your profile" aria-current={onMe ? 'page' : undefined} className={'ydock-item ydock-you' + (onMe ? ' on' : '')}
+          onClick={(e) => { if (pathname === '/me' && !window.location.search) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) } }}>
           <span className="y-me" key={`${me?.id}-${me?.hue}`} style={{ background: vivid(me?.hue || 0) }}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}</span>
           <span className="ydock-label">You</span>
         </NavLink>

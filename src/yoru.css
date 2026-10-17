@@ -224,33 +224,6 @@ html::before { background: var(--y-bg) !important; }
   .y-search:focus-within { width: 180px; }
 }
 
-/* Phone tab bar: floating solid pill; the selected tab expands to show its label. */
-.ydock { display: none; }
-@media (max-width: 879px) {
-  .ydock {
-    display: flex; position: fixed; left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom)); height: 64px; z-index: 140;
-    border-radius: 32px; padding: 8px; gap: 4px; background: var(--y-s1); box-shadow: 0 10px 18px -10px rgba(0, 0, 0, 0.8);
-    transition: transform 0.45s var(--y-out), opacity 0.3s;
-  }
-  .ydock.away { transform: translate3d(0, calc(100% + 44px), 0); opacity: 0; pointer-events: none; }
-  .ydock.hide { display: none; }
-  .ydock-item {
-    flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 24px; overflow: hidden;
-    color: var(--y-t3); text-decoration: none; -webkit-tap-highlight-color: transparent;
-    transition: flex 0.45s cubic-bezier(0.3, 0.7, 0.2, 1), background 0.3s, color 0.3s, transform 0.15s;
-  }
-  .ydock-item.on { flex: 2.4; background: var(--y-tx); color: var(--y-bg); }
-  .ydock-item:active { transform: scale(0.95); }
-  .ydock-label {
-    max-width: 0; margin-left: 0; opacity: 0; overflow: hidden; white-space: nowrap; font-size: 13px; font-weight: 650;
-    transition: max-width 0.45s cubic-bezier(0.3, 0.7, 0.2, 1), margin-left 0.45s cubic-bezier(0.3, 0.7, 0.2, 1), opacity 0.3s;
-  }
-  .ydock-item.on .ydock-label { max-width: 90px; margin-left: 8px; opacity: 1; }
-  .ydock .y-me-wrap.dockme { display: flex; flex: 1; min-width: 0; height: 48px; align-items: center; justify-content: center; }
-  .ydock .y-me { width: 34px; height: 34px; border-radius: 50%; transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1); -webkit-tap-highlight-color: transparent; }
-  .ydock .y-me:active { transform: scale(0.88); }
-  .ydock .y-menu { top: auto; bottom: calc(100% + 16px); right: -4px; transform-origin: bottom right; }
-}
 
 /* ============================================================
    Home — hero
@@ -919,31 +892,6 @@ a:focus-visible, button:focus-visible { outline-color: var(--y-ac); }
   .page, .y-home, .y-home-body > * { animation: none; }
 }
 
-/* Tab bar hide/show: the buttons squeeze together into one round button, which then fades down.
-   Showing again plays it in reverse: the button rises, then opens out into the full bar. */
-@media (max-width: 879px) {
-  .ydock {
-    transition: left 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.14s, right 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.14s, gap 0.3s ease 0.14s, padding 0.3s ease 0.14s,
-      transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
-  }
-  .ydock .ydock-item, .ydock .y-me-wrap.dockme {
-    transition: flex 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.14s, opacity 0.25s ease 0.2s, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.14s, background 0.3s, color 0.3s;
-  }
-  .ydock.away {
-    left: calc(50% - 32px); right: calc(50% - 32px); gap: 0; padding: 8px 0; overflow: hidden;
-    transform: translate3d(0, calc(100% + 44px), 0); opacity: 0; pointer-events: none;
-    transition: left 0.3s cubic-bezier(0.65, 0, 0.35, 1), right 0.3s cubic-bezier(0.65, 0, 0.35, 1), gap 0.3s ease, padding 0.3s ease,
-      transform 0.32s cubic-bezier(0.65, 0, 0.35, 1) 0.22s, opacity 0.25s ease 0.26s;
-  }
-  .ydock.away .ydock-item, .ydock.away .y-me-wrap.dockme {
-    flex: 0 0 0; min-width: 0; opacity: 0; transform: scale(0.3);
-    transition: flex 0.3s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.2s ease, transform 0.3s cubic-bezier(0.65, 0, 0.35, 1);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ydock, .ydock.away, .ydock .ydock-item, .ydock .y-me-wrap.dockme { transition-duration: 0.01s; transition-delay: 0s; }
-}
-
 
 /* ---------- Top bar: solid and gradient are separate layers that cross-fade ---------- */
 .topbar.y-top, .topbar.y-top.over-hero { background: transparent !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; isolation: isolate; transition: none; }
@@ -963,22 +911,6 @@ a:focus-visible, button:focus-visible { outline-color: var(--y-ac); }
   .topbar.y-top::before { background: var(--y-bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 
-/* ---------- Tab bar: a pill slides between tabs ---------- */
-@media (max-width: 879px) {
-  .ydock { gap: 0; }
-  .ydock-ind {
-    position: absolute; left: 8px; top: 8px; bottom: 8px; width: calc((100% - 16px) / var(--n, 5)); border-radius: 24px; background: var(--y-tx); pointer-events: none;
-    transform: translateX(calc(var(--i, 0) * 100%)); transition: transform 0.38s cubic-bezier(0.34, 1.3, 0.5, 1), opacity 0.2s ease;
-  }
-  .ydock.away .ydock-ind { opacity: 0; transition: opacity 0.2s ease; }
-  .ydock .ydock-item, .ydock .y-me-wrap.dockme { position: relative; z-index: 1; }
-  .ydock .ydock-item, .ydock .ydock-item.on { flex: 1; flex-direction: column; gap: 3px; background: transparent; overflow: visible; }
-  .ydock .ydock-item.on { color: var(--y-bg); }
-  .ydock-label, .ydock-item.on .ydock-label { max-width: none; margin: 0; opacity: 0.85; font-size: 10px; font-weight: 650; letter-spacing: 0.01em; }
-  .ydock-item.on svg { animation: yoTabPop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1); }
-  .ydock-item { transition: color 0.35s ease 0.08s, transform 0.2s ease; }
-}
-@keyframes yoTabPop { 0% { transform: translateY(5px) scale(0.75); } 60% { transform: translateY(-2px) scale(1.12); } 100% { transform: none; } }
 
 /* ---------- Surprise me: slot-machine overlay ---------- */
 .y-shuf-fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
@@ -1100,14 +1032,9 @@ h1, h2, h3 { text-wrap: balance; }
 .y-me-wrap.top .y-me { transition: transform 0.35s var(--y-spring), box-shadow 0.3s var(--y-ease); }
 .y-me-wrap.top:hover .y-me { transform: scale(1.08); }
 .y-me-wrap.top.on .y-me { box-shadow: 0 0 0 2px var(--y-bg), 0 0 0 4px var(--y-tx); }
-@media (max-width: 879px) {
-  .ydock .ydock-item.ydock-you .y-me { width: 26px; height: 26px; border-radius: 50%; font-size: 12px; display: grid; place-items: center; overflow: hidden; font-weight: 700; color: var(--y-bg); }
-  .ydock .ydock-item.ydock-you.on { color: var(--y-bg); }
-}
 .y-browse-embed { display: flex; flex-direction: column; gap: 22px; margin-top: 8px; }
 @media (max-width: 879px) {
   .y-me-wrap.top { display: none; }
-  .ydock .ydock-item.ydock-you .y-me { width: 22px; height: 22px; font-size: 11px; }
 }
 
 /* Hub menu rows and compact appearance picker */
@@ -1706,3 +1633,56 @@ body { transition: none; }
 .auth { overflow: hidden; overscroll-behavior: none; touch-action: none; }
 .auth input { touch-action: manipulation; }
 @media (max-height: 720px) { .auth { padding: 12px; } .auth-card { padding: 18px 20px 18px; } .auth-brand { margin-bottom: 10px; } .auth-p { margin-bottom: 12px; } .auth-field input { height: 52px; } }
+
+/* =====================================================================
+   Phone tab bar — one implementation.
+   • Taps: the hit areas never move, scale or animate (only the icon inside gives feedback).
+   • Selected tab: a white pill glides between tabs (transform only).
+   • Hide/show: icons fade, the bar closes into a round button (clip-path), then drifts down; reversed to show.
+   ===================================================================== */
+.ydock { display: none; }
+@media (max-width: 879px) {
+  .ydock {
+    display: flex; position: fixed; left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom)); height: 64px; z-index: 140;
+    padding: 8px; gap: 0; border-radius: 32px; background: var(--y-s1);
+    box-shadow: 0 10px 18px -10px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    clip-path: inset(-30px -20px -30px -20px round 50px); /* wide enough that the shadow is never clipped */
+    transform: translate3d(0, 0, 0); opacity: 1; touch-action: manipulation;
+    transition: clip-path 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.18s, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+  }
+  .ydock.hide { display: none; }
+  .ydock.away {
+    clip-path: inset(0 calc(50% - 32px) 0 calc(50% - 32px) round 32px);
+    transform: translate3d(0, calc(100% + 40px), 0); opacity: 0; pointer-events: none;
+    transition: clip-path 0.4s cubic-bezier(0.65, 0, 0.35, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.28s, opacity 0.3s ease 0.36s;
+  }
+  .ydock-item {
+    position: relative; z-index: 1; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    height: 48px; border-radius: 24px; color: var(--y-t3); text-decoration: none; background: none; scale: none;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none;
+    transition: color 0.35s ease, opacity 0.3s ease 0.32s;
+  }
+  .ydock-item.on { color: var(--y-bg); }
+  .ydock-item:active { scale: none; }
+  .ydock-item svg { transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
+  .ydock-item:active svg, .ydock-item:active .y-me { transform: scale(0.84); transition-duration: 0.12s; }
+  .ydock-item.on svg { transform: translateY(-1px); }
+  .ydock-label { max-width: none; margin: 0; opacity: 0.85; font-size: 10px; font-weight: 650; letter-spacing: 0.01em; white-space: nowrap; }
+  .ydock-ind {
+    position: absolute; left: 8px; top: 8px; bottom: 8px; width: calc((100% - 16px) / var(--n, 4)); border-radius: 24px; background: var(--y-tx);
+    pointer-events: none; z-index: 0; transform: translateX(calc(var(--i, 0) * 100%));
+    transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
+  }
+  .ydock.away .ydock-item { opacity: 0; transition: opacity 0.14s ease, color 0.35s ease; }
+  .ydock.away .ydock-ind { opacity: 0; transition: opacity 0.14s ease; }
+  .ydock .ydock-item.ydock-you .y-me { width: 22px; height: 22px; border-radius: 50%; font-size: 11px; display: grid; place-items: center; overflow: hidden; font-weight: 700; color: var(--y-bg); transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
+}
+@media (prefers-reduced-motion: reduce) { .ydock, .ydock.away, .ydock-item, .ydock-ind { transition-duration: 0.01s; transition-delay: 0s; } }
+
+/* ===== Sign-out: calm fade to a cover, back out when done ===== */
+.signout-veil { position: fixed; inset: 0; z-index: 9990; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: var(--y-bg); opacity: 0; pointer-events: all; transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+.signout-veil.in { opacity: 1; }
+.so-spin { width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.14); border-top-color: var(--y-tx); animation: yoSpin 0.8s linear infinite; transition: opacity 0.3s ease, transform 0.4s ease; }
+.so-text { font: 600 15px var(--y-font); color: var(--y-t2); letter-spacing: -0.005em; }
+.signout-veil.done .so-spin { opacity: 0; transform: scale(0.6); }
+@media (prefers-reduced-motion: reduce) { .signout-veil, .so-spin { transition-duration: 0.01s; animation-duration: 2s; } }
