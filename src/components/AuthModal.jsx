@@ -51,21 +51,24 @@ export default function AuthModal({ onClose }) {
   const [done, setDone] = useState(null) // { title, text, go? }
   const [taken, setTaken] = useState(null) // null | true | false
   const t = useRef(0)
+  // The parent hands us a new onClose on every render; keep the latest in a ref so effects and timers never restart (or cancel) because of it.
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
   const [closing, setClosing] = useState(false)
   // Fade out instead of vanishing.
-  const close = () => { setClosing(true); clearTimeout(t.current); t.current = setTimeout(onClose, 300) }
+  const close = () => { setClosing(true); clearTimeout(t.current); t.current = setTimeout(() => closeRef.current(), 300) }
 
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    const onKey = (e) => { if (e.key === 'Escape') { setClosing(true); t.current = setTimeout(onClose, 300) } }
+    const onKey = (e) => { if (e.key === 'Escape') { setClosing(true); clearTimeout(t.current); t.current = setTimeout(() => closeRef.current(), 300) } }
     // No scrolling on the sign-in / sign-up screen (touch or wheel), except inside the fields themselves.
     const noScroll = (e) => { if (!(e.target instanceof Element && e.target.closest('input'))) e.preventDefault() }
     document.addEventListener('touchmove', noScroll, { passive: false })
     document.addEventListener('wheel', noScroll, { passive: false })
     document.addEventListener('keydown', onKey)
     return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey); document.removeEventListener('touchmove', noScroll); document.removeEventListener('wheel', noScroll); clearTimeout(t.current) }
-  }, [onClose])
+  }, [])
 
   // Live username availability while signing up.
   useEffect(() => {
@@ -80,7 +83,7 @@ export default function AuthModal({ onClose }) {
   }, [username, mode])
 
   const switchMode = (m) => { setMode(m); setError(''); setShow(false) }
-  const finish = (d) => { setDone(d); t.current = setTimeout(() => { setClosing(true); t.current = setTimeout(() => { onClose(); if (d.go) navigate(d.go) }, 300) }, d.delay || 1000) }
+  const finish = (d) => { setDone(d); t.current = setTimeout(() => { setClosing(true); t.current = setTimeout(() => { closeRef.current(); if (d.go) navigate(d.go) }, 300) }, d.delay || 1000) }
 
   const submit = async (e) => {
     e.preventDefault()
