@@ -48,7 +48,35 @@ export function setScheme(name) {
   listeners.forEach((l) => l())
 }
 
+// ---- Preview mode: try a scheme across the whole app, then keep or revert ----
+let previewing = false
+let committed = current
+const notify = () => listeners.forEach((l) => l())
+export function previewScheme(name) {
+  if (!SCHEMES[name]) return
+  if (!previewing) committed = current
+  previewing = true
+  current = name
+  applyScheme(name)
+  notify()
+}
+export function keepPreview() {
+  if (!previewing) return
+  previewing = false
+  try { localStorage.setItem(KEY, current) } catch { /* ignore */ }
+  notify()
+}
+export function cancelPreview() {
+  if (!previewing) return
+  previewing = false
+  current = committed
+  applyScheme(current)
+  notify()
+}
+export const isPreviewing = () => previewing
+
 const subscribe = (cb) => { listeners.add(cb); return () => listeners.delete(cb) }
+export const usePreviewing = () => useSyncExternalStore(subscribe, isPreviewing, isPreviewing)
 export const useScheme = () => useSyncExternalStore(subscribe, getScheme, getScheme)
 
 // ---- Colour helpers that follow the active scheme ----

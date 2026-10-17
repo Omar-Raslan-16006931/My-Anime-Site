@@ -19,6 +19,7 @@ import Simulcast from './pages/Simulcast'
 import Profiles from './pages/Profiles'
 import Welcome from './pages/Welcome'
 import SurpriseOverlay from './components/SurpriseOverlay'
+import { PreviewBar } from './components/ThemePreview'
 import { initVault, subscribeVault, vaultLocked } from './lib/vault'
 import { useSyncExternalStore } from 'react'
 
@@ -184,6 +185,7 @@ export default function App() {
 
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
       <SurpriseOverlay />
+      <PreviewBar />
       <Toasts />
     </div>
   )

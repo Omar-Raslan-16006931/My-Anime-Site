@@ -4,6 +4,7 @@ import { supabase } from '../supabase'
 import { udb } from '../lib/udb'
 import { isNative } from '../lib/native'
 import { SCHEMES, SCHEME_NAMES, setScheme, useScheme } from '../lib/theme'
+import ThemePicker from '../components/ThemePreview'
 import { useProfiles, profileActions } from '../lib/profiles'
 import CurrentlyWatching from './CurrentlyWatching'
 import Watchlist from './Watchlist'
@@ -190,14 +191,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
         </button>
         <div className={'acc-expand' + (lookOpen ? ' open' : '')}>
           <div>
-            <div className="me-swatches acc-swatches">
-              {SCHEME_NAMES.map((k) => (
-                <button key={k} type="button" className={'me-swatch' + (scheme === k ? ' on' : '')} aria-pressed={scheme === k} onClick={() => setScheme(k)}>
-                  <span className="me-swatch-chips"><i style={{ background: SCHEMES[k].bg }} /><i style={{ background: SCHEMES[k].s2 }} /><i style={{ background: SCHEMES[k].ac }} /></span>
-                  <b>{k}</b>
-                </button>
-              ))}
-            </div>
+            <div className="acc-swatches"><ThemePicker /></div>
           </div>
         </div>
       </div>

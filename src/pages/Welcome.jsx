@@ -2,16 +2,12 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { usePosterWall } from '../lib/wall'
-import { profileActions } from '../lib/profiles'
+import { profileActions, vivid, HUES } from '../lib/profiles'
+import ThemePicker from '../components/ThemePreview'
+import { toast } from '../lib/toast'
 
 const GENRES = ['Action', 'Fantasy', 'Sci-Fi', 'Mecha', 'Slice of Life', 'Romance', 'Comedy', 'Crime', 'Thriller', 'Mystery', 'Horror', 'Drama', 'Sports', 'Historical']
-const STEPS = ['Account', 'Your taste', 'Setup', 'Ready']
-// Free for everyone — the plan only decides how many profiles you set up.
-const PLANS = [
-  { name: 'Solo', profiles: 1, lines: ['1 profile', 'Watch on any device', 'Simulcasts within the hour'] },
-  { name: 'Duo', profiles: 2, lines: ['2 profiles', 'Watch on any device', 'Simulcasts within the hour'] },
-  { name: 'Family', profiles: 5, lines: ['Up to 5 profiles', 'Kids profiles', 'Simulcasts within the hour'] },
-]
+const STEPS = ['Account', 'Your taste', 'Your look', 'Profile']
 const TASTE_KEY = 'yoru:taste'
 
 const Check = () => (
@@ -30,7 +26,9 @@ export default function Welcome({ user, onAuthRequired }) {
   const [busy, setBusy] = useState(false)
   const [needsConfirm, setNeedsConfirm] = useState(false)
   const [genres, setGenres] = useState(() => { try { return JSON.parse(localStorage.getItem(TASTE_KEY) || '[]') } catch { return [] } })
-  const [plan, setPlan] = useState('Duo')
+  const [pname, setPname] = useState('')
+  const [phue, setPhue] = useState(HUES[0])
+  const [pkids, setPkids] = useState(false)
 
   // Already signed in → skip the account step.
   useEffect(() => { if (user && step === 0) setStep(1) }, [user, step])
@@ -62,8 +60,14 @@ export default function Welcome({ user, onAuthRequired }) {
     if (step === 1) { try { localStorage.setItem(TASTE_KEY, JSON.stringify(genres)) } catch { /* ignore */ } }
     setStep((s) => Math.min(3, s + 1))
   }
-  const finish = () => navigate('/profiles')
-  const chosen = PLANS.find((p) => p.name === plan) || PLANS[1]
+  const nameForProfile = (pname || username || 'Me').trim()
+  const finish = (e) => {
+    e?.preventDefault()
+    const base = profileActions.add2(nameForProfile, pkids, phue)
+    if (base) profileActions.setActive(base.id)
+    toast(`Welcome, ${nameForProfile}`)
+    navigate('/')
+  }
 
   const c1 = wall.posters.slice(0, 4)
   const c2 = wall.posters.slice(4, 8)
@@ -95,13 +99,13 @@ export default function Welcome({ user, onAuthRequired }) {
         </div>
 
         {step === 0 && (
-          <form className="y-ob-pane lead" onSubmit={createAccount}>
+          <form key="s0" className="y-ob-pane lead" onSubmit={createAccount}>
             <h1>Anime and series, the night they air.</h1>
             <p className="y-ob-sub">Create a free account to keep your list and pick up where you left off.</p>
             <div className="y-ob-fields">
-              <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" required />
-              <input type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
-              <input type="password" placeholder="Password (6+ characters)" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required />
+              <label className={'auth-field' + (username ? ' filled' : '')}><input placeholder=" " value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" required /><span className="auth-label">Username</span></label>
+              <label className={'auth-field' + (email ? ' filled' : '')}><input type="email" placeholder=" " value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required /><span className="auth-label">Email</span></label>
+              <label className={'auth-field' + (password ? ' filled' : '')}><input type="password" placeholder=" " value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required minLength={6} /><span className="auth-label">Password (6+ characters)</span></label>
             </div>
             {err && <p className="y-ob-err">{err}</p>}
             <div className="y-ob-go">
@@ -112,7 +116,7 @@ export default function Welcome({ user, onAuthRequired }) {
         )}
 
         {step === 1 && (
-          <div className="y-ob-pane">
+          <div key="s1" className="y-ob-pane">
             <h1>What do you like to watch?</h1>
             <p className="y-ob-sub">Pick at least three. We’ll use them to tune your picks. · <b>{genres.length} selected</b></p>
             <div className="y-ob-genres">
@@ -124,39 +128,33 @@ export default function Welcome({ user, onAuthRequired }) {
         )}
 
         {step === 2 && (
-          <div className="y-ob-pane">
-            <h1>Set up your profiles</h1>
-            <p className="y-ob-sub">Yoru is free. Pick how many people will watch.</p>
-            <div className="y-ob-plans">
-              {PLANS.map((p) => (
-                <button key={p.name} type="button" className={'y-ob-plan' + (plan === p.name ? ' on' : '')} onClick={() => setPlan(p.name)} aria-pressed={plan === p.name}>
-                  <div className="top"><b>{p.name}</b><span className="radio"><i /></span></div>
-                  <div className="price"><strong>Free</strong></div>
-                  <ul>{p.lines.map((l) => <li key={l}>{l}</li>)}</ul>
-                </button>
-              ))}
-            </div>
+          <div key="s2" className="y-ob-pane">
+            <h1>Choose your look</h1>
+            <p className="y-ob-sub">Pick the colours Yoru uses. Tap one to see the whole app change.</p>
+            <ThemePicker instant />
           </div>
         )}
 
         {step === 3 && (
-          <div className="y-ob-pane lead">
-            <div className="y-ob-done"><Check /></div>
-            <h1>You’re in.</h1>
-            <p className="y-ob-sub">
-              {needsConfirm ? 'Check your inbox to confirm your email, then sign in. ' : ''}
-              {chosen.name} setup{genres.length ? `, picks from ${genres.length} genres` : ''}. Next, set up who’s watching.
-            </p>
-          </div>
+          <form key="s3" className="y-ob-pane lead" onSubmit={finish}>
+            <h1>Who’s watching?</h1>
+            <p className="y-ob-sub">{needsConfirm ? 'Check your inbox to confirm your email, then sign in. ' : ''}Make your first profile. You can add more later.</p>
+            <div className="y-ob-prof">
+              <div className="y-who-prev" style={{ background: vivid(phue) }}>{(nameForProfile[0] || '?').toUpperCase()}</div>
+              <input maxLength={18} placeholder={username || 'Profile name'} value={pname} onChange={(e) => setPname(e.target.value)} aria-label="Profile name" />
+              <div className="y-who-hues" role="radiogroup" aria-label="Colour">
+                {HUES.map((h) => <button key={h} type="button" role="radio" aria-checked={phue === h} aria-label={`Colour ${h}`} className={phue === h ? 'on' : ''} style={{ background: vivid(h) }} onClick={() => setPhue(h)} />)}
+              </div>
+              <label className="y-who-switch"><span>Kids profile</span><input type="checkbox" checked={pkids} onChange={(e) => setPkids(e.target.checked)} /><i /></label>
+            </div>
+          </form>
         )}
 
         <div className="y-ob-actions">
           {step === 1 && <button type="button" className="y-btn ac" disabled={genres.length < 3} onClick={next}>Continue</button>}
           {step === 2 && <button type="button" className="y-btn ac" onClick={next}>Continue</button>}
-          {step === 3 && <button type="button" className="y-btn ac" onClick={finish}>Choose your profile →</button>}
-          {step > 1 && step < 3 && (
-            <button type="button" className="y-btn" onClick={() => setStep((s) => s - 1)}>Back</button>
-          )}
+          {step === 3 && <button type="button" className="y-btn ac" onClick={finish}>Start watching →</button>}
+          {step > 1 && <button type="button" className="y-btn" onClick={() => setStep((s) => s - 1)}>Back</button>}
         </div>
       </main>
     </div>
