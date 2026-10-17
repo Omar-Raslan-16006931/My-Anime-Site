@@ -42,7 +42,7 @@ function softly(fn) {
   fn()
   void veil.offsetWidth
   requestAnimationFrame(() => veil.classList.add('go'))
-  setTimeout(() => veil.remove(), 800)
+  setTimeout(() => veil.remove(), 1300)
 }
 
 export function applyScheme(name = current) {

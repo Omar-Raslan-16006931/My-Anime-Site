@@ -25,7 +25,6 @@ export default function Profiles({ user, profile }) {
   const [leaving, setLeaving] = useState(null) // id animating out
   const [picked, setPicked] = useState(null)
   const [closing, setClosing] = useState(false)
-  const [flash, setFlash] = useState(null) // tile that was just edited/created
   const timer = useRef(0)
   const rowRef = useRef(null)
   useFlip(rowRef, profiles) // neighbours glide to their new slots when a profile is removed or added
@@ -84,8 +83,7 @@ export default function Profiles({ user, profile }) {
     closeDialogs(() => {
       if (snap.id) {
         profileActions.update(snap.id, { name: snap.name, hue: snap.hue, kids: snap.kids })
-        setRev((r) => ({ ...r, [snap.id]: (r[snap.id] || 0) + 1 }))
-        setFlash(snap.id); setTimeout(() => setFlash(null), 900)
+        setRev((r) => ({ ...r, [snap.id]: (r[snap.id] || 0) + 1 })) // remounts the tile: its single pop-in plays once
       } else {
         const np = profileActions.add(snap.name, snap.kids, snap.hue)
         if (np) { setFresh(np.id); setTimeout(() => setFresh(null), 900) }
@@ -126,7 +124,7 @@ export default function Profiles({ user, profile }) {
       <div ref={rowRef} className={'y-who-row' + (picked ? ' picking' : '')}>
         {profiles.map((p, i) => (
           <div key={p.id} data-flip={p.id} role="button" tabIndex={0} style={{ '--i': i }}
-            className={'y-who-p' + (wobbling ? ' wob' : '') + (active?.id === p.id ? ' cur' : '') + (picked === p.id ? ' picked' : '') + (leaving === p.id ? ' leaving' : '') + (flash === p.id ? ' flash' : '') + (fresh === p.id ? ' fresh' : '')}
+            className={'y-who-p' + (wobbling ? ' wob' : '') + (active?.id === p.id ? ' cur' : '') + (picked === p.id ? ' picked' : '') + (leaving === p.id ? ' leaving' : '') + (fresh === p.id ? ' fresh' : '')}
             onClick={(e) => choose(p, e)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(p, { currentTarget: e.currentTarget }) } }}>
             <span className="wob-wrap">
               <span className="tile" key={`${p.hue}-${p.name}-${rev[p.id] || 0}`} style={{ background: vivid(p.hue ?? 0) }}>
