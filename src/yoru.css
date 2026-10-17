@@ -2418,3 +2418,12 @@ body { transition: none; }
 .acc-stats button:active { background: rgba(255, 255, 255, 0.12); }
 .acc-stats b { font-size: 19px; font-weight: 750; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .acc-stats span { font-size: 11px; font-weight: 600; color: var(--y-t3); }
+
+/* Settings group (Appearance, Downloads): Safari-proof rounded press state.
+   The edge is a real border (nothing paints over it) and each row has its own matching corners,
+   so the pressed highlight never relies on the parent's overflow clip. */
+.acc-group { box-shadow: none !important; border: 1px solid rgba(255, 255, 255, 0.07); isolation: isolate; transform: translateZ(0); }
+.acc-item { border-radius: 0; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.acc-item:first-child { border-top-left-radius: 17px; border-top-right-radius: 17px; }
+.acc-item:last-child { border-bottom-left-radius: 17px; border-bottom-right-radius: 17px; }
+.acc-item:active, .acc-item:hover { background-clip: padding-box; }
