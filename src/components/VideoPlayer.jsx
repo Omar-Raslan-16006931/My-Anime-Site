@@ -6,7 +6,7 @@ import { allmangaResolve } from '../lib/allmanga'
 import { anilistIdFromMal, animeTmdbInfo } from '../lib/anilist'
 import DownloadLinks from './DownloadLinks'
 import { toast } from '../lib/toast'
-import { apiUrl, absoluteUrl, isNative } from '../lib/native'
+import { apiUrl, isNative } from '../lib/native'
 import { downloadAnimeEpisode, downloadId, isDownloaded, isDownloading, subscribe as subscribeDownloads } from '../lib/offline'
 
 // Subtitle delivery: VidLink takes our file natively (documented `sub_file`
@@ -286,9 +286,8 @@ export default function VideoPlayer({
 
   const baseEmbed = active?.target.kind === 'embed' ? active.target.url : ''
   // VidLink loads an external VTT via its documented sub_file option.
-  const embedUrl = baseEmbed && activeId === 'vidlink' && subsOn && subTarget
-    ? `${baseEmbed}${baseEmbed.includes('?') ? '&' : '?'}sub_file=${encodeURIComponent(absoluteUrl(subPath('vtt')))}&sub_label=English`
-    : baseEmbed
+  // The embed URL never depends on the subtitle switch, so CC on/off never reloads the player.
+  const embedUrl = baseEmbed
 
   const toggleSubs = () => {
     setSubsOn((v) => {
@@ -297,6 +296,13 @@ export default function VideoPlayer({
       return nv
     })
   }
+
+  // <video> sources: flip the English track on/off in place (no reload).
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v?.textTracks) return
+    for (const t of v.textTracks) if (t.language === 'en' || t.label === 'English') t.mode = subsOn ? 'showing' : 'hidden'
+  }, [subsOn])
 
   // Download the .srt so it can be uploaded into any embed player's CC menu.
   const downloadSubs = async () => {
@@ -331,7 +337,9 @@ export default function VideoPlayer({
   // VidLink takes the file natively and AllManga uses a <track>; every other
   // embed gets our own subtitle layer on top, timed by the playback clock the
   // player posts to the page (VidLink / MegaPlay / Videasy all do).
-  const overlayMode = !!(subsOn && subTarget && active?.target.kind === 'embed' && activeId !== 'vidlink')
+  // The subtitle layer always runs (cues loaded, clock followed); the CC switch only shows/hides it.
+  const subsEngine = !!(subTarget && active?.target.kind === 'embed')
+  const overlayMode = subsEngine && subsOn
   const vttPath = subTarget ? subPath('vtt') : null
 
   // New source / episode → forget the old clock.
@@ -346,7 +354,7 @@ export default function VideoPlayer({
 
   // Fetch + parse the English VTT when the overlay is needed.
   useEffect(() => {
-    if (!overlayMode || !vttPath) { setCues(null); return }
+    if (!subsEngine || !vttPath) { setCues(null); return }
     let on = true
     setCues(null)
     fetch(vttPath)
@@ -354,12 +362,12 @@ export default function VideoPlayer({
       .then((txt) => { if (on) setCues(parseVtt(txt)) })
       .catch(() => { if (on) setCues([]) })
     return () => { on = false }
-  }, [overlayMode, vttPath])
+  }, [subsEngine, vttPath])
 
   // Frame loop: estimate the current time between player updates and show the
   // matching line. Only re-renders when the visible text actually changes.
   useEffect(() => {
-    if (!overlayMode || !cues?.length) { setCueText(''); return }
+    if (!subsEngine || !cues?.length) { setCueText(''); return }
     let raf = 0
     let last = ''
     const tick = () => {
@@ -374,7 +382,7 @@ export default function VideoPlayer({
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [overlayMode, cues])
+  }, [subsEngine, cues])
 
   // If a player never reports its time, say so instead of showing nothing.
   useEffect(() => {
@@ -616,8 +624,8 @@ export default function VideoPlayer({
             </div>
           ) : active?.target.kind === 'resolve' ? (
             <video ref={videoRef} controls autoPlay playsInline>
-              {subsOn && subTarget && (
-                <track key={subPath('vtt')} kind="subtitles" srcLang="en" label="English" src={subPath('vtt')} default />
+              {subTarget && (
+                <track key={subPath('vtt')} kind="subtitles" srcLang="en" label="English" src={subPath('vtt')} default={subsOn} />
               )}
             </video>
           ) : embedUrl ? (

@@ -2339,7 +2339,7 @@ body { transition: none; }
 
 /* watch page: keep the site's top bar visible above it; smaller controls */
 @media (min-width: 880px) {
-  .wp { top: var(--topbar-h, 72px); z-index: 115; }
+  .wp { top: 0; padding-top: var(--topbar-h, 72px); z-index: 115; }
   .wp-main, .wp-side { height: calc(100vh - var(--topbar-h, 72px)); height: calc(100dvh - var(--topbar-h, 72px)); }
   .wp-top { height: 56px; }
 }
