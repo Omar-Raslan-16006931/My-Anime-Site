@@ -1190,3 +1190,21 @@ h1, h2, h3 { text-wrap: balance; }
 .acc-item.danger .acc-ico { background: color-mix(in srgb, var(--y-ac) 16%, transparent); }
 .acc-gate { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 18px; border-radius: 16px; background: var(--y-s1); color: var(--y-t2); }
 @media (min-width: 880px) { .acc-tile { width: 132px; } }
+
+/* Account overview v2: pen badge, account-info pill, sign-out corner, inline add */
+.acc-out { position: absolute; top: 4px; right: 0; z-index: 3 !important; width: 40px; height: 40px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; color: var(--y-t2); background: rgba(255, 255, 255, 0.07); }
+.acc-out:hover { color: var(--y-ac); background: color-mix(in srgb, var(--y-ac) 14%, transparent); }
+.acc-avatar-wrap { position: relative; margin-bottom: 8px; }
+.acc-avatar-wrap .acc-avatar { margin: 0; }
+.acc-pen { position: absolute; right: -8px; bottom: -8px; width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--y-bg); background: var(--y-tx); color: var(--y-bg); display: grid; place-items: center; cursor: pointer; padding: 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+.acc-name { font: 700 24px var(--y-font); letter-spacing: -0.02em; margin: 6px 0 0; }
+.acc-info { margin-top: 10px; height: 34px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.05); color: var(--y-tx); font: 600 13px var(--y-font); cursor: pointer; }
+.acc-info:hover { background: rgba(255, 255, 255, 0.12); }
+.acc-p.add.on span { box-shadow: inset 0 0 0 1.5px var(--y-tx); color: var(--y-tx); }
+.acc-add { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 8px; border-radius: 14px; background: var(--y-s1); animation: yoPageIn 0.35s var(--y-ease) backwards; }
+.acc-add input[type='text'], .acc-add input:not([type]) { width: 140px; height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: var(--y-tx); font: 500 14px var(--y-font); }
+.acc-add label { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--y-t2); }
+.acc-add .btn { border-radius: 999px; }
+.acc-glow { opacity: 0.45; }
+.acc-hero { position: relative; }
+.acc-hero .acc-out { position: absolute; top: 0; right: 0; }

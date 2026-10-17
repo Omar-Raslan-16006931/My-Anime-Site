@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useProfiles, profileActions } from '../lib/profiles'
 import { glow } from '../lib/theme'
 import { usePosterWall } from '../lib/wall'
@@ -9,7 +9,8 @@ export default function Profiles({ user, profile }) {
   const navigate = useNavigate()
   const { profiles, active } = useProfiles()
   const wall = usePosterWall()
-  const [manage, setManage] = useState(false)
+  const [params] = useSearchParams()
+  const [manage, setManage] = useState(params.get('manage') === '1')
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [kids, setKids] = useState(false)

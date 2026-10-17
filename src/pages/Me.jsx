@@ -21,7 +21,7 @@ const SECTIONS = [
   { k: 'continue', label: 'Continue watching', user: true },
   { k: 'list', label: 'My List', user: true },
   { k: 'ai', label: 'AI picks', sub: 'Tell it your mood, get a shortlist', user: true, icon: ico(<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z" />) },
-  { k: 'account', label: 'Account', sub: 'Name, photo, passkeys, privacy', user: true, icon: ico(<><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>) },
+  { k: 'account', label: 'Account info', user: true, top: true, icon: ico(<><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>) },
   ...(isNative ? [{ k: 'downloads', label: 'Downloads', sub: 'Watch offline', icon: ico(<path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14" />) }] : []),
   { k: 'look', label: 'Appearance', sub: 'Colour theme', icon: ico(<><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 0 0 18z" /></>) },
 ]
@@ -48,6 +48,9 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
   const logout = async () => { await supabase.auth.signOut(); navigate('/') }
 
   // Previews for the overview (first 12 of each).
+  const [adding, setAdding] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newKids, setNewKids] = useState(false)
   const [cw, setCw] = useState(null)
   const [list, setList] = useState(null)
   useEffect(() => {
@@ -110,20 +113,33 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
   /* ---------------- Overview ---------------- */
   const others = profiles.filter((p) => p.id !== me?.id)
   const switchTo = (p) => { profileActions.setActive(p.id) }
+  const create = (e) => {
+    e.preventDefault()
+    const p = profileActions.add(newName, newKids)
+    if (p) { setNewName(''); setNewKids(false); setAdding(false) }
+  }
 
   return (
     <div className="me-page acc">
       <div className="acc-glow" style={{ '--h1': `oklch(0.6 0.16 ${me?.hue || 0})` }} aria-hidden="true" />
 
       <header className="acc-hero">
-        <button type="button" className="acc-avatar" style={{ background: vivid(me?.hue || 0) }} onClick={() => navigate('/profiles')} aria-label="Switch profile">
-          {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}
-        </button>
-        <button type="button" className="acc-name" onClick={() => navigate('/profiles')}>
-          {me?.name || 'Guest'}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-        </button>
+        {user && (
+          <button type="button" className="acc-out" onClick={logout} aria-label="Sign out" title="Sign out">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3" /></svg>
+          </button>
+        )}
+        <div className="acc-avatar-wrap">
+          <button type="button" className="acc-avatar" style={{ background: vivid(me?.hue || 0) }} onClick={() => navigate('/profiles')} aria-label="Switch profile">
+            {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : initial}
+          </button>
+          <button type="button" className="acc-pen" onClick={() => navigate('/profiles?manage=1')} aria-label="Manage profiles" title="Manage profiles">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></svg>
+          </button>
+        </div>
+        <h1 className="acc-name">{me?.name || 'Guest'}</h1>
         <span className="acc-handle">{user ? `@${account}` : 'Browsing as a guest'}</span>
+        {user && <button type="button" className="acc-info" onClick={() => pick('account')}>Account info</button>}
 
         <div className="acc-profiles">
           {others.map((p) => (
@@ -132,11 +148,20 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
               <small>{p.name}</small>
             </button>
           ))}
-          <button type="button" className="acc-p add" onClick={() => navigate('/profiles')}>
-            <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></span>
-            <small>Manage</small>
-          </button>
+          {profiles.length < profileActions.max && (
+            <button type="button" className={'acc-p add' + (adding ? ' on' : '')} onClick={() => setAdding((v) => !v)} aria-expanded={adding}>
+              <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></span>
+              <small>Add</small>
+            </button>
+          )}
         </div>
+        {adding && (
+          <form className="acc-add" onSubmit={create}>
+            <input autoFocus maxLength={18} placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} aria-label="New profile name" />
+            <label><input type="checkbox" checked={newKids} onChange={(e) => setNewKids(e.target.checked)} /> Kids</label>
+            <button type="submit" className="btn btn-primary btn-sm" disabled={!newName.trim()}>Add</button>
+          </form>
+        )}
       </header>
 
       {!user ? (
@@ -175,7 +200,7 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
       )}
 
       <div className="acc-group">
-        {SECTIONS.filter((s) => s.icon).map((s) => (
+        {SECTIONS.filter((s) => s.icon && !s.top).map((s) => (
           <button key={s.k} type="button" className="acc-item" onClick={() => pick(s.k)}>
             <span className="acc-ico">{s.icon}</span>
             <span className="acc-txt"><b>{s.label}</b><small>{s.sub}</small></span>
@@ -184,25 +209,6 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
         ))}
       </div>
 
-      <div className="acc-group">
-        <button type="button" className="acc-item" onClick={() => navigate('/profiles')}>
-          <span className="acc-ico">{ico(<><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6" /></>)}</span>
-          <span className="acc-txt"><b>Switch profile</b><small>Who’s watching?</small></span>
-          <Chevron />
-        </button>
-        {user ? (
-          <button type="button" className="acc-item danger" onClick={logout}>
-            <span className="acc-ico">{ico(<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3" />)}</span>
-            <span className="acc-txt"><b>Sign out</b><small>{user.email}</small></span>
-          </button>
-        ) : (
-          <button type="button" className="acc-item" onClick={signIn}>
-            <span className="acc-ico">{ico(<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3M14 17l5-5-5-5M19 12H8" />)}</span>
-            <span className="acc-txt"><b>Sign in</b><small>Sync your list across devices</small></span>
-            <Chevron />
-          </button>
-        )}
-      </div>
     </div>
   )
 }
