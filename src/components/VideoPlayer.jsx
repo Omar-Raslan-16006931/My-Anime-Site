@@ -129,6 +129,7 @@ export default function VideoPlayer({
   poster, // used for the Downloads list (iPhone app)
   altTitles = [], // other names (romaji, synonyms) — helps AllManga find the show
   hasNext = true,
+  aside = null, // PC: episode / season picker shown as a right-hand column
 }) {
   const type = mediaType
   const displayTitle = movieTitle || title
@@ -591,8 +592,9 @@ export default function VideoPlayer({
   const nextLabel = type === 'tv' ? `S${safeSeason} · E${safeEpisode + 1}` : `Episode ${safeEpisode + 1}`
 
   return (
-    <div className={'modal player-modal' + (lightsOff ? ' lights-off' : '')} onClick={() => (lightsOff ? setLights(false) : onClose?.())}>
+    <div className={'modal player-modal' + (lightsOff ? ' lights-off' : '') + (aside ? ' has-aside' : '')} onClick={() => (lightsOff ? setLights(false) : onClose?.())}>
       <div className="modal-card player-card" onClick={(e) => e.stopPropagation()}>
+        <div className="player-main">
         <div className="modal-head">
           <div style={{ minWidth: 0 }}>
             <div className="eyebrow">Now Playing · {nowLabel}</div>
@@ -784,6 +786,8 @@ export default function VideoPlayer({
           </div>
           {showDl && <DownloadLinks title={displayTitle} />}
         </div>
+        </div>
+        {aside && <aside className="player-side">{aside}</aside>}
       </div>
     </div>
   )

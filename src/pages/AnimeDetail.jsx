@@ -13,6 +13,7 @@ import WatchedButton from '../components/WatchedButton'
 import { fromAnime } from '../lib/watched'
 import DownloadLinks from '../components/DownloadLinks'
 import Collapse from '../components/Collapse'
+import PlayerEpisodes from '../components/PlayerEpisodes'
 import MoreLikeThis from '../components/MoreLikeThis'
 
 async function upsertWatching(user, d, epNum) {
@@ -443,6 +444,20 @@ export default function AnimeDetail({ user, onAuthRequired }) {
           poster={poster}
           altTitles={[details.title, ...(details.title_synonyms || [])].filter((t) => t && t !== title)}
           hasNext={!totalEps || playingEp < totalEps}
+          aside={(
+            <PlayerEpisodes
+              heading="Episodes"
+              current={playingEp}
+              onPick={(n) => play(n)}
+              items={opRows.map(({ num, ep }) => ({
+                num: Number(num),
+                title: milestoneTitle(num) || ep?.title || `Episode ${num}`,
+                thumb: ep?.images?.jpg?.image_url || poster,
+                meta: [ep?.aired ? fmtDate(ep.aired) : null, ep?.filler ? 'Filler' : null].filter(Boolean).join(' · '),
+                seen: !!episodeProgress[Number(num)]?.seen,
+              }))}
+            />
+          )}
         />
       )}
 

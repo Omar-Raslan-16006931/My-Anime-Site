@@ -156,13 +156,13 @@ export default function Search({ user, onAuthRequired }) {
         <>
           <button type="button" className="ai-pill" onClick={() => setAiOpen(true)}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z" /></svg>
-            AI picks
+            Ask AI for recommendations
           </button>
           {aiOpen && createPortal(
             <div className={'y-who-scrim ai-scrim' + (aiOut ? ' closing' : '')} onClick={closeAi}>
-              <div className="y-who-sheet ai-sheet" role="dialog" aria-modal="true" aria-label="AI picks" onClick={(e) => e.stopPropagation()}>
+              <div className="y-who-sheet ai-sheet" role="dialog" aria-modal="true" aria-label="Ask AI for recommendations" onClick={(e) => e.stopPropagation()}>
                 <div className="ai-sheet-head">
-                  <div><h2>AI picks</h2><p>Describe a mood, get a shortlist.</p></div>
+                  <div><h2>Ask AI for recommendations</h2><p>Describe a mood, get a shortlist.</p></div>
                   <button type="button" className="ai-sheet-x" onClick={closeAi} aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
                 </div>
                 <div className="ai-sheet-body embed-page"><Recommend user={user} onAuthRequired={() => { closeAi(); onAuthRequired?.() }} /></div>

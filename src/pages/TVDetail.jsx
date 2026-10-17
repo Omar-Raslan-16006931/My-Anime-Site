@@ -10,6 +10,7 @@ import Select from '../components/Select'
 import { recordRecent } from '../lib/progress'
 import DownloadLinks from '../components/DownloadLinks'
 import Collapse from '../components/Collapse'
+import PlayerEpisodes from '../components/PlayerEpisodes'
 import MoreLikeThis from '../components/MoreLikeThis'
 import { isAdultTmdbDetails } from '../lib/tmdb'
 import { loadTvSeen, setTvSeen, tvEpKey } from '../lib/tvProgress'
@@ -328,7 +329,7 @@ export default function TVDetail({ user, onAuthRequired }) {
           mediaType="tv"
           tmdbId={details.id}
           title={details.name}
-          season={selectedSeason}
+          season={lastSeason ?? selectedSeason}
           episode={playing}
           onClose={() => setPlaying(null)}
           onNext={() => play(playing + 1)}
@@ -337,6 +338,24 @@ export default function TVDetail({ user, onAuthRequired }) {
             play(ep, season || selectedSeason)
           }}
           hasNext={!!seasonData?.episodes?.some((e) => e.episode_number === playing + 1)}
+          aside={(
+            <PlayerEpisodes
+              heading="Episodes"
+              loading={seasonLoading}
+              seasons={seasons.map((s) => ({ value: s.season_number, label: s.season_number === 0 ? 'Specials' : `Season ${s.season_number}` }))}
+              season={selectedSeason}
+              onSeason={setSelectedSeason}
+              current={selectedSeason === (lastSeason ?? selectedSeason) ? playing : null}
+              onPick={(n) => play(n)}
+              items={(seasonData?.episodes || []).map((ep) => ({
+                num: ep.episode_number,
+                title: ep.name || `Episode ${ep.episode_number}`,
+                thumb: ep.still_path ? `${IMG}${ep.still_path}` : (details.poster_path ? `${IMG}${details.poster_path}` : null),
+                meta: [ep.air_date, typeof ep.runtime === 'number' ? `${ep.runtime} min` : null].filter(Boolean).join(' · '),
+                seen: seen.has(tvEpKey(selectedSeason, ep.episode_number)),
+              }))}
+            />
+          )}
         />
       )}
 
