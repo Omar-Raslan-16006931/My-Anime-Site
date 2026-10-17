@@ -33,10 +33,8 @@ const NO_CHROME = ['/profiles', '/welcome']
 export default function Navbar({ user, profile, onAuthClick }) {
   const [scrolled, setScrolled] = useState(false)
   const [kbOpen, setKbOpen] = useState(false)
-  const [dockAway, setDockAway] = useState(false)
   const [q, setQ] = useState('')
   const baseVHRef = useRef(0)
-  const pressing = useRef(false)
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { profiles, active } = useProfiles()
@@ -84,24 +82,11 @@ export default function Navbar({ user, profile, onAuthClick }) {
   }, [])
 
   // Top bar: its backdrop is driven by the scroll position itself (--tb: 0 = clear over the
-  // home hero, 1 = solid), so it never "switches" and can't flicker. Tab bar: tucks away on a
-  // deliberate scroll down, returns on a deliberate scroll up and at the end of the page.
-  // Rubber-band overscroll (iOS) is ignored so the bounce can't make it flutter.
+  // home hero, 1 = solid), so it never "switches" and can't flicker.
   const barRef = useRef(null)
   const pathRef = useRef(pathname)
-  const awayRef = useRef(false)
-  const toggledAt = useRef(0)
   const paintRef = useRef(() => {})
-  const setAway = (v) => {
-    if (v === awayRef.current) return
-    awayRef.current = v
-    toggledAt.current = performance.now()
-    setDockAway(v)
-  }
   useLayoutEffect(() => {
-    let last = Math.max(0, window.scrollY)
-    let down = 0
-    let up = 0
     let raf = 0
     const paint = () => {
       const y = Math.max(0, window.scrollY)
@@ -110,25 +95,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
       setScrolled((s) => (y > 40) === s ? s : y > 40)
     }
     paintRef.current = paint
-    const run = () => {
-      raf = 0
-      paint()
-      const y = window.scrollY
-      const max = document.documentElement.scrollHeight - window.innerHeight
-      if (y < 0 || y > max + 1) { last = Math.min(Math.max(y, 0), max); return } // rubber band
-      const d = y - last
-      last = y
-      const calm = performance.now() - toggledAt.current > 400 // never flutter
-      if (y < 100 || max - y < 140) { down = 0; up = 0; if (calm) setAway(false); return }
-      if (d > 0) {
-        up = 0; down += d
-        if (calm && down > 90 && y > 260 && !pressing.current) setAway(true)
-      } else if (d < 0) {
-        down = 0; up -= d
-        if (calm && up > 28) setAway(false)
-      }
-    }
-    const onScroll = () => { if (!raf) raf = requestAnimationFrame(run) }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; paint() }) }
     paint()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => { cancelAnimationFrame(raf); window.removeEventListener('scroll', onScroll) }
@@ -136,8 +103,6 @@ export default function Navbar({ user, profile, onAuthClick }) {
   useLayoutEffect(() => {
     pathRef.current = pathname
     paintRef.current()
-    awayRef.current = false
-    setDockAway(false)
   }, [pathname])
 
   const submitSearch = (e) => {
@@ -179,9 +144,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
       </header>
 
       {/* Phone tab bar: floating pill. The selected tab expands into a white pill with its label. */}
-      <nav className={'ydock' + (kbOpen ? ' hide' : '') + (dockAway ? ' away' : '')} aria-label="Primary" style={{ '--n': DOCK.length + 1 }}
-        onPointerDown={() => { pressing.current = true }} onPointerUp={() => { pressing.current = false }} onPointerCancel={() => { pressing.current = false }}>
-        <span className="ydock-ind" style={{ '--i': Math.max(tab, 0), opacity: tab < 0 ? 0 : undefined }} aria-hidden="true" />
+      <nav className={'ydock' + (kbOpen ? ' hide' : '')} aria-label="Primary">
         {DOCK.map((d, i) => (
           <NavLink key={d.key} to={d.to} aria-label={d.label} aria-current={i === tab ? 'page' : undefined} className={'ydock-item' + (i === tab ? ' on' : '')}
             onClick={(e) => { if (i === tab && pathname === d.to) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) } }}>

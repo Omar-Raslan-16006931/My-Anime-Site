@@ -1636,57 +1636,28 @@ body { transition: none; }
 @media (max-height: 720px) { .auth { padding: 12px; } .auth-card { padding: 18px 20px 18px; } .auth-brand { margin-bottom: 10px; } .auth-p { margin-bottom: 12px; } .auth-field input { height: 52px; } }
 
 /* =====================================================================
-   Phone tab bar — one implementation.
-   • Taps: the hit areas never move, scale or animate (only the icon inside gives feedback).
-   • Selected tab: a white pill glides between tabs (transform only).
-   • Hide/show: icons fade, the bar closes into a round button (clip-path), then drifts down; reversed to show.
+   Phone tab bar — plain and solid: full width, hairline on top, icon + label, the active tab lights up.
    ===================================================================== */
 .ydock { display: none; }
 @media (max-width: 879px) {
   .ydock {
-    display: flex; position: fixed; left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom)); height: 64px; z-index: 140;
-    padding: 8px; gap: 0; border-radius: 32px; background: none;
-    clip-path: inset(-44px -24px -120px -24px round 50px); /* wide enough that the shadow and the scrim are never clipped */
-    transform: translate3d(0, 0, 0); opacity: 1; touch-action: manipulation;
-    transition: clip-path 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.18s, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 140;
+    height: calc(56px + env(safe-area-inset-bottom)); padding: 0 8px env(safe-area-inset-bottom);
+    background: var(--y-bg); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); touch-action: manipulation;
   }
   .ydock.hide { display: none; }
-  /* ::before = soft scrim so posters never peek out around the floating bar; ::after = the pill itself. */
-  .ydock::before {
-    content: ''; position: absolute; z-index: -2; pointer-events: none; left: -24px; right: -24px; top: -44px; bottom: calc(-24px - env(safe-area-inset-bottom) - 24px);
-    background: linear-gradient(to bottom, transparent 0, color-mix(in srgb, var(--y-bg) 78%, transparent) 30px, var(--y-bg) 64px);
-  }
-  .ydock::after {
-    content: ''; position: absolute; z-index: -1; pointer-events: none; inset: 0; border-radius: 32px; background: var(--y-s1);
-    box-shadow: 0 10px 18px -10px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-  }
-  .ydock.away {
-    clip-path: inset(0 calc(50% - 32px) 0 calc(50% - 32px) round 32px);
-    transform: translate3d(0, calc(100% + 40px), 0); opacity: 0; pointer-events: none;
-    transition: clip-path 0.4s cubic-bezier(0.65, 0, 0.35, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.28s, opacity 0.3s ease 0.36s;
-  }
   .ydock-item {
-    position: relative; z-index: 1; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-    height: 48px; border-radius: 24px; color: var(--y-t3); text-decoration: none; background: none; scale: none;
-    -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none;
-    transition: color 0.35s ease, opacity 0.3s ease 0.32s;
+    flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    color: var(--y-t3); text-decoration: none; background: none; scale: none;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none; transition: color 0.2s ease;
   }
-  .ydock-item.on { color: var(--y-bg); }
-  .ydock-item:active { scale: none; }
-  .ydock-item svg { transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
-  .ydock-item:active svg, .ydock-item:active .y-me { transform: scale(0.84); transition-duration: 0.12s; }
-  .ydock-item.on svg { transform: translateY(-1px); }
-  .ydock-label { max-width: none; margin: 0; opacity: 0.85; font-size: 10px; font-weight: 650; letter-spacing: 0.01em; white-space: nowrap; }
-  .ydock-ind {
-    position: absolute; left: 8px; top: 8px; bottom: 8px; width: calc((100% - 16px) / var(--n, 4)); border-radius: 24px; background: var(--y-tx);
-    pointer-events: none; z-index: 0; transform: translateX(calc(var(--i, 0) * 100%));
-    transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
-  }
-  .ydock.away .ydock-item { opacity: 0; transition: opacity 0.14s ease, color 0.35s ease; }
-  .ydock.away .ydock-ind { opacity: 0; transition: opacity 0.14s ease; }
-  .ydock .ydock-item.ydock-you .y-me { width: 22px; height: 22px; border-radius: 50%; font-size: 11px; display: grid; place-items: center; overflow: hidden; font-weight: 700; color: var(--y-bg); transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
+  .ydock-item.on { color: var(--y-tx); }
+  .ydock-item:active { scale: none; opacity: 0.6; }
+  .ydock-label { max-width: none; margin: 0; font-size: 10px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; }
+  .ydock .ydock-item.ydock-you .y-me { width: 22px; height: 22px; border-radius: 50%; font-size: 11px; display: grid; place-items: center; overflow: hidden; font-weight: 700; color: var(--y-bg); box-shadow: 0 0 0 2px transparent; transition: box-shadow 0.2s ease; }
+  .ydock .ydock-item.ydock-you.on .y-me { box-shadow: 0 0 0 2px var(--y-tx); }
+  .tp-bar { bottom: calc(70px + env(safe-area-inset-bottom)) !important; }
 }
-@media (prefers-reduced-motion: reduce) { .ydock, .ydock.away, .ydock-item, .ydock-ind { transition-duration: 0.01s; transition-delay: 0s; } }
 
 /* ===== Sign-out: calm fade to a cover, back out when done ===== */
 .signout-veil { position: fixed; inset: 0; z-index: 9990; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: var(--y-bg); opacity: 0; pointer-events: all; transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
