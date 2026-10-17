@@ -414,7 +414,7 @@ html::before { background: var(--y-bg) !important; }
 .ycc-art { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; background: var(--y-s1); overflow: hidden; }
 .ycc-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .ycc-art img.poster { object-position: center 25%; }
-.ycc-shade { position: absolute; inset: 0; background: linear-gradient(0deg, color-mix(in srgb, var(--y-bg) 80%, transparent), transparent 60%); }
+.ycc-shade { position: absolute; inset: -2px; background: linear-gradient(0deg, color-mix(in srgb, var(--y-bg) 80%, transparent), transparent 60%); }
 .ycc-play { position: absolute; left: 12px; bottom: 14px; width: 34px; height: 34px; border-radius: 50%; background: color-mix(in srgb, var(--y-tx) 92%, transparent); color: var(--y-bg); display: grid; place-items: center; }
 .ycc-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255, 255, 255, 0.18); }
 .ycc-bar span { display: block; height: 100%; background: var(--y-ac); }
@@ -556,12 +556,12 @@ html::before { background: var(--y-bg) !important; }
 .y-mood-sk { aspect-ratio: 2 / 3; border-radius: 16px; }
 .y-empty-note { grid-column: 1 / -1; color: var(--y-t3); font-size: 14px; padding: 20px 0; }
 .y-mood-card {
-  position: relative; aspect-ratio: 2 / 3; border-radius: 16px; overflow: hidden; cursor: pointer; background: var(--y-s1); outline: none;
+  position: relative; aspect-ratio: 2 / 3; border-radius: 16px; overflow: hidden; isolation: isolate; cursor: pointer; background: var(--y-s1); outline: none;
   display: flex; flex-direction: column; justify-content: flex-end; padding: 16px; gap: 8px;
   animation: yoIn 0.5s ease-out backwards; transition: transform 0.45s var(--y-out), opacity 0.3s, box-shadow 0.45s;
 }
-.y-mood-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.y-mood-shade { position: absolute; inset: 0; background: linear-gradient(0deg, color-mix(in srgb, var(--y-bg) 90%, #000), transparent 62%); }
+.y-mood-card img { position: absolute; inset: 1px; width: calc(100% - 2px); height: calc(100% - 2px); border-radius: inherit; object-fit: cover; }
+.y-mood-shade { position: absolute; inset: -2px; background: linear-gradient(0deg, color-mix(in srgb, var(--y-bg) 90%, #000), transparent 62%); }
 .y-mood-syn { position: relative; display: none; margin: 0; font-size: 12px; line-height: 1.45; color: var(--y-t2); -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .y-mood-name { position: relative; }
 .y-mood-name b { display: block; font-weight: 650; font-size: 16px; line-height: 1.1; }
