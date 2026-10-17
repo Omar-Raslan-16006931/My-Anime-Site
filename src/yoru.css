@@ -2230,3 +2230,13 @@ body { transition: none; }
 
   .pe-season { height: 34px !important; border-radius: 999px !important; padding: 0 14px !important; background-color: rgba(255, 255, 255, 0.08) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; outline: none !important; box-shadow: none !important; font-size: 13px; font-weight: 600; }
 }
+
+/* ---- PC player v3: Next on the right, lights-off fix ---- */
+@media (min-width: 880px) {
+  .player-modal.has-aside .pc-nav { justify-content: space-between !important; }
+  .player-modal.has-aside .pc-nav .pc-next { margin-left: auto; }
+  /* Lights off: the page layout is dropped — just the centred video, as before */
+  .player-modal.has-aside.lights-off .player-main { display: contents !important; }
+  .player-modal.has-aside.lights-off .player-main > .player-frame { width: 100% !important; max-height: none !important; }
+  .player-modal.has-aside.lights-off .player-card { display: block !important; width: auto !important; height: auto !important; overflow: visible !important; padding: 0 !important; }
+}
