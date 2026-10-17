@@ -1670,3 +1670,7 @@ html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after { transit
 .tp-bar:has(.tp-keep.ok) .tp-cancel { flex-grow: 1; padding: 0 16px; opacity: 0.35; }
 .tp-bar-row button { transition: transform 0.25s ease, background 0.3s ease, color 0.3s ease, opacity 0.3s ease; }
 body { transition: none; }
+/* v5 timing for the spring flight */
+.greet.fly { animation: gOut 0.65s cubic-bezier(0.4, 0, 0.2, 1) 2.5s forwards; }
+.greet.fly .greet-bg { animation-duration: 0.9s; animation-delay: 0.05s; }
+.greet.fly .greet-name { animation-delay: 0.95s; }
