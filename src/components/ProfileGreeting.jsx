@@ -6,6 +6,7 @@ import { useProfiles, vivid } from '../lib/profiles'
 export default function ProfileGreeting() {
   const { active } = useProfiles()
   const [show, setShow] = useState(null) // profile snapshot being greeted
+  const [cont, setCont] = useState(false) // continuing seamlessly from the profile picker
 
   useEffect(() => {
     let fresh = false
@@ -15,7 +16,8 @@ export default function ProfileGreeting() {
   }, [])
 
   useEffect(() => {
-    const on = () => {
+    const on = (e) => {
+      setCont(!!e?.detail?.cont)
       try {
         const a = JSON.parse(localStorage.getItem('yoru:profiles') || '[]').find((p) => p.id === localStorage.getItem('yoru:profile'))
         if (a) setShow(a)
@@ -27,13 +29,13 @@ export default function ProfileGreeting() {
 
   useEffect(() => {
     if (!show) return undefined
-    const t = setTimeout(() => setShow(null), 2900)
+    const t = setTimeout(() => setShow(null), cont ? 2300 : 2900)
     return () => clearTimeout(t)
-  }, [show])
+  }, [show, cont])
 
   if (!show) return null
   return (
-    <div className="greet" key={show.id} aria-hidden="true">
+    <div className={'greet' + (cont ? ' cont' : '')} key={show.id + (cont ? 'c' : '')} aria-hidden="true">
       <div className="greet-inner">
         <div className="greet-tile" style={{ background: vivid(show.hue ?? 0) }}>{show.name[0].toUpperCase()}</div>
         <div className="greet-name">Welcome back, {show.name}</div>

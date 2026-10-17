@@ -18,6 +18,9 @@ export default function Profiles({ user, profile }) {
   const [wobbling, setWobbling] = useState(params.get('manage') === '1')
   const [fresh, setFresh] = useState(null) // tile that was just created
   const [settled, setSettled] = useState(false) // initial staggered entrance is over
+  const [welcome, setWelcome] = useState('')
+  const [rev, setRev] = useState({}) // bumps when a profile is edited so its tile always replays its pop
+  const settleTimer = useRef(0)
   const [sheet, setSheet] = useState(null) // { id?, name, hue, kids }
   const [del, setDel] = useState(null) // profile awaiting remove confirmation
   const [leaving, setLeaving] = useState(null) // id animating out
@@ -32,12 +35,25 @@ export default function Profiles({ user, profile }) {
   useEffect(() => { profileActions.ensure(account || 'Me') }, [account])
   useEffect(() => { const t = setTimeout(() => setSettled(true), 1700); return () => { clearTimeout(t); clearTimeout(timer.current) } }, [])
 
-  const choose = (p) => {
+  const choose = (p, e) => {
     if (manage) { setSheet({ id: p.id, name: p.name, hue: p.hue ?? 0, kids: !!p.kids }); return }
     if (picked) return
+    // The chosen tile glides to the exact spot (and size) the welcome screen uses, while everything else fades out.
+    const tile = e?.currentTarget?.querySelector('.tile')
+    if (tile) {
+      const r = tile.getBoundingClientRect()
+      const dx = window.innerWidth / 2 - (r.left + r.width / 2)
+      const dy = (window.innerHeight - 172) / 2 + 62 - (r.top + r.height / 2)
+      const sc = 124 / r.width
+      requestAnimationFrame(() => {
+        tile.style.transition = 'transform 0.9s cubic-bezier(0.65, 0, 0.35, 1), box-shadow 0.6s'
+        tile.style.transform = `translate(${dx}px, ${dy}px) scale(${sc})`
+      })
+    }
     setPicked(p.id)
+    setWelcome(p.name)
     profileActions.setActive(p.id)
-    timer.current = setTimeout(() => { window.dispatchEvent(new Event('yoru:greet')); navigate('/') }, 620)
+    timer.current = setTimeout(() => { window.dispatchEvent(new CustomEvent('yoru:greet', { detail: { cont: true } })); navigate('/') }, 1000)
   }
   // Dialogs fade and drop away before they unmount.
   const closeDialogs = (after) => {
@@ -46,14 +62,20 @@ export default function Profiles({ user, profile }) {
   }
   // Entering manage mode starts the wobble; leaving it lets each tile settle back smoothly instead of snapping.
   const toggleManage = () => {
-    if (!manage) { setManage(true); setWobbling(true); return }
+    if (!manage) {
+      // cancel a pending "stop wobbling" from a quick Done, and clear any leftover inline settle styles
+      clearTimeout(settleTimer.current)
+      rowRef.current?.querySelectorAll('.wob-wrap').forEach((el) => { el.style.animation = ''; el.style.transition = ''; el.style.transform = '' })
+      setManage(true); setWobbling(true); return
+    }
     const row = rowRef.current
     const els = row ? [...row.querySelectorAll('.wob-wrap')] : []
     els.forEach((el) => { const t = getComputedStyle(el).transform; el.style.animation = 'none'; el.style.transform = t })
     if (row) void row.offsetWidth
     els.forEach((el) => { el.style.transition = 'transform 0.7s cubic-bezier(0.34, 1.4, 0.64, 1)'; el.style.transform = 'none' })
     setManage(false)
-    timer.current = setTimeout(() => {
+    clearTimeout(settleTimer.current)
+    settleTimer.current = setTimeout(() => {
       setWobbling(false)
       els.forEach((el) => { el.style.animation = ''; el.style.transition = ''; el.style.transform = '' })
     }, 760)
@@ -67,6 +89,7 @@ export default function Profiles({ user, profile }) {
     closeDialogs(() => {
       if (snap.id) {
         profileActions.update(snap.id, { name: snap.name, hue: snap.hue, kids: snap.kids })
+        setRev((r) => ({ ...r, [snap.id]: (r[snap.id] || 0) + 1 }))
         setFlash(snap.id); setTimeout(() => setFlash(null), 900)
       } else {
         const np = profileActions.add(snap.name, snap.kids, snap.hue)
@@ -97,6 +120,7 @@ export default function Profiles({ user, profile }) {
         </div>
       </div>
       <div className="y-who-fade" />
+      {picked && <div className="y-who-welcome">Welcome back, {welcome}</div>}
       <Link to="/" className="y-who-logo y-brand">Yoru<i>.</i></Link>
 
       <div className="y-who-head">
@@ -109,9 +133,9 @@ export default function Profiles({ user, profile }) {
         {profiles.map((p, i) => (
           <div key={p.id} data-flip={p.id} role="button" tabIndex={0} style={{ '--i': i }}
             className={'y-who-p' + (wobbling ? ' wob' : '') + (active?.id === p.id ? ' cur' : '') + (picked === p.id ? ' picked' : '') + (leaving === p.id ? ' leaving' : '') + (flash === p.id ? ' flash' : '') + (fresh === p.id ? ' fresh' : '')}
-            onClick={() => choose(p)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(p) } }}>
+            onClick={(e) => choose(p, e)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(p, { currentTarget: e.currentTarget }) } }}>
             <span className="wob-wrap">
-              <span className="tile" key={`${p.hue}-${p.name}`} style={{ background: vivid(p.hue ?? 0) }}>
+              <span className="tile" key={`${p.hue}-${p.name}-${rev[p.id] || 0}`} style={{ background: vivid(p.hue ?? 0) }}>
                 <span className="ini">{p.name[0].toUpperCase()}</span>
                 <span className="edit" aria-hidden="true"><Pen /></span>
                 {profiles.length > 1 && (

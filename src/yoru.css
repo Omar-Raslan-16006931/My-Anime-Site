@@ -1566,3 +1566,22 @@ body { transition: padding-bottom 0.45s var(--y-ease); }
 /* once the opening entrance has played it never replays (index changes, class changes, re-renders) */
 .y-who.settled .y-who-p:not(.fresh):not(.leaving), .y-who.settled .y-who-p.wob:not(.fresh):not(.leaving) { animation: none; }
 .y-who-p.fresh, .y-who.settled .y-who-p.fresh { animation: yoTileIn 0.7s var(--y-spring) backwards; }
+
+/* ===== Choosing a profile: the tile glides to centre, the rest fades, the welcome text fades in ===== */
+.y-who.leaving-page { opacity: 1; transition: none; }
+.y-who.leaving-page > .y-who-wall, .y-who.leaving-page > .y-who-fade, .y-who.leaving-page > .y-who-logo, .y-who.leaving-page > .y-who-head,
+.y-who.leaving-page > .y-who-foot, .y-who.leaving-page > .y-who-note { opacity: 0; transition: opacity 0.7s var(--y-ease); }
+.y-who-row.picking .y-who-p:not(.picked) { opacity: 0; filter: none; scale: 1; transition: opacity 0.55s var(--y-ease); }
+.y-who-p.picked { position: relative; z-index: 6; }
+.y-who-p.picked .nm, .y-who-p.picked .sub, .y-who-p.picked .rm, .y-who-p.picked .edit { opacity: 0; transition: opacity 0.35s var(--y-ease); }
+.y-who-p.picked .tile { box-shadow: 0 30px 70px -16px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.18); }
+.y-who-welcome { position: fixed; left: 0; right: 0; top: calc((100dvh - 172px) / 2 + 146px); height: 26px; line-height: 26px; text-align: center; font: 650 20px/26px var(--y-font); letter-spacing: -0.01em; color: var(--y-t2); opacity: 0; z-index: 7; pointer-events: none; animation: yoWelcomeIn 0.6s var(--y-ease) 0.4s forwards; }
+@keyframes yoWelcomeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+/* greeting lines up pixel-for-pixel with the picker's destination */
+.greet-inner { height: 172px; gap: 22px; justify-content: flex-start; }
+.greet-name { height: 26px; line-height: 26px; }
+.greet.cont { animation: greetFadeCont 2.3s var(--y-ease) forwards; }
+.greet.cont .greet-inner { animation: greetInnerCont 2.3s var(--y-ease) forwards; }
+@keyframes greetFadeCont { 0%, 72% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes greetInnerCont { 0%, 72% { opacity: 1; transform: none; } 100% { opacity: 0; transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .greet.cont, .greet.cont .greet-inner, .y-who-welcome { animation-duration: 0.01s; } }
