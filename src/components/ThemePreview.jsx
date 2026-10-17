@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { SCHEMES, SCHEME_NAMES, previewScheme, setScheme, keepPreview, cancelPreview, useScheme, usePreviewing } from '../lib/theme'
 
 // A tiny mock of the app drawn in a scheme's own colours, so a theme can be judged at a glance.
@@ -49,24 +49,35 @@ export default function ThemePicker({ onTry, instant = false }) {
 export function PreviewBar() {
   const previewing = usePreviewing()
   const scheme = useScheme()
+  const [min, setMin] = useState(false)
   // Leave room under the page so the bar never covers the last content.
   useEffect(() => {
     document.documentElement.classList.toggle('tp-on', previewing)
+    if (!previewing) setMin(false)
     return () => document.documentElement.classList.remove('tp-on')
   }, [previewing])
   if (!previewing) return null
   return (
-    <div className="tp-bar" role="region" aria-label="Theme preview">
-      <div className="tp-bar-dots">
-        {SCHEME_NAMES.map((k) => (
-          <button key={k} type="button" aria-label={k} aria-pressed={scheme === k} className={scheme === k ? 'on' : ''} style={{ background: SCHEMES[k].ac }} onClick={() => previewScheme(k)} />
-        ))}
-      </div>
-      <div className="tp-bar-row">
-        <span>Previewing <b>{scheme}</b></span>
-        <button type="button" className="tp-cancel" onClick={cancelPreview}>Cancel</button>
-        <button type="button" className="tp-keep" onClick={keepPreview}>Keep</button>
-      </div>
+    <div className={'tp-bar' + (min ? ' min' : '')} role="region" aria-label="Theme preview">
+      <button type="button" className="tp-handle" onClick={() => setMin((v) => !v)} aria-label={min ? 'Expand theme bar' : 'Minimise theme bar'} aria-expanded={!min}>
+        <span /><em>{min ? `Previewing ${scheme}` : 'Browse the app while you pick'}</em>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: min ? 'rotate(180deg)' : 'none' }}><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      {!min && (
+        <>
+          <div className="tp-chips" role="radiogroup" aria-label="Theme">
+            {SCHEME_NAMES.map((k) => (
+              <button key={k} type="button" role="radio" aria-checked={scheme === k} className={scheme === k ? 'on' : ''} onClick={() => previewScheme(k)}>
+                <i style={{ background: SCHEMES[k].ac, boxShadow: `inset 0 0 0 5px ${SCHEMES[k].bg}` }} />{k}
+              </button>
+            ))}
+          </div>
+          <div className="tp-bar-row">
+            <button type="button" className="tp-cancel" onClick={cancelPreview}>Cancel</button>
+            <button type="button" className="tp-keep" onClick={keepPreview}>Keep {scheme}</button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

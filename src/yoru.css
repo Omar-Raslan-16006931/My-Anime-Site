@@ -1438,3 +1438,20 @@ h1, h2, h3 { text-wrap: balance; }
 .y-ob-fields .auth-field { margin-bottom: 12px; }
 
 html.tp-on body { padding-bottom: 170px; }
+
+/* Floating theme bar v2: sits above the tab bar so the whole app stays usable while previewing */
+.tp-bar { bottom: calc(14px + env(safe-area-inset-bottom)); gap: 8px; padding: 6px 12px 12px; }
+@media (max-width: 879px) { .tp-bar { bottom: calc(100px + env(safe-area-inset-bottom)); } html.tp-on body { padding-bottom: 260px; } }
+.tp-bar.min { padding-bottom: 6px; }
+.tp-handle { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 30px; border: 0; background: none; color: var(--y-t3); font: 600 12px var(--y-font); cursor: pointer; position: relative; }
+.tp-handle span { position: absolute; top: 3px; left: 50%; width: 34px; height: 4px; margin-left: -17px; border-radius: 4px; background: rgba(255, 255, 255, 0.22); }
+.tp-handle em { font-style: normal; margin-top: 8px; }
+.tp-handle svg { margin-top: 8px; transition: transform 0.3s var(--y-ease); }
+.tp-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; overscroll-behavior-x: contain; }
+.tp-chips::-webkit-scrollbar { display: none; }
+.tp-chips button { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 13px 0 8px; border-radius: 999px; border: 1.5px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); color: var(--y-t2); font: 650 12.5px var(--y-font); cursor: pointer; }
+.tp-chips button i { width: 20px; height: 20px; border-radius: 50%; display: block; }
+.tp-chips button.on { border-color: var(--y-tx); background: rgba(255, 255, 255, 0.12); color: var(--y-tx); }
+.tp-bar-row { display: flex; gap: 8px; }
+.tp-bar-row button { flex: 1; height: 40px; }
+.tp-bar-dots { display: none; }

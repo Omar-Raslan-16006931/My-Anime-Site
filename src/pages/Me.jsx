@@ -3,8 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { udb } from '../lib/udb'
 import { isNative } from '../lib/native'
-import { SCHEMES, SCHEME_NAMES, setScheme, useScheme } from '../lib/theme'
-import ThemePicker from '../components/ThemePreview'
+import { SCHEMES, SCHEME_NAMES, setScheme, useScheme, previewScheme } from '../lib/theme'
 import { useProfiles, profileActions } from '../lib/profiles'
 import CurrentlyWatching from './CurrentlyWatching'
 import Watchlist from './Watchlist'
@@ -47,7 +46,6 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
   const logout = async () => { await supabase.auth.signOut(); navigate('/') }
 
   // Previews for the overview (first 12 of each).
-  const [lookOpen, setLookOpen] = useState(false)
   const [cw, setCw] = useState(null)
   const [list, setList] = useState(null)
   useEffect(() => {
@@ -184,16 +182,11 @@ export default function Me({ user, profile, setProfile, onAuthRequired, onAuthCl
             <Chevron />
           </button>
         )}
-        <button type="button" className={'acc-item' + (lookOpen ? ' open' : '')} onClick={() => setLookOpen((v) => !v)} aria-expanded={lookOpen}>
+        <button type="button" className="acc-item" onClick={() => { previewScheme(scheme); navigate('/') }}>
           <span className="acc-ico">{SECTIONS.find((x) => x.k === 'look').icon}</span>
-          <span className="acc-txt"><b>Appearance</b><small>{scheme}</small></span>
+          <span className="acc-txt"><b>Appearance</b><small>{scheme} · tap to preview themes across the app</small></span>
           <Chevron />
         </button>
-        <div className={'acc-expand' + (lookOpen ? ' open' : '')}>
-          <div>
-            <div className="acc-swatches"><ThemePicker /></div>
-          </div>
-        </div>
       </div>
     </div>
   )
