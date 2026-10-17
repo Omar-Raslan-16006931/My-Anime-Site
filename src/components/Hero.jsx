@@ -141,7 +141,7 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
     return (
       <div className="y-hero-m" ref={root}>
         {list.map((s, i) => (s.backdrop || s.poster) && (
-          <img key={'bg' + (s.href || i)} src={s.backdrop || s.poster} alt="" aria-hidden="true" className={'y-hero-m-bg' + (i === idx ? ' on' : '')} loading={i === 0 ? 'eager' : 'lazy'} decoding="async" />
+          <img key={'bg' + (s.href || i)} src={s.poster || s.backdrop} alt="" aria-hidden="true" className={'y-hero-m-bg' + (i === idx ? ' on' : '')} loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : 'low'} decoding="async" />
         ))}
         <div className="y-hero-m-shade" />
         <Coverflow list={list} idx={idx} go={go} pause={pause} navigate={navigate} />
@@ -170,7 +170,7 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
     <div className="y-hero" ref={root} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="y-hero-bg">
         {list.map((s, i) => s.backdrop && (
-          <img key={s.href || i} src={s.backdrop} alt="" aria-hidden="true" className={'y-hero-img' + (i === idx ? ' on' : '')} loading={i === 0 ? 'eager' : 'lazy'} decoding="async" />
+          <img key={s.href || i} src={s.backdrop} alt="" aria-hidden="true" className={'y-hero-img' + (i === idx ? ' on' : '')} loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : 'low'} decoding="async" />
         ))}
       </div>
       <div className="y-scrim y-hero-scrim" />
@@ -329,7 +329,7 @@ function Coverflow({ list, idx, go, pause, navigate }) {
           onClick={() => { if (blockClick.current) return; if (mod(Math.round(pos.current), count) === i) navigate(s.href); else go(i) }}
           aria-label={`Open ${s.title}`}
         >
-          {s.poster || s.backdrop ? <img src={s.poster || s.backdrop} alt="" draggable="false" /> : <span>{s.title}</span>}
+          {s.poster || s.backdrop ? <img src={s.poster || s.backdrop} alt="" draggable="false" decoding="async" fetchPriority={i === 0 ? 'high' : 'auto'} /> : <span>{s.title}</span>}
         </button>
       ))}
     </div>

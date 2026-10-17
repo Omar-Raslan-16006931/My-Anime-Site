@@ -191,7 +191,7 @@ export default function App() {
       <Toasts />
     </div>
     )}
-    <ProfileGreeting />
+    <ProfileGreeting profile={profile} />
     </>
   )
 }

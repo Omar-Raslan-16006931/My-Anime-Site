@@ -6,8 +6,8 @@ import { useProfiles, tileBg } from '../lib/profiles'
 //  • After picking a profile ("yoru:greet" with detail.fly): this overlay takes over the picked tile
 //    from its very first frame and flies it to the centre itself — one element the whole way, so
 //    there is no hand-over and nothing can snap.
-export default function ProfileGreeting() {
-  const { active } = useProfiles()
+export default function ProfileGreeting({ profile }) {
+  const { active, profiles } = useProfiles()
   const [g, setG] = useState(null) // { p, fly? }
   const tileRef = useRef(null)
 
@@ -24,6 +24,12 @@ export default function ProfileGreeting() {
     window.addEventListener('yoru:greet', on)
     return () => window.removeEventListener('yoru:greet', on)
   }, [])
+
+  // Warm the photo so the tile never pops from the initial to the picture.
+  useEffect(() => {
+    const url = g?.p?.avatar || (g?.p?.id === profiles[0]?.id ? profile?.avatar_url : null)
+    if (url) { const im = new Image(); im.src = url }
+  }, [g, profile?.avatar_url]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!g) return undefined
@@ -53,7 +59,9 @@ export default function ProfileGreeting() {
   }, [g])
 
   if (!g) return null
-  const { p, fly } = g
+  const { fly } = g
+  // The first profile also wears the account photo; it shows as soon as it has loaded.
+  const p = !g.p.avatar && g.p.id === profiles[0]?.id && profile?.avatar_url ? { ...g.p, avatar: profile.avatar_url } : g.p
   const tileStyle = { background: tileBg(p) }
   if (fly) {
     // Same box, radius and font as the picker tile; the final size comes from scale only.
