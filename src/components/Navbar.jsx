@@ -116,7 +116,7 @@ export default function Navbar({ user, profile, onAuthClick }) {
   
   return (
     <>
-      <header ref={barRef} className={'topbar y-top' + (scrolled ? ' scrolled' : '')}>
+      <header ref={barRef} className={'topbar y-top' + (scrolled ? ' scrolled' : '') + (/^\/(anime|movie|tv)\/[^/]+/.test(pathname) ? ' on-detail' : '')}>
         <Link to="/" className="brand y-brand" aria-label={BRAND}>{BRAND}<i>.</i></Link>
 
         <nav className="y-links" aria-label="Main">
