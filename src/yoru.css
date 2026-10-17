@@ -2114,3 +2114,8 @@ body { transition: none; }
 .pe-now i { width: 3px; border-radius: 2px; background: var(--y-ac); animation: yoEq 0.9s ease-in-out infinite; }
 .pe-now i:nth-child(2) { animation-delay: -0.3s; } .pe-now i:nth-child(3) { animation-delay: -0.6s; }
 @keyframes yoEq { 0%, 100% { height: 4px; } 50% { height: 14px; } }
+
+/* Download / Share / Next ep: icon only (label stays for screen readers + tooltip) */
+.tvh-actions .tvh-sc:has(> .tvh-lbl) { width: 46px; padding: 0; justify-content: center; }
+.tvh-actions .tvh-sc > .tvh-lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tvh-actions .tvh-sc:has(> .tvh-lbl) svg { width: 20px; height: 20px; }

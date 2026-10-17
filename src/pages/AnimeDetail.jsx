@@ -317,9 +317,9 @@ export default function AnimeDetail({ user, onAuthRequired }) {
 
           <div className="tvh-shortcuts">
             {lastWatched && (!totalEps || lastWatched < totalEps) && (
-              <button className="tvh-sc" onClick={() => play(lastWatched + 1)}>
+              <button title="Next ep" className="tvh-sc" onClick={() => play(lastWatched + 1)}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 5v14l10-7z" fill="currentColor" stroke="none" /><path d="M19 5v14" /></svg>
-                <span>Next ep</span>
+                <span className="tvh-lbl">Next ep</span>
               </button>
             )}
             <button className={'tvh-sc' + (inWatchlist ? ' on' : '')} onClick={toggleWatchlist} aria-pressed={inWatchlist}>
@@ -329,13 +329,13 @@ export default function AnimeDetail({ user, onAuthRequired }) {
               <span>{inWatchlist ? 'In My List' : 'My List'}</span>
             </button>
             <WatchedButton user={user} onAuthRequired={onAuthRequired} build={() => (details ? fromAnime(details, malId) : null)} />
-            <button className={'tvh-sc' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
+            <button title="Download" className={'tvh-sc' + (showDl ? ' on' : '')} onClick={() => setShowDl((v) => !v)} aria-expanded={showDl}>
               <Icon.download width="20" height="20" />
-              <span>Download</span>
+              <span className="tvh-lbl">Download</span>
             </button>
-            <button className="tvh-sc" onClick={share}>
+            <button title="Share" className="tvh-sc" onClick={share}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3" /><path d="m7 8 5-5 5 5" /><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
-              <span>Share</span>
+              <span className="tvh-lbl">Share</span>
             </button>
           </div>
           </div>
