@@ -14,6 +14,8 @@ function PinDialog({ ask, onCancel, onOk }) {
   const [v, setV] = useState('')
   const [bad, setBad] = useState(false)
   const [ok, setOk] = useState(false)
+  const [out, setOut] = useState(false)
+  const leave = (then) => { setOut(true); setTimeout(then, 280) } // play the exit, then unmount
   const [fails, setFails] = useState(0)
   const [until, setUntil] = useState(0)
   const [, tick] = useState(0)
@@ -26,14 +28,14 @@ function PinDialog({ ask, onCancel, onOk }) {
     const d = raw.replace(/\D/g, '').slice(0, 4)
     setV(d); setBad(false)
     if (d.length < 4) return
-    if (await profileActions.checkPin(p.id, d)) { setOk(true); setTimeout(onOk, 650); return }
+    if (await profileActions.checkPin(p.id, d)) { setOk(true); setTimeout(() => leave(onOk), 650); return }
     const n = fails + 1
     setFails(n); setBad(true)
     if (n >= 5) { setUntil(Date.now() + 30000); setFails(0) }
     setTimeout(() => { setV(''); setBad(false); inputRef.current?.focus() }, 450)
   }
   return (
-    <div className="y-who-scrim" onClick={onCancel}>
+    <div className={'y-who-scrim' + (out ? ' closing' : '')} onClick={() => leave(onCancel)}>
       <div className="y-who-sheet small pin" onClick={(e) => { e.stopPropagation(); inputRef.current?.focus() }}>
         <div className="y-who-prev sm" style={{ background: tileBg(p) }}>{!p.avatar && p.name[0].toUpperCase()}</div>
         <h2>{p.name}</h2>
@@ -44,7 +46,7 @@ function PinDialog({ ask, onCancel, onOk }) {
             : [0, 1, 2, 3].map((i) => <i key={i} className={i < v.length ? 'on' : ''} />)}
         </div>
         <input ref={inputRef} className="y-pin-input" inputMode="numeric" pattern="[0-9]*" autoComplete="off" value={v} disabled={locked} onChange={(e) => change(e.target.value)} aria-label="PIN" />
-        <div className="y-who-sheet-btns"><button type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</button></div>
+        <div className="y-who-sheet-btns"><button type="button" className="btn btn-ghost" onClick={() => leave(onCancel)}>Cancel</button></div>
       </div>
     </div>
   )
