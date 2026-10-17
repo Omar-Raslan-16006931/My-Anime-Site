@@ -4,8 +4,7 @@ import MediaCard from '../components/MediaCard'
 import { fetchGroup, fetchPage } from '../lib/browse'
 import { animeCategoryArt, animeList } from '../lib/anime'
 import { CATEGORIES, TMDB_MOVIE_GENRE, TMDB_TV_GENRE } from '../lib/categories'
-import { getPopularMovies, getPopularTV, getTmdbImage, tmdbFetch } from '../lib/tmdb'
-import { animeArtFromMal } from '../lib/anilist'
+import { getPopularMovies, getPopularTV, getTmdbImage } from '../lib/tmdb'
 
 const GROUPS = [
   { key: 'Anime', to: '/anime', blurb: 'Simulcasts, classics and everything between.' },
@@ -13,6 +12,14 @@ const GROUPS = [
   { key: 'TV', to: '/tv', blurb: 'Series from around the world.' },
 ]
 const SOURCES = [{ key: 'anime', label: 'Anime' }, { key: 'movie', label: 'Movies' }, { key: 'tv', label: 'TV' }]
+
+// Line glyphs for the three big tiles.
+const glyph = (d) => <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
+const GLYPH = {
+  Anime: glyph(<><path d="M24 5l4.6 12.4L41 22l-12.4 4.6L24 39l-4.6-12.4L7 22l12.4-4.6z" /><path d="M38 34l1.6 4.4L44 40l-4.4 1.6L38 46l-1.6-4.4L32 40l4.4-1.6z" /></>),
+  Movies: glyph(<><rect x="5" y="14" width="38" height="27" rx="4" /><path d="M5 22h38M13 14l5 8M24 14l5 8M35 14l5 8" /><path d="M5 14l4-8 34 4-2 4" /></>),
+  TV: glyph(<><rect x="5" y="10" width="38" height="26" rx="4" /><path d="M17 43h14M24 36v7" /><path d="M20 17l11 6-11 6z" /></>),
+}
 
 // Browse: three big tiles (Anime / Movies / TV), a tile per genre and a grid of
 // whatever is selected underneath.
@@ -28,7 +35,6 @@ export default function Browse({ embedded = false }) {
   const [more, setMore] = useState(false)
   const [error, setError] = useState(false)
   const [art, setArt] = useState({})
-  const [groupArt, setGroupArt] = useState({})
   const [tick, setTick] = useState(0)
 
   const sources = useMemo(() => {
@@ -39,27 +45,10 @@ export default function Browse({ embedded = false }) {
     return s
   }, [isGenre, sel])
 
-  // Tile art: the top title of each category + a backdrop for each group.
+  // Genre tile art: the top title of each category. (The three big tiles are designed, not photos.)
   useEffect(() => {
     let alive = true
     animeCategoryArt(CATEGORIES).then((a) => { if (alive) setArt(a || {}) }).catch(() => {})
-    // Fixed, iconic art per group (Demon Slayer, Dune: Part Two, Stranger Things); today's popular
-    // titles only as a fallback if a lookup fails.
-    const bd = (x) => (x?.backdrop_path ? getTmdbImage(x.backdrop_path, 'w1280') : null)
-    Promise.all([
-      animeArtFromMal(38000).catch(() => null),
-      tmdbFetch('/movie/693134').catch(() => null),
-      tmdbFetch('/tv/66732').catch(() => null),
-    ]).then(async ([a, m, t]) => {
-      let anime = a?.banner || null, movies = bd(m), tv = bd(t)
-      if (!anime || !movies || !tv) {
-        const [fa, fm, ft] = await Promise.all([animeList('trending', 12).catch(() => []), getPopularMovies().catch(() => null), getPopularTV().catch(() => null)])
-        anime ||= (fa || []).find((x) => x.banner)?.banner || null
-        movies ||= bd((fm?.results || []).find((x) => x.backdrop_path))
-        tv ||= bd((ft?.results || []).find((x) => x.backdrop_path))
-      }
-      if (alive) setGroupArt({ Anime: anime, Movies: movies, TV: tv })
-    })
     return () => { alive = false }
   }, [])
 
@@ -103,8 +92,8 @@ export default function Browse({ embedded = false }) {
 
       <div className="y-bg-grid">
         {GROUPS.map((g) => (
-          <button key={g.key} type="button" className={'y-bg-tile' + (sel === g.key ? ' on' : '')} onClick={() => pick(g.key)} aria-pressed={sel === g.key}>
-            {groupArt[g.key] && <img src={groupArt[g.key]} alt="" loading="lazy" />}
+          <button key={g.key} type="button" className={'y-bg-tile bg-' + g.key.toLowerCase() + (sel === g.key ? ' on' : '')} onClick={() => pick(g.key)} aria-pressed={sel === g.key}>
+            <span className="y-bg-glyph" aria-hidden="true">{GLYPH[g.key]}</span>
             <span className="y-bg-word" aria-hidden="true">{g.key}</span>
             <span className="y-bg-name">{g.key}</span>
             <span className="y-bg-blurb">{g.blurb}</span>

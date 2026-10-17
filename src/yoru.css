@@ -1705,3 +1705,20 @@ body { transition: none; }
    inside replays its entrance animation when the page is shown again). No transitions. ===== */
 .route-anim { animation: none !important; }
 .kp-off { position: absolute; top: 0; left: 0; right: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; contain: strict; }
+
+/* ===== Explore: the three big tiles are designed (gradient + glyph), not photos ===== */
+.y-bg-tile.bg-anime { --h: 355; }
+.y-bg-tile.bg-movies { --h: 55; }
+.y-bg-tile.bg-tv { --h: 250; }
+.y-bg-tile[class*='bg-'] {
+  background:
+    radial-gradient(120% 90% at 100% 0%, oklch(0.62 0.19 var(--h) / 0.55), transparent 60%),
+    linear-gradient(160deg, oklch(0.30 0.07 var(--h)), oklch(0.18 0.03 var(--h)));
+}
+.y-bg-tile[class*='bg-']::after { background: linear-gradient(0deg, rgba(0, 0, 0, 0.35), transparent 60%); }
+.y-bg-glyph { position: absolute; right: 14px; top: 12px; width: 64px; height: 64px; z-index: 1; color: oklch(0.9 0.08 var(--h)); opacity: 0.85; pointer-events: none; transition: transform 0.5s var(--y-out); }
+.y-bg-glyph svg { width: 100%; height: 100%; display: block; }
+.y-bg-tile:hover .y-bg-glyph, .y-bg-tile.on .y-bg-glyph { transform: scale(1.08) rotate(-4deg); }
+.y-bg-tile.on { box-shadow: 0 0 0 1px var(--y-ac), 0 14px 30px -14px oklch(0.6 0.19 var(--h) / 0.7); }
+@media (max-width: 879px) { .y-bg-glyph { width: 34px; height: 34px; right: 9px; top: 9px; } }
+.y-bg-tile[class*="bg-"] .y-bg-word { display: none; }
