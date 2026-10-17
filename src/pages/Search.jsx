@@ -88,7 +88,8 @@ export default function Search({ user, onAuthRequired }) {
         </button>
       </div>
 
-      <div className="xp-types" role="tablist" aria-label="Type">
+      <div className="xp-types" role="tablist" aria-label="Type" style={{ '--i': Math.max(0, TYPES.findIndex(([k]) => k === type)) }}>
+        <span className="xp-ind" aria-hidden="true" />
         {TYPES.map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={type === k} className={'xp-type' + (type === k ? ' on' : '')}
             onClick={() => update({ t: k, g: k !== 'all' && k !== 'anime' && genre && !MAP[k][genre] ? '' : genre })}>{l}</button>
