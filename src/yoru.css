@@ -1828,3 +1828,15 @@ body { transition: none; }
 .wd-add-btn { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; background: var(--y-tx); color: var(--y-bg); transition: background 0.25s ease, color 0.25s ease; }
 .wd-add-btn.on { background: color-mix(in srgb, var(--y-ac) 24%, transparent); color: var(--y-ac); }
 .wd-add-none { padding: 14px; text-align: center; color: var(--y-t3); font-size: 13.5px; }
+
+/* Simulcast: 14-day window */
+.y-sim-pager { display: flex; gap: 8px; margin-bottom: 4px; }
+.y-sim-pager .y-btn { height: 36px; padding: 0 16px; font-size: 13.5px; }
+.y-sim-pager .y-btn:disabled { background: var(--y-tx); color: var(--y-bg); opacity: 1; cursor: default; }
+@media (max-width: 879px) {
+  .y-sim-pager { display: none; }
+  .y-sim-days { display: flex !important; overflow-x: auto; gap: 6px; margin: 0 calc(-1 * var(--y-pad, 20px)); padding: 0 var(--y-pad, 20px); scrollbar-width: none; overscroll-behavior-x: contain; }
+  .y-sim-days::-webkit-scrollbar { display: none; }
+  .y-sim-day { flex: none; width: 52px; }
+  .y-sim-day span { white-space: nowrap; }
+}

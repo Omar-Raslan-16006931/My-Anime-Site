@@ -1,16 +1,20 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { weekSchedule, weekStartOf } from '../lib/schedule'
+import { weekSchedule } from '../lib/schedule'
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const hhmm = (unix) => new Date(unix * 1000).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', hour12: false })
 
-// This week's simulcasts, by day. PC: seven columns. Phone: day picker + timeline.
+const SPAN = 14 // today + the next 13 days: mostly future, not a half-finished calendar week
+const today0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
+
+// Simulcasts from today onwards, by day. PC: seven columns (two pages). Phone: scrolling day picker + timeline.
 export default function Simulcast() {
-  const start = useMemo(() => weekStartOf(), [])
-  const todayIdx = (new Date().getDay() + 6) % 7
+  const start = useMemo(() => today0(), [])
+  const todayIdx = 0
   const [items, setItems] = useState(null)
   const [day, setDay] = useState(todayIdx)
+  const [page, setPage] = useState(0)
   const [err, setErr] = useState(false)
   const [tick, setTick] = useState(0)
   const [now, setNow] = useState(Date.now())
@@ -18,10 +22,14 @@ export default function Simulcast() {
   useEffect(() => {
     let alive = true
     setItems(null); setErr(false)
-    weekSchedule(start).then((l) => {
+    // First week shows as soon as it arrives; the second follows (one after the other for AniList's limits).
+    const second = new Date(start); second.setDate(second.getDate() + 7)
+    weekSchedule(start, 10, 7).then(async (a) => {
       if (!alive) return
-      if (!l.length) setErr(true)
-      setItems(l)
+      if (!a.length) { setErr(true); setItems([]); return }
+      setItems(a)
+      const b = await weekSchedule(second, 10, 7).catch(() => [])
+      if (alive && b.length) setItems([...a, ...b.map((x) => ({ ...x, day: x.day + 7 }))])
     }).catch(() => { if (alive) { setErr(true); setItems([]) } })
     return () => { alive = false }
   }, [start, tick])
@@ -32,13 +40,13 @@ export default function Simulcast() {
     return () => clearInterval(t)
   }, [])
 
-  const days = useMemo(() => DAYS.map((d, i) => {
+  const days = useMemo(() => Array.from({ length: SPAN }, (_, i) => {
     const dt = new Date(start); dt.setDate(start.getDate() + i)
-    return { d, i, date: dt.getDate(), items: (items || []).filter((x) => x.day === i) }
+    return { d: i === 0 ? 'Today' : i === 1 ? 'Tmrw' : DAYS[(dt.getDay() + 6) % 7], i, date: dt.getDate(), month: dt.toLocaleString('en', { month: 'short' }), items: (items || []).filter((x) => x.day === i) }
   }), [start, items])
 
-  const end = new Date(start.getTime() + 6 * 864e5)
-  const range = `${start.toLocaleString('en', { month: 'long' })} ${start.getDate()} – ${end.getDate()}`
+  const end = new Date(start); end.setDate(start.getDate() + SPAN - 1)
+  const range = `${start.toLocaleString('en', { month: 'short' })} ${start.getDate()} – ${end.toLocaleString('en', { month: 'short' })} ${end.getDate()}`
   const status = (x) => {
     const t = x.airingAt * 1000
     if (t <= now && now - t < 30 * 60 * 1000) return 'live'
@@ -54,7 +62,7 @@ export default function Simulcast() {
       <div className="y-sim-head">
         <h1 className="y-title-xl">Simulcast</h1>
         <div className="y-sim-sub">
-          <div className="y-eyebrow ac">This week · {range}</div>
+          <div className="y-eyebrow ac">Next 2 weeks · {range}</div>
           <div className="y-sim-note">New episodes within an hour of Japanese broadcast. Times are local.</div>
         </div>
       </div>
@@ -66,11 +74,15 @@ export default function Simulcast() {
         </div>
       ) : (
         <>
-          {/* PC: seven columns */}
+          {/* PC: seven columns, two pages */}
+          <div className="y-sim-pager">
+            <button type="button" className="y-btn" disabled={page === 0} onClick={() => setPage(0)}>This week</button>
+            <button type="button" className="y-btn" disabled={page === 1} onClick={() => setPage(1)}>Next week</button>
+          </div>
           <div className="y-sim-cols">
-            {days.map((c) => (
+            {days.slice(page * 7, page * 7 + 7).map((c) => (
               <div key={c.i} className={'y-sim-col' + (c.i === todayIdx ? ' today' : '')}>
-                <div className="y-sim-colhead"><b>{c.d}</b><span>{c.date}</span></div>
+                <div className="y-sim-colhead"><b>{c.i === 0 ? DAYS[(new Date(start).getDay() + 6) % 7] : c.d}</b><span>{c.date}</span></div>
                 {c.i === todayIdx && <div className="y-sim-today">Today</div>}
                 {items === null
                   ? Array.from({ length: 3 }).map((_, k) => <div key={k} className="y-skel y-sim-sk" />)

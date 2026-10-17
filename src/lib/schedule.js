@@ -42,14 +42,14 @@ export function weekStartOf(d = new Date()) {
   return s
 }
 
-// All simulcasts airing between Mon 00:00 and the next Mon 00:00 (local), the
-// most popular shows per day. → [{ ...item, day: 0..6 }] sorted by time.
-export async function weekSchedule(start = weekStartOf(), perDay = 10) {
-  const key = 'week:' + start.getTime()
+// Simulcasts airing in the `span` days from `start` (local midnight), the
+// most popular shows per day. → [{ ...item, day: 0..span-1 }] sorted by time.
+export async function weekSchedule(start = weekStartOf(), perDay = 10, span = 7) {
+  const key = 'week:' + start.getTime() + ':' + span
   const hit = fresh(key, 10 * 60 * 1000)
   if (hit) return hit
   const from = Math.floor(start.getTime() / 1000)
-  const to = from + 7 * 86400
+  const to = from + span * 86400
   const q = `query($a:Int,$b:Int,$p:Int){ Page(page:$p, perPage:50){ pageInfo{hasNextPage} airingSchedules(airingAt_greater:$a, airingAt_lesser:$b, sort:TIME){ ${FIELDS} } } }`
   // Pages one after another (with one retry) so AniList's burst limit doesn't reject them.
   // Two waves of three pages: fast, but gentle enough for AniList's burst limit.
@@ -69,12 +69,12 @@ export async function weekSchedule(start = weekStartOf(), perDay = 10) {
       const k = it.malId + ':' + it.episode
       if (seen.has(k)) continue
       seen.add(k)
-      all.push({ ...it, day: Math.min(6, Math.max(0, Math.floor((it.airingAt - from) / 86400))) })
+      all.push({ ...it, day: Math.min(span - 1, Math.max(0, Math.floor((it.airingAt - from) / 86400))) })
     }
   }
   // Keep the most popular few per day, then order by air time.
   const out = []
-  for (let day = 0; day < 7; day++) {
+  for (let day = 0; day < span; day++) {
     out.push(...all.filter((x) => x.day === day).sort((a, b) => b.popularity - a.popularity).slice(0, perDay))
   }
   out.sort((a, b) => a.airingAt - b.airingAt)
