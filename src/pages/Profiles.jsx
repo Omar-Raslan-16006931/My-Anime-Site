@@ -71,13 +71,14 @@ export default function Profiles({ user, profile }) {
 
   const account = profile?.username || user?.email?.split('@')[0] || ''
   useEffect(() => { profileActions.ensure(account || 'Me') }, [account])
-  useEffect(() => { const t = setTimeout(() => setSettled(true), 1700); return () => { clearTimeout(t); clearTimeout(timer.current) } }, [])
+  useEffect(() => { const t = setTimeout(() => setSettled(true), 1700); return () => clearTimeout(t) }, [])
 
   const startPick = (p, fly) => {
     setPicked(p.id)
-    profileActions.setActive(p.id)
     window.dispatchEvent(new CustomEvent('yoru:greet', { detail: { profile: p, fly } }))
-    timer.current = setTimeout(() => navigate('/'), 1000)
+    // Activate and leave together: activating remounts the page stack (per-profile data), which
+    // would otherwise cancel the navigation and drop you back on this picker.
+    timer.current = setTimeout(() => { navigate('/'); profileActions.setActive(p.id) }, 1000)
   }
   const choose = (p, e) => {
     if (manage) { setSheet({ id: p.id, name: p.name, hue: p.hue ?? 0, kids: !!p.kids, avatar: p.avatar || null, blob: undefined, hadPin: hasPin(p), pinOn: hasPin(p), pin: '' }); return }
