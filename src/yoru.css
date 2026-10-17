@@ -2156,3 +2156,41 @@ body { transition: none; }
   .tp-bar { bottom: calc(100px + env(safe-area-inset-bottom)) !important; }
 }
 @media (max-width: 879px) and (prefers-reduced-motion: reduce) { .ydock { animation: none; } }
+
+/* =====================================================================
+   PC top bar — floating pill (adapted from the "Navbar-1" component):
+   rounded-full glass bar, centred with a max width, links that fade/slide in and grow on hover,
+   a solid call-to-action ("Surprise me"), and a logo that tilts on hover. Plain CSS, no new dependencies.
+   ===================================================================== */
+@media (min-width: 880px) {
+  .topbar.y-top, .topbar.y-top.over-hero {
+    position: fixed !important; top: 12px !important; left: 50% !important; right: auto !important;
+    width: min(1280px, calc(100% - 48px)); height: 56px !important; padding: 0 10px 0 24px !important; gap: 28px !important;
+    border-radius: 999px; transform: translateX(-50%); animation: yoBarIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    box-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.7);
+  }
+  @keyframes yoBarIn { from { opacity: 0; transform: translate(-50%, -14px); } }
+  .topbar.y-top::before {
+    inset: 0 !important; border-radius: inherit; opacity: 1 !important;
+    background: color-mix(in srgb, var(--y-s1) 78%, transparent) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(1.3) !important; backdrop-filter: blur(22px) saturate(1.3) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+  }
+  .topbar.y-top::after { display: none !important; }
+
+  .y-brand { display: inline-block; font-size: 21px; transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .y-brand:hover { transform: rotate(-4deg) scale(1.06); }
+  .y-links { gap: 4px; margin-left: 6px; }
+  .y-link { padding: 8px 15px; border-radius: 999px; transition: color 0.2s, background 0.25s, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); animation: yoLinkIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .y-link:nth-child(2) { animation-delay: 0.05s; } .y-link:nth-child(3) { animation-delay: 0.1s; }
+  .y-link:nth-child(4) { animation-delay: 0.15s; } .y-link:nth-child(5) { animation-delay: 0.2s; } .y-link:nth-child(6) { animation-delay: 0.25s; }
+  @keyframes yoLinkIn { from { opacity: 0; transform: translateY(-8px); } }
+  .y-link:hover { transform: scale(1.05); background: rgba(255, 255, 255, 0.07); }
+  .y-link.on { background: rgba(255, 255, 255, 0.12); }
+  .y-surprise { height: 36px; padding: 0 18px; border: 0; background: var(--y-tx); color: var(--y-bg); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s; animation: yoCtaIn 0.4s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .y-surprise:hover { transform: scale(1.05); background: var(--y-tx); color: var(--y-bg); filter: brightness(0.92); }
+  @keyframes yoCtaIn { from { opacity: 0; transform: translateX(16px); } }
+  .y-search { height: 36px; }
+  .y-me { width: 36px; height: 36px; border-radius: 50%; }
+}
+@media (min-width: 880px) and (prefers-reduced-motion: reduce) { .topbar.y-top, .y-link, .y-surprise { animation: none !important; } }
