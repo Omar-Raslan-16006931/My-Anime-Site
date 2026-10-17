@@ -1697,3 +1697,7 @@ body { transition: none; }
 /* Instant page switches: no fade, no entrance animations on the page shell. */
 .route-anim { animation: none !important; }
 .route-anim .me-head, .route-anim .me-panel, .route-anim .me-rows, .route-anim .acc-hero, .route-anim .acc-shelf, .route-anim .acc-group { animation: none; }
+
+/* Collapse wrappers must not grow to their content width (it stopped rows from scrolling sideways). */
+.collapse { grid-template-columns: minmax(0, 1fr); }
+.collapse-in { min-width: 0; }
