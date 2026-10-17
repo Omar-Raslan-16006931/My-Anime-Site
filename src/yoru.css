@@ -1693,3 +1693,7 @@ body { transition: none; }
 @media (max-width: 879px) { .y-home-body > .y-cw-wrap:not(.open) { margin-bottom: -26px; } }
 .y-cw-wrap > .collapse-in { overflow: visible; }
 .y-cw-wrap:not(.open) > .collapse-in { overflow: hidden; }
+
+/* Instant page switches: no fade, no entrance animations on the page shell. */
+.route-anim { animation: none !important; }
+.route-anim .me-head, .route-anim .me-panel, .route-anim .me-rows, .route-anim .acc-hero, .route-anim .acc-shelf, .route-anim .acc-group { animation: none; }
