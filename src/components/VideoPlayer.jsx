@@ -669,10 +669,6 @@ export default function VideoPlayer({
               <b>{displayTitle}</b>
               <span>{nowLabel}</span>
             </div>
-            <div className="wp-top-r">
-              <button type="button" className="wp-ibtn" onClick={() => { setLights(true); toast('Lights off · press Esc or click to turn them on') }} title="Lights off" aria-label="Lights off">{I(<><path d="M9 18h6M10 22h4" /><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z" /></>)}</button>
-              <button type="button" className="wp-ibtn" onClick={goFullscreen} title="Fullscreen (keeps subtitles visible)" aria-label="Fullscreen">{I(<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />)}</button>
-            </div>
           </header>
 
           <div className="wp-stage">{frameEl}</div>
@@ -691,7 +687,7 @@ export default function VideoPlayer({
                 </select>
               </label>
               {sources.length > 1 && (
-                <button type="button" className="wp-ibtn sm" onClick={tryAnother} title="Not playing? Try the next source" aria-label="Try another source"><Icon.refresh width="16" height="16" /></button>
+                <button type="button" className="wp-chip" onClick={tryAnother} title="Not playing? Switch to the next source"><Icon.refresh width="15" height="15" /> Try another source</button>
               )}
               {currentStream && streams.length > 1 && (
                 <label className="wp-select" title="Server">
@@ -738,6 +734,9 @@ export default function VideoPlayer({
               </div>
             </div>
             <div className="wp-bar-r">
+              <button type="button" className="wp-chip" onClick={() => { setLights(true); toast('Lights off · press Esc or click to turn them on') }} title="Dim everything except the video">{I(<><path d="M9 18h6M10 22h4" /><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z" /></>, 15)} Lights off</button>
+              <button type="button" className="wp-chip" onClick={goFullscreen} title="Fullscreen (keeps subtitles visible)">{I(<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />, 15)} Fullscreen</button>
+              <span className="wp-sep" aria-hidden="true" />
               {canPrev && <button type="button" className="wp-ibtn" onClick={goPrev} title="Previous episode" aria-label="Previous episode">{I(<path d="M19 5v14l-9-7zM5 5v14" />)}</button>}
               {canNext && <button type="button" className="wp-next" onClick={goNext}>Next episode {I(<path d="M5 5v14l9-7zM19 5v14" />, 16)}</button>}
             </div>
