@@ -1696,3 +1696,13 @@ body { transition: none; }
 @media (hover: hover) and (pointer: fine) { .row-track { cursor: grab; } .row-track.grabbing { cursor: grabbing; user-select: none; } .row-track.grabbing * { pointer-events: none; } }
 .row-track img { -webkit-user-drag: none; user-drag: none; }
 @media (prefers-reduced-motion: reduce) { .y-flow-card, .y-hero-m-bg, .y-hero-img { transition-duration: 0.01s; } .y-hero-m-info { animation: none; } }
+
+/* ===== Slideshow: physics-driven, no CSS transitions on the cards, no dots ===== */
+.y-flow-dots { display: none; }
+.y-flow-card, .y-flow.dragging .y-flow-card { transition: none !important; will-change: transform, opacity; backface-visibility: hidden; }
+.y-flow-card::after { transition: none !important; }
+.y-flow-card.on::after { opacity: var(--d, 0); }
+/* sign in / sign up: the screen itself never scrolls */
+.auth { overflow: hidden; overscroll-behavior: none; touch-action: none; }
+.auth input { touch-action: manipulation; }
+@media (max-height: 720px) { .auth { padding: 12px; } .auth-card { padding: 18px 20px 18px; } .auth-brand { margin-bottom: 10px; } .auth-p { margin-bottom: 12px; } .auth-field input { height: 52px; } }

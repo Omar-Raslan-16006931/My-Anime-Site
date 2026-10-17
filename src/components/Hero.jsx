@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from './Icons'
 
@@ -170,18 +170,73 @@ export default function Hero({ item, items, onPlay, isInList, onToggleList, inte
   )
 }
 
-// 3D poster coverflow that follows your finger: drag, flick for momentum, release to settle on a card.
+// 3D poster coverflow driven by physics. The cards are positioned straight from one continuous `pos`
+// value (no React re-render, no CSS transitions): your finger sets it while dragging, and on release a
+// critically-damped spring carries it to the nearest card with the speed of your flick.
 const STEP = 126 // px of finger travel per card
+const K = 150 // spring stiffness
+const C = 2 * Math.sqrt(K) // critical damping: settles fast, never wobbles
+const mod = (n, m) => ((n % m) + m) % m
+
 function Coverflow({ list, idx, go, pause, navigate }) {
   const count = list.length
-  const [drag, setDrag] = useState(0) // in cards; > 0 means dragged to the right
-  const [dragging, setDragging] = useState(false)
+  const els = useRef([])
+  const pos = useRef(idx)
+  const raf = useRef(0)
   const st = useRef(null)
+  const dragging = useRef(false)
   const blockClick = useRef(false)
+
+  const paint = useCallback((p) => {
+    for (let i = 0; i < count; i++) {
+      const el = els.current[i]
+      if (!el) continue
+      let o = mod(i - p, count)
+      if (o > count / 2) o -= count
+      const a = Math.abs(o)
+      el.style.transform = `translateX(${o * 60}%) translateZ(${-Math.min(a, 2.2) * 200}px) rotateY(${-o * 32}deg)`
+      el.style.opacity = a <= 1 ? 1 - a * 0.42 : Math.max(0, 0.58 - (a - 1) * 0.58)
+      el.style.zIndex = 20 - Math.round(a * 4)
+      el.style.setProperty('--d', Math.min(1, a) * 0.45)
+      el.tabIndex = a > 1.2 ? -1 : 0
+    }
+  }, [count])
+
+  // Spring from the current position/velocity to `target` (an unbounded card number).
+  const spring = useCallback((target, v0 = 0) => {
+    cancelAnimationFrame(raf.current)
+    let v = v0
+    let last = performance.now()
+    const tick = (t) => {
+      const dt = Math.min(0.032, (t - last) / 1000)
+      last = t
+      const x = pos.current
+      v += (-K * (x - target) - C * v) * dt
+      pos.current = x + v * dt
+      if (Math.abs(pos.current - target) < 0.0008 && Math.abs(v) < 0.01) { pos.current = target; paint(target); return }
+      paint(pos.current)
+      raf.current = requestAnimationFrame(tick)
+    }
+    raf.current = requestAnimationFrame(tick)
+  }, [paint])
+
+  useLayoutEffect(() => { paint(pos.current) }, [paint, list])
+  useEffect(() => () => cancelAnimationFrame(raf.current), [])
+
+  // The selected card changed from outside (autoplay, tapping a side card): glide the short way round.
+  useEffect(() => {
+    if (dragging.current) return
+    const cur = pos.current
+    let d = mod(idx, count) - mod(Math.round(cur), count)
+    if (d > count / 2) d -= count
+    if (d < -count / 2) d += count
+    const target = Math.round(cur) + d
+    if (Math.abs(target - cur) > 0.001) spring(target)
+  }, [idx, count, spring])
 
   const down = (e) => {
     if (count < 2 || (e.pointerType === 'mouse' && e.button !== 0)) return
-    st.current = { x: e.clientX, y: e.clientY, lx: e.clientX, lt: performance.now(), v: 0, mode: null }
+    st.current = { x: e.clientX, y: e.clientY, p0: pos.current, lx: e.clientX, lt: performance.now(), v: 0, mode: null }
   }
   const move = (e) => {
     const s = st.current
@@ -193,60 +248,50 @@ function Coverflow({ list, idx, go, pause, navigate }) {
       s.mode = Math.abs(dx) > Math.abs(dy) * 1.15 ? 'x' : 'y'
       if (s.mode === 'y') { st.current = null; return }
       e.currentTarget.setPointerCapture?.(e.pointerId)
-      setDragging(true)
+      cancelAnimationFrame(raf.current)
+      s.p0 = pos.current // pick up a moving card exactly where it is
+      s.x = e.clientX - dx
+      dragging.current = true
       pause?.()
     }
     const now = performance.now()
-    s.v = 0.8 * s.v + 0.2 * ((e.clientX - s.lx) / Math.max(1, now - s.lt)) // px per ms, smoothed
+    s.v = 0.75 * s.v + 0.25 * ((e.clientX - s.lx) / Math.max(1, now - s.lt)) // px/ms, smoothed
     s.lx = e.clientX; s.lt = now
-    // rubber-band resistance isn't needed (it wraps), but keep the drag within two cards
-    setDrag(Math.max(-2, Math.min(2, dx / STEP)))
+    pos.current = s.p0 - dx / STEP
+    paint(pos.current)
   }
   const up = () => {
     const s = st.current
     st.current = null
     if (!s || s.mode !== 'x') return
+    dragging.current = false
     blockClick.current = true
     setTimeout(() => { blockClick.current = false }, 60)
-    const projected = drag + (s.v * 220) / STEP // where a flick would carry it
-    const target = idx - Math.max(-2, Math.min(2, Math.round(projected)))
-    setDragging(false)
-    setDrag(0)
-    go(target)
+    const vel = -(s.v * 1000) / STEP // cards per second (positive = toward the next card)
+    const flick = Math.abs(vel) > 0.35 // a fast flick carries a little further than where you let go
+    const target = Math.round(pos.current + (flick ? vel * 0.14 : 0))
+    const clamped = Math.max(Math.round(s.p0) - 2, Math.min(Math.round(s.p0) + 2, target))
+    go(mod(clamped, count)) // updates the title/buttons right away
+    // Carry the flick's speed, but never so much that the card shoots past its resting place and bounces back.
+    const dist = clamped - pos.current
+    const vmax = Math.sqrt(K) * Math.abs(dist)
+    spring(clamped, vel * dist > 0 ? Math.sign(vel) * Math.min(Math.abs(vel), vmax) : vel)
   }
 
-  const pos = idx - drag
   return (
-    <div className={'y-flow' + (dragging ? ' dragging' : '')} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
-      {list.map((s, i) => {
-        let o = (((i - pos) % count) + count) % count
-        if (o > count / 2) o -= count
-        const a = Math.abs(o)
-        const opacity = a <= 1 ? 1 - a * 0.42 : Math.max(0, 0.58 - (a - 1) * 0.58)
-        return (
-          <button
-            key={s.href || i}
-            type="button"
-            className={'y-flow-card' + (i === idx && !dragging ? ' on' : '')}
-            style={{
-              transform: `translateX(${o * 60}%) translateZ(${-Math.min(a, 2.2) * 200}px) rotateY(${-o * 32}deg)`,
-              zIndex: 20 - Math.round(a * 4),
-              opacity,
-              '--d': Math.min(1, a) * 0.45,
-            }}
-            onClick={() => { if (blockClick.current) return; if (i === idx) navigate(s.href); else go(i) }}
-            aria-label={i === idx ? `Open ${s.title}` : `Show ${s.title}`}
-            tabIndex={a > 1.2 ? -1 : 0}
-          >
-            {s.poster || s.backdrop ? <img src={s.poster || s.backdrop} alt="" draggable="false" /> : <span>{s.title}</span>}
-          </button>
-        )
-      })}
-      {count > 1 && (
-        <div className="y-flow-dots" aria-hidden="true">
-          {list.map((s, i) => <i key={s.href || i} className={i === idx ? 'on' : ''} />)}
-        </div>
-      )}
+    <div className="y-flow" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+      {list.map((s, i) => (
+        <button
+          key={s.href || i}
+          ref={(el) => { els.current[i] = el }}
+          type="button"
+          className="y-flow-card"
+          onClick={() => { if (blockClick.current) return; if (mod(Math.round(pos.current), count) === i) navigate(s.href); else go(i) }}
+          aria-label={`Open ${s.title}`}
+        >
+          {s.poster || s.backdrop ? <img src={s.poster || s.backdrop} alt="" draggable="false" /> : <span>{s.title}</span>}
+        </button>
+      ))}
     </div>
   )
 }

@@ -59,8 +59,12 @@ export default function AuthModal({ onClose }) {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const onKey = (e) => { if (e.key === 'Escape') { setClosing(true); t.current = setTimeout(onClose, 300) } }
+    // No scrolling on the sign-in / sign-up screen (touch or wheel), except inside the fields themselves.
+    const noScroll = (e) => { if (!(e.target instanceof Element && e.target.closest('input'))) e.preventDefault() }
+    document.addEventListener('touchmove', noScroll, { passive: false })
+    document.addEventListener('wheel', noScroll, { passive: false })
     document.addEventListener('keydown', onKey)
-    return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey); clearTimeout(t.current) }
+    return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey); document.removeEventListener('touchmove', noScroll); document.removeEventListener('wheel', noScroll); clearTimeout(t.current) }
   }, [onClose])
 
   // Live username availability while signing up.
