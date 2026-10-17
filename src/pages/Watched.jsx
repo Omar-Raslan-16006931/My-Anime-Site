@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useWatched, removeWatched } from '../lib/watched'
+import { useWatched, removeWatched, addWatched, fromMovie, fromTV, watchedKey } from '../lib/watched'
+import { searchMovies, searchTV, getMovieDetails, getTVDetails, getTmdbImage } from '../lib/tmdb'
 import { toast } from '../lib/toast'
 import { useFlip } from '../lib/flip'
 import Icon from '../components/Icons'
@@ -44,9 +45,74 @@ export function statsOf(items) {
 }
 export const fmtDur = (m) => { const d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60); return d ? `${d}d ${h}h` : h ? `${h}h ${Math.round(m % 60)}m` : `${Math.round(m)}m` }
 
+
+// Quick add: search movies and TV shows only (anime is added from its page), tap + to mark one watched.
+function QuickAdd({ user, watched }) {
+  const [q, setQ] = useState('')
+  const [res, setRes] = useState(null) // null = idle, [] = nothing found
+  const [busy, setBusy] = useState(() => new Set())
+  const seq = useRef(0)
+
+  useEffect(() => {
+    const term = q.trim()
+    if (term.length < 2) { setRes(null); return undefined }
+    const id = ++seq.current
+    const t = setTimeout(async () => {
+      const [m, tv] = await Promise.all([searchMovies(term).catch(() => null), searchTV(term).catch(() => null)])
+      if (id !== seq.current) return
+      const list = [
+        ...(m?.results || []).map((x) => ({ media_type: 'movie', tmdb_id: x.id, title: x.title, year: (x.release_date || '').slice(0, 4), poster: x.poster_path ? getTmdbImage(x.poster_path, 'w185') : null, pop: x.popularity || 0 })),
+        ...(tv?.results || []).map((x) => ({ media_type: 'tv', tmdb_id: x.id, title: x.name, year: (x.first_air_date || '').slice(0, 4), poster: x.poster_path ? getTmdbImage(x.poster_path, 'w185') : null, pop: x.popularity || 0 })),
+      ].sort((a, b) => b.pop - a.pop).slice(0, 8)
+      setRes(list)
+    }, 320)
+    return () => clearTimeout(t)
+  }, [q])
+
+  const toggle = async (r) => {
+    const k = watchedKey(r)
+    if (busy.has(k)) return
+    setBusy((b) => new Set(b).add(k))
+    try {
+      if (watched.has(r)) { await removeWatched(user, r); toast(`Removed “${r.title}” from Watched`); return }
+      const d = await (r.media_type === 'movie' ? getMovieDetails(r.tmdb_id) : getTVDetails(r.tmdb_id)).catch(() => null)
+      const item = d && d.id ? (r.media_type === 'movie' ? fromMovie(d) : fromTV(d)) : { media_type: r.media_type, tmdb_id: r.tmdb_id, title: r.title, poster: r.poster, genres: [], year: Number(r.year) || null }
+      await addWatched(user, item)
+      toast(`Marked “${item.title}” as watched`)
+    } finally { setBusy((b) => { const n = new Set(b); n.delete(k); return n }) }
+  }
+
+  return (
+    <div className="wd-add">
+      <label className="wd-add-field">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></svg>
+        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Add a movie or TV show you’ve watched…" aria-label="Search movies and TV shows to add" enterKeyHint="search" />
+        {q && <button type="button" className="wd-add-x" onClick={() => setQ('')} aria-label="Clear">×</button>}
+      </label>
+      {res && (
+        <div className="wd-add-list">
+          {res.length === 0 ? <p className="wd-add-none">No movies or TV shows found.</p> : res.map((r) => {
+            const on = watched.has(r)
+            return (
+              <div key={watchedKey(r)} className="wd-add-row">
+                <span className="wd-add-art">{r.poster && <img src={r.poster} alt="" loading="lazy" />}</span>
+                <span className="wd-add-txt"><b>{r.title}</b><small>{r.media_type === 'tv' ? 'TV' : 'Movie'}{r.year ? ` · ${r.year}` : ''}</small></span>
+                <button type="button" className={'wd-add-btn' + (on ? ' on' : '')} onClick={() => toggle(r)} aria-pressed={on} aria-label={on ? 'Watched, tap to remove' : 'Mark as watched'}>
+                  {on ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg> : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Watched({ user, onAuthRequired }) {
   const navigate = useNavigate()
-  const { items, ready } = useWatched(user)
+  const watched = useWatched(user)
+  const { items, ready } = watched
   const [tab, setTab] = useState('all')
   const [leaving, setLeaving] = useState(() => new Set())
   const st = useMemo(() => statsOf(items), [items])
@@ -67,10 +133,13 @@ export default function Watched({ user, onAuthRequired }) {
   if (!ready) return <div className="wd"><div className="wd-hero y-skel" style={{ height: 150 }} /></div>
   if (!st.count) {
     return (
+      <div className="wd">
+      <QuickAdd user={user} watched={watched} />
       <div className="wd-empty">
         <div className="wd-empty-ico"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="m8 12.5 2.8 2.8L16 9.5" /></svg></div>
         <b>Nothing watched yet</b>
         <p>Tap <em>Mark watched</em> on any show or movie, or the ✓ on Continue watching, and your stats will show up here.</p>
+      </div>
       </div>
     )
   }
@@ -79,6 +148,7 @@ export default function Watched({ user, onAuthRequired }) {
   const split = [['anime', 'Anime'], ['movie', 'Movies'], ['tv', 'TV']].filter(([k]) => st.by[k])
   return (
     <div className="wd">
+      <QuickAdd user={user} watched={watched} />
       <section className="wd-hero">
         <div className="wd-hero-main">
           <small>Time well spent</small>

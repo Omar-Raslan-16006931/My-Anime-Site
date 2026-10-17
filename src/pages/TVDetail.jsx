@@ -225,7 +225,7 @@ export default function TVDetail({ user, onAuthRequired }) {
             {resuming && (
               <button className="tvh-sc" onClick={() => { setSelectedSeason(lastSeason); play(lastEp + 1, lastSeason) }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 5v14l10-7z" fill="currentColor" stroke="none" /><path d="M19 5v14" /></svg>
-                <span>Next episode</span>
+                <span>Next ep</span>
               </button>
             )}
             <button className={'tvh-sc' + (inWatchlist ? ' on' : '')} onClick={toggleWatchlist} aria-pressed={inWatchlist}>

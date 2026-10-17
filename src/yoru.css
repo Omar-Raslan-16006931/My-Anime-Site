@@ -1804,3 +1804,27 @@ body { transition: none; }
 /* No glows: primary buttons and the big category tiles stay flat. */
 .btn-primary, .btn-primary:hover, .btn-primary:active, .btn-primary:focus-visible, .y-btn.ac, .y-btn.ac:hover { box-shadow: none !important; }
 .y-bg-tile, .y-bg-tile.on, .y-bg-tile:hover { box-shadow: none !important; filter: none; }
+
+/* Detail pages: the shortcut row always fits (equal columns, one-line labels) and the page never scrolls sideways. */
+.fu { overflow-x: clip; max-width: 100%; }
+.tvh-shortcuts { width: 100%; gap: 0; }
+.tvh-sc { flex: 1 1 0; min-width: 0; padding: 8px 2px; white-space: nowrap; font-size: 11.5px; }
+@media (min-width: 880px) { .tvh-shortcuts { width: auto; } .tvh-sc { flex: none; min-width: 78px; padding: 8px 10px; } }
+
+/* Watched: quick add */
+.wd-add { position: relative; }
+.wd-add-field { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; border-radius: 999px; background: var(--y-s1); color: var(--y-t3); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); }
+.wd-add-field:focus-within { box-shadow: inset 0 0 0 1px var(--y-ac); }
+.wd-add-field input { flex: 1; min-width: 0; border: 0 !important; background: none !important; outline: none !important; box-shadow: none !important; color: var(--y-tx); font: 500 14px var(--y-font); -webkit-appearance: none; appearance: none; padding: 0 !important; height: 100%; }
+.wd-add-field input::-webkit-search-cancel-button { display: none; }
+.wd-add-x { border: 0; background: none; color: var(--y-t3); font-size: 22px; line-height: 1; cursor: pointer; padding: 0 2px; }
+.wd-add-list { margin-top: 8px; border-radius: 18px; background: var(--y-s1); padding: 6px; display: flex; flex-direction: column; animation: yoPageIn 0.25s var(--y-ease) backwards; }
+.wd-add-row { display: flex; align-items: center; gap: 12px; padding: 6px; border-radius: 12px; }
+.wd-add-art { width: 36px; height: 54px; border-radius: 6px; overflow: hidden; background: var(--y-s3); flex: none; }
+.wd-add-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wd-add-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.wd-add-txt b { font-size: 14px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wd-add-txt small { font-size: 12px; color: var(--y-t3); }
+.wd-add-btn { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; background: var(--y-tx); color: var(--y-bg); transition: background 0.25s ease, color 0.25s ease; }
+.wd-add-btn.on { background: color-mix(in srgb, var(--y-ac) 24%, transparent); color: var(--y-ac); }
+.wd-add-none { padding: 14px; text-align: center; color: var(--y-t3); font-size: 13.5px; }
